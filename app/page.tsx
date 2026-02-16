@@ -1,5 +1,4 @@
-import { supabase } from '@/lib/supabase' // Si te da error acá, probá "../lib/supabase"
-
+import { supabase } from '@/src/lib/supabase'
 export default async function Home() {
   // 1. Pedimos los eventos a Supabase
   const { data: events, error } = await supabase
