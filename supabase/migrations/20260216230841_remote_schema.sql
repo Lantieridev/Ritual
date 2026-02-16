@@ -237,8 +237,6 @@ alter table "public"."tours" validate constraint "tours_artist_id_fkey";
 
 set check_function_bodies = off;
 
-create type "public"."geometry_dump" as ("path" integer[], "geom" public.geometry);
-
 CREATE OR REPLACE FUNCTION public.handle_new_user()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -251,8 +249,6 @@ begin
 end;
 $function$
 ;
-
-create type "public"."valid_detail" as ("valid" boolean, "reason" character varying, "location" public.geometry);
 
 
   create policy "Public artists"

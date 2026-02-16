@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { routes } from '@/src/lib/routes'
 
 /**
  * Página mostrada cuando el evento no existe (notFound() en [id]/page).
@@ -13,7 +14,7 @@ export default function EventNotFound() {
         El enlace puede estar roto o el recital ya no existe.
       </p>
       <Link
-        href="/"
+        href={routes.home}
         className="inline-flex items-center justify-center rounded-lg font-medium bg-yellow-500 text-neutral-950 hover:bg-yellow-400 px-6 py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
       >
         Volver al listado

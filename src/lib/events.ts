@@ -1,5 +1,5 @@
 import { supabase } from '@/src/lib/supabase'
-import type { EventWithRelations, EventCreateInput, Venue } from '@/src/lib/types'
+import type { EventWithRelations, EventCreateInput } from '@/src/lib/types'
 
 /** Select usado en listado y detalle: evento con venue y lineups (artistas). */
 const EVENTS_SELECT = `
@@ -45,20 +45,4 @@ export async function getEventById(
     return null
   }
   return data as EventWithRelations
-}
-
-/**
- * Lista todas las sedes para selects (p. ej. formulario de nuevo recital).
- */
-export async function getVenues(): Promise<Venue[]> {
-  const { data, error } = await supabase
-    .from('venues')
-    .select('id, name, city')
-    .order('name', { ascending: true })
-
-  if (error) {
-    console.error('Error cargando sedes:', error)
-    return []
-  }
-  return (data ?? []) as Venue[]
 }

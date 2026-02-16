@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Card } from '@/src/components/ui'
+import { routes } from '@/src/lib/routes'
 import type { EventWithRelations } from '@/src/lib/types'
 
 interface EventCardProps {
@@ -16,7 +17,7 @@ export function EventCard({ event }: EventCardProps) {
     : 'Sede por confirmar'
 
   return (
-    <Link href={`/events/${event.id}`} className="block group">
+    <Link href={routes.events.detail(event.id)} className="block group">
       <Card className="h-full">
         <div className="flex flex-col gap-4">
           <div>

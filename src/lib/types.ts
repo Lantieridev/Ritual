@@ -12,6 +12,12 @@ export interface Artist {
   spotify_id?: string | null
 }
 
+/** Payload mínimo para crear un artista (formulario). */
+export interface ArtistCreateInput {
+  name: string
+  genre?: string
+}
+
 /** Sede del recital (venues). events.venue_id apunta aquí. */
 export interface Venue {
   id: string
@@ -21,6 +27,14 @@ export interface Venue {
   country?: string | null
   lat?: number | null
   lng?: number | null
+}
+
+/** Payload mínimo para crear una sede (formulario). */
+export interface VenueCreateInput {
+  name: string
+  city?: string
+  address?: string
+  country?: string
 }
 
 /**
@@ -61,9 +75,20 @@ export interface EventWithRelations extends Event {
   lineups: LineupRow[] | null
 }
 
-/** Payload mínimo para crear un evento manualmente (formulario "nuevo recital"). */
+/** Payload para crear un evento (nombre, fecha, sede, opcionalmente artistas del lineup). */
 export interface EventCreateInput {
   name: string
   date: string
   venue_id: string
+  /** IDs de artistas para el lineup; se insertan en tabla lineups tras crear el evento. */
+  artist_ids?: string[]
+}
+
+/** Payload para actualizar un evento; artist_ids reemplaza todo el lineup. */
+export interface EventUpdateInput {
+  name?: string
+  date?: string
+  venue_id?: string
+  /** Si se envía, reemplaza el lineup del evento (borra anteriores e inserta estos). */
+  artist_ids?: string[]
 }

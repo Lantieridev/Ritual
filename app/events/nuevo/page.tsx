@@ -1,34 +1,25 @@
-import Link from 'next/link'
-import { getVenues } from '@/src/lib/events'
+import { getVenues } from '@/src/lib/venues'
+import { getArtists } from '@/src/lib/artists'
+import { routes } from '@/src/lib/routes'
 import { EventForm } from '@/src/components/events'
+import { PageShell } from '@/src/components/layout/PageShell'
 import { createEvent } from '../actions'
 
 /**
- * Página para agregar un recital manualmente.
- * Server Component: obtiene sedes y pasa la Server Action al formulario (Client).
+ * Página para agregar un recital manualmente (incl. lineup).
+ * Server Component: obtiene sedes y artistas; el form llama a createEvent.
  */
 export default async function NewEventPage() {
-  const venues = await getVenues()
+  const [venues, artists] = await Promise.all([getVenues(), getArtists()])
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white p-6 md:p-8 font-sans">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 text-zinc-400 hover:text-yellow-500 mb-8 transition-colors"
-      >
-        ← Volver al listado
-      </Link>
-
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold text-yellow-500 tracking-tighter">
-          Nuevo recital
-        </h1>
-        <p className="text-zinc-400 mt-2">
-          Cargá los datos del recital. El lineup de artistas se podrá agregar en una próxima versión.
-        </p>
-      </header>
-
-      <EventForm venues={venues} createEvent={createEvent} />
-    </main>
+    <PageShell
+      backHref={routes.home}
+      backLabel="← Volver al listado"
+      title="Nuevo recital"
+      description="Cargá datos y elegí los artistas del lineup."
+    >
+      <EventForm venues={venues} artists={artists} createEvent={createEvent} />
+    </PageShell>
   )
 }

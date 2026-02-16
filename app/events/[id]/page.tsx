@@ -1,7 +1,10 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getEventById } from '@/src/lib/events'
-import { Card, Button } from '@/src/components/ui'
+import { routes } from '@/src/lib/routes'
+import { Card, LinkButton } from '@/src/components/ui'
+import { DeleteEventButton } from '@/src/components/events'
+import { deleteEvent } from '../actions'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -25,12 +28,17 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white p-6 md:p-8 font-sans">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 text-zinc-400 hover:text-yellow-500 mb-8 transition-colors"
-      >
-        ← Volver al listado
-      </Link>
+      <div className="flex flex-wrap items-center gap-4 mb-8">
+        <Link
+          href={routes.home}
+          className="inline-flex items-center gap-2 text-zinc-400 hover:text-yellow-500 transition-colors"
+        >
+          ← Volver al listado
+        </Link>
+        <LinkButton href={routes.events.edit(event.id)} variant="secondary" className="px-4 py-2 text-sm">
+          Editar
+        </LinkButton>
+      </div>
 
       <article>
         <header className="mb-8">
@@ -78,6 +86,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 </ul>
               </div>
             )}
+
+            <div className="pt-6 border-t border-white/10">
+              <p className="text-sm text-zinc-400 uppercase tracking-wider mb-2">Acciones</p>
+              <DeleteEventButton event={event} deleteEvent={deleteEvent} />
+            </div>
           </div>
         </Card>
       </article>
