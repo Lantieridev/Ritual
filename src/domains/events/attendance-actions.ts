@@ -1,8 +1,8 @@
 'use server'
 
-import { createClient } from '@/src/core/lib/supabase-server'
+import { supabase } from '@/src/core/lib/supabase'
 import { validateUUID, validateRating, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
-import { getCurrentUserId } from '@/src/domains/auth/data'
+import { getDevUserId } from '@/src/core/lib/env'
 
 export type AttendanceStatus = 'interested' | 'going' | 'went'
 
@@ -23,10 +23,7 @@ export async function getOrCreateAttendance(
     const idErr = validateUUID(eventId, 'Evento')
     if (idErr) return null
 
-    const supabase = await createClient()
-    const userId = await getCurrentUserId()
-
-    if (!userId) return null
+    const userId = getDevUserId()
 
     const { data: existing } = await supabase
         .from('attendance')
@@ -62,10 +59,7 @@ export async function setAttendanceStatus(
 
     if (!isValidStatus(status)) return { error: 'Estado de asistencia inválido.' }
 
-    const supabase = await createClient()
-    const userId = await getCurrentUserId()
-
-    if (!userId) return { error: 'Debes iniciar sesión para marcar asistencia.' }
+    const userId = getDevUserId()
 
     const { data: existing } = await supabase
         .from('attendance')
@@ -115,9 +109,7 @@ export async function saveMemory(
         : undefined
 
     const attendance = await getOrCreateAttendance(eventId)
-    if (!attendance) return { error: 'No se pudo obtener el registro de asistencia. ¿Iniciaste sesión?' }
-
-    const supabase = await createClient()
+    if (!attendance) return { error: 'No se pudo obtener el registro de asistencia.' }
 
     const { data: existing } = await supabase
         .from('memories')

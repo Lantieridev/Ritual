@@ -1,6 +1,6 @@
-import { createClient } from '@/src/core/lib/supabase-server'
+import { supabase } from '@/src/core/lib/supabase'
 import type { EventWithRelations } from '@/src/core/types'
-import { getCurrentUserId } from '@/src/domains/auth/data'
+import { getDevUserId } from '@/src/core/lib/env'
 
 const EVENTS_SELECT = `
   *,
@@ -34,7 +34,6 @@ export interface EventWithAttendance extends EventWithRelations {
 }
 
 export async function getEvents(): Promise<EventWithRelations[]> {
-  const supabase = await createClient()
   const { data, error } = await supabase
     .from('events')
     .select(EVENTS_SELECT)
@@ -52,9 +51,6 @@ export async function getEvents(): Promise<EventWithRelations[]> {
  * Permite filtrar y mostrar badges de estado en el home.
  */
 export async function getEventsWithAttendance(): Promise<EventWithAttendance[]> {
-  const supabase = await createClient()
-  const currentUserId = await getCurrentUserId()
-
   const { data, error } = await supabase
     .from('events')
     .select(EVENTS_WITH_ATTENDANCE_SELECT)
@@ -69,14 +65,13 @@ export async function getEventsWithAttendance(): Promise<EventWithAttendance[]> 
   const events = (data ?? []) as EventWithAttendance[]
   return events.map((ev) => ({
     ...ev,
-    attendance: (ev.attendance ?? []).filter((a) => a.user_id === currentUserId),
+    attendance: (ev.attendance ?? []).filter((a) => a.user_id === getDevUserId()),
   }))
 }
 
 export async function getEventById(
   id: string
 ): Promise<EventWithRelations | null> {
-  const supabase = await createClient()
   const { data, error } = await supabase
     .from('events')
     .select(EVENTS_SELECT)

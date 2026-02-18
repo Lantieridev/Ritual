@@ -6,6 +6,7 @@ import { routes } from '@/src/core/lib/routes'
 import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
 import { supabase } from '@/src/core/lib/supabase'
 import { getTicketmasterEventsByArtist, isTicketmasterConfigured, normalizeTicketmasterEvent } from '@/src/core/lib/ticketmaster'
+import { EmptyState } from '@/src/core/components/ui/EmptyState'
 
 import { searchSpotifyArtist, getBestSpotifyImage, isSpotifyConfigured } from '@/src/core/lib/spotify'
 
@@ -17,6 +18,8 @@ export const metadata: Metadata = {
 export default async function WishlistPage() {
     const artistIds = await getWishlistArtistIds()
 
+    // ...
+
     if (artistIds.length === 0) {
         return (
             <PageShell
@@ -25,19 +28,12 @@ export default async function WishlistPage() {
                 title="Wishlist"
                 description="Artistas que seguís."
             >
-                <div className="flex flex-col items-center gap-4 py-16 text-center">
-                    <p className="text-5xl">☆</p>
-                    <p className="text-zinc-500 max-w-sm">
-                        No seguís ningún artista todavía. Entrá al perfil de un artista y tocá{' '}
-                        <strong className="text-zinc-400">Seguir</strong>.
-                    </p>
-                    <Link
-                        href={routes.artists.list}
-                        className="text-sm text-zinc-400 hover:text-white transition-colors underline underline-offset-4"
-                    >
-                        Ver artistas
-                    </Link>
-                </div>
+                <EmptyState
+                    title="Tu wishlist está vacía"
+                    description="Seguí a tus artistas favoritos para ver sus próximos shows acá."
+                    action={{ label: "Explorar Artistas", href: routes.artists.list }}
+                    icon={<span className="text-3xl">☆</span>}
+                />
             </PageShell>
         )
     }

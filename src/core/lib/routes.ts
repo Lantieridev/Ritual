@@ -44,6 +44,8 @@ export const routes = {
     detail: (id: string) => `/festivals/${id}` as const,
   },
 
-  // Reservado para cuando exista auth:
-  // profile: '/perfil',
+  // Auth
+  login: '/login',
+  signup: '/signup',
+  profile: '/profile',
 } as const

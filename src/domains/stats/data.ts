@@ -1,5 +1,5 @@
-import { createClient } from '@/src/core/lib/supabase-server'
-import { getCurrentUserId } from '@/src/domains/auth/data'
+import { supabase } from '@/src/core/lib/supabase'
+import { getDevUserId } from '@/src/core/lib/env'
 
 export interface StatsData {
     totalShows: number
@@ -31,9 +31,6 @@ export interface StatsData {
  * Combina eventos, attendance y memories en una sola query eficiente.
  */
 export async function getPersonalStats(): Promise<StatsData> {
-    const supabase = await createClient()
-    const currentUserId = await getCurrentUserId()
-
     // Traer todos los eventos con venue, lineup, attendance y memories
     const { data: events, error } = await supabase
         .from('events')
@@ -58,7 +55,7 @@ export async function getPersonalStats(): Promise<StatsData> {
     // Filtrar attendance del usuario actual
     const eventsWithMyAttendance = events.map((ev: any) => ({
         ...ev,
-        myAttendance: (ev.attendance ?? []).find((a: any) => a.user_id === currentUserId) ?? null,
+        myAttendance: (ev.attendance ?? []).find((a: any) => a.user_id === getDevUserId()) ?? null,
     }))
 
     const totalShows = events.length

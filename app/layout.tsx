@@ -18,17 +18,22 @@ export const metadata: Metadata = {
   description: "Plataforma de gestión de recitales: itinerarios, giras y memoria en vivo.",
 };
 
-export default function RootLayout({
+import { createClient } from "@/src/core/lib/supabase/server";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <html lang="es" className="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-neutral-950`}
       >
-        <Navbar />
+        <Navbar user={user} />
         {children}
         <Footer />
       </body>

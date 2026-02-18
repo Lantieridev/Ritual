@@ -4,6 +4,7 @@ import { getEventsWithAttendance } from '@/src/domains/events/data'
 import { routes } from '@/src/core/lib/routes'
 import { LinkButton } from '@/src/core/components/ui'
 import { Hero } from '@/src/core/components/home'
+import { EmptyState } from '@/src/core/components/ui/EmptyState'
 
 export const metadata: Metadata = {
   title: 'RITUAL — Tu historial de recitales',
@@ -140,30 +141,27 @@ export default async function HomePage({ searchParams }: PageProps) {
 
         {/* Empty state */}
         {events.length === 0 && (
-          <div className="flex flex-col items-center gap-5 py-24 text-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.03]">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-9 w-9 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
+          <EmptyState
+            title={filter === 'all' ? 'Todavía no hay recitales' : 'No hay recitales con este filtro'}
+            description={
+              filter === 'all'
+                ? 'Buscá shows en Ticketmaster o Setlist.fm, o cargá uno a mano.'
+                : filter === 'went'
+                  ? 'Marcá shows como "Fui" en el detalle del evento.'
+                  : filter === 'going'
+                    ? 'Marcá shows futuros como "Voy a ir" para verlos acá.'
+                    : filter === 'interested'
+                      ? 'Marcá shows futuros como "Me interesa" para seguirlos.'
+                      : 'Probá con otro filtro o agregá más recitales.'
+            }
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-9 w-9 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
               </svg>
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-zinc-300 mb-1">
-                {filter === 'all' ? 'Todavía no hay recitales' : 'No hay recitales con este filtro'}
-              </p>
-              <p className="text-sm text-zinc-600 max-w-xs">
-                {filter === 'all'
-                  ? 'Buscá shows en Ticketmaster o Setlist.fm, o cargá uno a mano.'
-                  : filter === 'went'
-                    ? 'Marcá shows como "Fui" en el detalle del evento.'
-                    : filter === 'going'
-                      ? 'Marcá shows futuros como "Voy a ir" para verlos acá.'
-                      : filter === 'interested'
-                        ? 'Marcá shows futuros como "Me interesa" para seguirlos.'
-                        : 'Probá con otro filtro o agregá más recitales.'}
-              </p>
-            </div>
+            }
+          >
             {filter === 'all' && (
-              <div className="flex flex-wrap gap-3 justify-center">
+              <div className="flex flex-wrap gap-3 justify-center mt-6">
                 <LinkButton href={routes.events.search} variant="primary" className="px-5 py-2.5 text-sm">
                   Buscar shows
                 </LinkButton>
@@ -176,12 +174,12 @@ export default async function HomePage({ searchParams }: PageProps) {
               <Link
                 href="/"
                 scroll={false}
-                className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-4"
+                className="mt-6 block text-sm text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-4"
               >
                 Ver todos los recitales
               </Link>
             )}
-          </div>
+          </EmptyState>
         )}
 
         {/* Timeline agrupado por año */}

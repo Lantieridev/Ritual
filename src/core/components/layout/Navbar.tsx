@@ -4,14 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { routes } from '@/src/core/lib/routes'
 
+import { ProfileDropdown } from './ProfileDropdown'
+
 const NAV_LINKS = [
     { label: 'Inicio', href: routes.home },
     { label: 'Buscar', href: routes.events.search },
-    { label: 'Artistas', href: routes.artists.list },
     { label: 'Festivales', href: routes.festivals.list },
-    { label: 'Sedes', href: routes.venues.list },
-    { label: 'Wishlist', href: routes.wishlist },
-    { label: 'Gastos', href: routes.expenses.list },
     { label: 'Stats', href: routes.stats },
 ]
 
@@ -19,7 +17,13 @@ const NAV_LINKS = [
  * Navbar global sticky con efecto backdrop-blur y active link indicator.
  * Se renderiza en app/layout.tsx y persiste en toda la navegación.
  */
-export function Navbar() {
+import type { User } from '@supabase/supabase-js'
+
+interface NavbarProps {
+    user?: User | null
+}
+
+export function Navbar({ user }: NavbarProps) {
     const pathname = usePathname()
 
     function isActive(href: string) {
@@ -40,7 +44,7 @@ export function Navbar() {
 
                 {/* Nav links — scrollable on mobile with fade */}
                 <nav className="relative flex-1 overflow-hidden">
-                    <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none pr-8">
+                    <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pr-8">
                         {NAV_LINKS.map(({ label, href }) => {
                             const active = isActive(href)
                             return (
@@ -63,6 +67,20 @@ export function Navbar() {
                     {/* Fade right edge for mobile overflow */}
                     <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-neutral-950/80 to-transparent pointer-events-none" />
                 </nav>
+
+                {/* Auth Section */}
+                <div className="shrink-0 flex items-center gap-4">
+                    {user ? (
+                        <ProfileDropdown user={user} />
+                    ) : (
+                        <Link
+                            href={routes.login}
+                            className="relative px-4 py-2 text-sm rounded-full bg-white text-neutral-950 hover:bg-zinc-200 transition-colors font-medium"
+                        >
+                            Ingresar
+                        </Link>
+                    )}
+                </div>
             </div>
         </header>
     )

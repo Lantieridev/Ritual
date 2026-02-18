@@ -1,14 +1,25 @@
-/**
- * Loading global: se muestra mientras se carga cualquier página.
- * Evita pantalla en blanco en navegación.
- */
+import { Skeleton } from "@/src/core/components/ui/Skeleton"
+
 export default function Loading() {
   return (
-    <main className="min-h-screen bg-neutral-950 text-white p-6 md:p-8 font-sans flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin" aria-hidden />
-        <p className="text-zinc-500 text-sm">Cargando...</p>
+    <div className="max-w-7xl mx-auto px-6 md:px-8 pt-24 pb-16 space-y-8 animate-in fade-in duration-500">
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-48 bg-white/10" />
+        <Skeleton className="h-4 w-96 bg-white/5" />
       </div>
-    </main>
+
+      {/* Grid layout similar to events/festivals */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <div key={i} className="space-y-3 rounded-xl border border-white/5 p-4 bg-white/[0.02]">
+            <Skeleton className="h-48 w-full rounded-lg bg-white/5" />
+            <div className="space-y-2 pt-2">
+              <Skeleton className="h-5 w-3/4 bg-white/10" />
+              <Skeleton className="h-4 w-1/2 bg-white/5" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }

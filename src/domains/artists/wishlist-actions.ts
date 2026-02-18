@@ -1,19 +1,16 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/src/core/lib/supabase-server'
+import { supabase } from '@/src/core/lib/supabase'
 import { routes } from '@/src/core/lib/routes'
 import { validateUUID, sanitizeError } from '@/src/core/lib/validation'
-import { getCurrentUserId } from '@/src/domains/auth/data'
+import { getDevUserId } from '@/src/core/lib/env'
 
 /**
  * Obtiene los IDs de artistas en la wishlist del usuario actual.
  */
 export async function getWishlistArtistIds(): Promise<string[]> {
-    const supabase = await createClient()
-    const userId = await getCurrentUserId()
-    if (!userId) return []
-
+    const userId = getDevUserId()
     const { data } = await supabase
         .from('wishlist')
         .select('artist_id')
@@ -31,10 +28,7 @@ export async function toggleWishlist(
     const idErr = validateUUID(artistId, 'Artista')
     if (idErr) return { inWishlist: false, error: idErr }
 
-    const supabase = await createClient()
-    const userId = await getCurrentUserId()
-
-    if (!userId) return { inWishlist: false, error: 'Debes iniciar sesión para seguir artistas.' }
+    const userId = getDevUserId()
 
     // Verificar si ya existe
     const { data: existing } = await supabase

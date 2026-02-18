@@ -16,6 +16,7 @@ import {
   isSetlistFmConfigured,
   getSetlistsByArtist,
 } from '@/src/core/lib/setlistfm'
+import { EmptyState } from '@/src/core/components/ui/EmptyState'
 
 export const metadata: Metadata = {
   title: 'Buscar recitales | RITUAL',
@@ -111,8 +112,8 @@ export default async function BuscarPage({ searchParams }: PageProps) {
         <a
           href={`/buscar?${new URLSearchParams({ ...(params.artist ? { artist: params.artist } : {}), ...(params.location ? { location: params.location } : {}), source: 'future' }).toString()}`}
           className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${source === 'future'
-              ? 'border-white text-white'
-              : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            ? 'border-white text-white'
+            : 'border-transparent text-zinc-500 hover:text-zinc-300'
             }`}
         >
           Shows futuros
@@ -128,8 +129,8 @@ export default async function BuscarPage({ searchParams }: PageProps) {
         <a
           href={`/buscar?${new URLSearchParams({ ...(params.artist ? { artist: params.artist } : {}), source: 'past' }).toString()}`}
           className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${source === 'past'
-              ? 'border-white text-white'
-              : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            ? 'border-white text-white'
+            : 'border-transparent text-zinc-500 hover:text-zinc-300'
             }`}
         >
           Historial pasado
@@ -188,17 +189,21 @@ export default async function BuscarPage({ searchParams }: PageProps) {
 
       {/* Cuando Ticketmaster está configurado pero no hay query todavía */}
       {!hasQuery && source === 'future' && tmConfigured && (
-        <div className="mt-8 text-center py-12 border border-dashed border-white/10 rounded-xl">
-          <p className="text-zinc-500 text-sm">Escribí el nombre de un artista o ciudad para buscar shows futuros.</p>
-          <p className="text-zinc-700 text-xs mt-2">Los resultados vienen de Ticketmaster — puede que no haya shows en Argentina para todos los artistas.</p>
-        </div>
+        <EmptyState
+          title="Buscá tu música"
+          description="Escribí el nombre de un artista o ciudad para buscar shows futuros. Los resultados vienen de Ticketmaster."
+          icon={<span className="text-4xl grayscale">🔍</span>}
+          className="border-dashed mt-8"
+        />
       )}
 
       {!hasQuery && source === 'past' && slConfigured && (
-        <div className="mt-8 text-center py-12 border border-dashed border-white/10 rounded-xl">
-          <p className="text-zinc-500 text-sm">Escribí el nombre exacto del artista para ver su historial de shows.</p>
-          <p className="text-zinc-700 text-xs mt-2">Los datos vienen de Setlist.fm — funciona mejor con nombres en inglés.</p>
-        </div>
+        <EmptyState
+          title="Historial de shows"
+          description="Escribí el nombre exacto del artista para ver su historial de shows (Setlist.fm)."
+          icon={<span className="text-4xl grayscale">📜</span>}
+          className="border-dashed mt-8"
+        />
       )}
     </PageShell>
   )

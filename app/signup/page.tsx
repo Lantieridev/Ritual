@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
-import { LoginForm } from './login-form'
+import { SignupForm } from './signup-form'
 
-export default async function LoginPage() {
+export default async function SignupPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -13,18 +13,18 @@ export default async function LoginPage() {
     return (
         <main className="min-h-screen grid lg:grid-cols-2">
             {/* Visual Side */}
-            <div className="hidden lg:block relative bg-neutral-900 overflow-hidden">
-                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-overlay" />
+            <div className="hidden lg:block relative bg-neutral-900 overflow-hidden order-last">
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1533174072545-e8d4aa97edf9?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-overlay" />
                 <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent" />
 
-                <div className="absolute bottom-20 left-20 p-8 border-l border-white/20 backdrop-blur-sm bg-black/20 text-white max-w-md">
+                <div className="absolute bottom-20 right-20 p-8 border-r border-white/20 backdrop-blur-sm bg-black/20 text-white max-w-md text-right">
                     <p className="font-mono text-xs mb-4 text-emerald-500 tracking-widest uppercase">
-                        RITUAL SYSTEM v1.0
+                        NUEVO USUARIO
                     </p>
                     <blockquote className="text-xl font-light leading-relaxed mb-6">
-                        &quot;La música es el único ritual que nos queda.&quot;
+                        &quot;Cada entrada es una historia que merece ser contada.&quot;
                     </blockquote>
-                    <p className="text-sm text-zinc-400">Archivando memorias sonoras.</p>
+                    <p className="text-sm text-zinc-400">Empezá tu colección hoy.</p>
                 </div>
             </div>
 
@@ -36,13 +36,13 @@ export default async function LoginPage() {
 
                 <div className="w-full max-w-sm space-y-8">
                     <div className="space-y-2 text-center lg:text-left">
-                        <h1 className="text-3xl font-bold tracking-tight">Iniciar Sesión</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Crear Cuenta</h1>
                         <p className="text-zinc-400">
-                            Ingresá a tu archivo personal.
+                            Unite para guardar tus recitales.
                         </p>
                     </div>
 
-                    <LoginForm />
+                    <SignupForm />
                 </div>
             </div>
         </main>
