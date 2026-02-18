@@ -5,11 +5,13 @@ import type { Metadata } from 'next'
 import { getEventById } from '@/src/domains/events/data'
 import { deleteEvent } from '@/src/domains/events/actions'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
+import { getEventPhotos } from '@/src/domains/events/photo-actions'
 import { routes } from '@/src/core/lib/routes'
 import { LinkButton } from '@/src/core/components/ui'
 import { DeleteEventButton } from '@/src/domains/events/components'
 import { AttendanceStatusButtons } from '@/src/domains/events/components/AttendanceStatusButtons'
 import { RatingAndReviewForm } from '@/src/domains/events/components/RatingAndReviewForm'
+import { PhotoGallery } from '@/src/domains/events/components/PhotoGallery'
 import { searchSpotifyArtist, getBestSpotifyImage, isSpotifyConfigured } from '@/src/core/lib/spotify'
 
 interface EventDetailPageProps {
@@ -31,9 +33,10 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = await params
-  const [event, attendance] = await Promise.all([
+  const [event, attendance, photos] = await Promise.all([
     getEventById(id),
     getAttendanceForEvent(id),
+    getEventPhotos(id),
   ])
 
   if (!event) notFound()
@@ -75,7 +78,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-950" />
         )}
-        {/* Gradiente overlay oscuro */}
         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />
 
         {/* Nav sobre la imagen */}
@@ -117,6 +119,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <AttendanceStatusButtons
             eventId={event.id}
             currentStatus={attendance?.status ?? null}
+            isPast={isPast}
           />
         </section>
 
@@ -156,10 +159,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </section>
         )}
 
-        {/* Rating y reseña — solo si ya pasó o si tiene status "went" */}
-        {(isPast || attendance?.status === 'went') && (
+        {/* Galería de fotos */}
+        <section className="border-t border-white/[0.06] pt-8">
+          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-4">
+            Fotos {photos.length > 0 && <span className="text-zinc-700">({photos.length})</span>}
+          </p>
+          <PhotoGallery eventId={event.id} initialPhotos={photos} />
+        </section>
+
+        {/* Rating, reseña y notas — visible cuando el status es "went" */}
+        {attendance?.status === 'went' && (
           <section className="border-t border-white/[0.06] pt-8">
             <p className="text-xs uppercase tracking-widest text-zinc-500 mb-4">Tu memoria del show</p>
+
+            {/* Mostrar rating guardado */}
             {attendance?.memory?.rating && (
               <div className="flex gap-0.5 mb-4">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -172,15 +185,29 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 ))}
               </div>
             )}
+
+            {/* Mostrar reseña guardada */}
             {attendance?.memory?.review && (
-              <p className="text-zinc-300 text-sm italic mb-6 border-l-2 border-white/10 pl-4">
-                "{attendance.memory.review}"
+              <p className="text-zinc-300 text-sm italic mb-4 border-l-2 border-white/10 pl-4">
+                &quot;{attendance.memory.review}&quot;
               </p>
             )}
+
+            {/* Mostrar notas guardadas */}
+            {attendance?.memory?.notes && (
+              <div className="mb-6 rounded-lg bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-2">Notas / Setlist</p>
+                <pre className="text-sm text-zinc-400 whitespace-pre-wrap font-mono leading-relaxed">
+                  {attendance.memory.notes}
+                </pre>
+              </div>
+            )}
+
             <RatingAndReviewForm
               eventId={event.id}
               initialRating={attendance?.memory?.rating}
               initialReview={attendance?.memory?.review}
+              initialNotes={attendance?.memory?.notes}
             />
           </section>
         )}

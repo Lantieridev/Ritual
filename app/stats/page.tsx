@@ -52,7 +52,7 @@ export default async function StatsPage() {
                             {[
                                 { label: 'Shows en total', value: stats.totalShows, sub: null },
                                 { label: 'Fui', value: stats.showsAttended, sub: null },
-                                { label: 'Próximos', value: stats.showsUpcoming, sub: null },
+                                { label: 'Voy a ir', value: stats.showsGoing, sub: null },
                                 { label: 'Me interesa', value: stats.showsInterested, sub: null },
                             ].map(({ label, value, sub }) => (
                                 <div

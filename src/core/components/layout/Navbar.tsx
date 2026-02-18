@@ -6,6 +6,8 @@ const NAV_LINKS = [
     { label: 'Buscar', href: routes.events.search },
     { label: 'Artistas', href: routes.artists.list },
     { label: 'Sedes', href: routes.venues.list },
+    { label: 'Wishlist', href: routes.wishlist },
+    { label: 'Gastos', href: routes.expenses.list },
     { label: 'Stats', href: routes.stats },
 ]
 

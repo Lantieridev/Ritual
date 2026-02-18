@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: 'Registrá, recordá y revivé cada show que fuiste. Tu archivo musical personal.',
 }
 
-type Filter = 'all' | 'upcoming' | 'past' | 'interested' | 'going'
+type Filter = 'all' | 'upcoming' | 'past' | 'interested' | 'going' | 'went'
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   interested: { label: 'Me interesa', className: 'bg-zinc-800 text-zinc-400 border-zinc-700' },
@@ -38,8 +38,11 @@ export default async function HomePage({ searchParams }: PageProps) {
     switch (filter) {
       case 'upcoming': return !isPast
       case 'past': return isPast
-      case 'interested': return status === 'interested'
-      case 'going': return status === 'going'
+      // "Me interesa" y "Voy" solo tienen sentido para shows futuros
+      case 'interested': return !isPast && status === 'interested'
+      case 'going': return !isPast && status === 'going'
+      // "Fui" solo para shows pasados con ese status
+      case 'went': return status === 'went'
       default: return true
     }
   })
@@ -58,6 +61,7 @@ export default async function HomePage({ searchParams }: PageProps) {
     { value: 'all', label: 'Todos' },
     { value: 'upcoming', label: 'Próximos' },
     { value: 'past', label: 'Pasados' },
+    { value: 'went', label: 'Fui ✓' },
     { value: 'interested', label: 'Me interesa' },
     { value: 'going', label: 'Voy' },
   ]

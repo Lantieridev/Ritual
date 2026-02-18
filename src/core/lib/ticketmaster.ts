@@ -4,9 +4,10 @@
  * Solo se usa en servidor. Requiere TICKETMASTER_API_KEY en .env.local.
  * Docs: https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/
  *
- * NOTA DE SEGURIDAD: Este archivo exporta tipos que son importados por Client Components.
- * La API key NUNCA se expone al cliente: las variables sin NEXT_PUBLIC_ no se incluyen
- * en el bundle del cliente, y las funciones async solo se llaman desde Server Components.
+ * NOTA: La Discovery API v2 requiere la API key como query param `apikey`.
+ * No acepta autenticación por header — es una limitación de su API pública.
+ * La key no se expone al cliente porque este archivo solo se ejecuta en el servidor
+ * (las variables sin NEXT_PUBLIC_ no se incluyen en el bundle del cliente).
  */
 import { getTicketmasterApiKey } from '@/src/core/lib/env'
 
@@ -71,8 +72,9 @@ export async function getTicketmasterEventsByArtist(
         return { events: [], error: 'TICKETMASTER_API_KEY no configurado.' }
     }
 
-    // API key sent as header (not query param) to avoid exposure in server/proxy logs
+    // Ticketmaster Discovery API v2 requires apikey as a query parameter
     const params = new URLSearchParams({
+        apikey: apiKey,
         keyword: artistName.trim(),
         countryCode,
         sort: 'date,asc',
@@ -82,7 +84,6 @@ export async function getTicketmasterEventsByArtist(
 
     try {
         const res = await fetch(`${BASE}/events.json?${params}`, {
-            headers: { 'X-Api-Key': apiKey },
             next: { revalidate: 300 },
         })
         if (res.status === 401) {
@@ -112,7 +113,9 @@ export async function getTicketmasterEventsByLocation(
         return { events: [], error: 'TICKETMASTER_API_KEY no configurado.' }
     }
 
+    // Ticketmaster Discovery API v2 requires apikey as a query parameter
     const params = new URLSearchParams({
+        apikey: apiKey,
         city: city.trim(),
         countryCode,
         sort: 'date,asc',
@@ -122,7 +125,6 @@ export async function getTicketmasterEventsByLocation(
 
     try {
         const res = await fetch(`${BASE}/events.json?${params}`, {
-            headers: { 'X-Api-Key': apiKey },
             next: { revalidate: 300 },
         })
         if (res.status === 401) {
@@ -141,8 +143,7 @@ export async function getTicketmasterEventsByLocation(
 }
 
 /**
- * Normaliza un evento de Ticketmaster al formato BandsintownEvent
- * para mantener compatibilidad con el componente BandsintownResults existente.
+ * Normaliza un evento de Ticketmaster al formato interno.
  */
 export function normalizeTicketmasterEvent(ev: TicketmasterEvent) {
     const venue = ev._embedded?.venues?.[0]

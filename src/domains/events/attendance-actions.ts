@@ -1,8 +1,6 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { supabase } from '@/src/core/lib/supabase'
-import { routes } from '@/src/core/lib/routes'
 import { validateUUID, validateRating, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { getDevUserId } from '@/src/core/lib/env'
 
@@ -10,6 +8,7 @@ export type AttendanceStatus = 'interested' | 'going' | 'went'
 
 const VALID_STATUSES: AttendanceStatus[] = ['interested', 'going', 'went']
 const MAX_REVIEW_LENGTH = 2000
+const MAX_NOTES_LENGTH = 5000
 
 function isValidStatus(s: unknown): s is AttendanceStatus {
     return typeof s === 'string' && VALID_STATUSES.includes(s as AttendanceStatus)
@@ -17,7 +16,6 @@ function isValidStatus(s: unknown): s is AttendanceStatus {
 
 /**
  * Obtiene o crea el registro de attendance para un evento.
- * Devuelve el id del attendance y el status actual.
  */
 export async function getOrCreateAttendance(
     eventId: string
@@ -87,24 +85,27 @@ export async function setAttendanceStatus(
 }
 
 /**
- * Guarda o actualiza la memoria (rating + reseña) de un evento.
+ * Guarda o actualiza la memoria (rating + reseña + notas) de un evento.
+ * No redirige — devuelve {} en éxito para que el cliente muestre "Guardado".
  */
 export async function saveMemory(
     eventId: string,
-    data: { rating?: number; review?: string }
+    data: { rating?: number; review?: string; notes?: string }
 ): Promise<{ error?: string }> {
     const idErr = validateUUID(eventId, 'Evento')
     if (idErr) return { error: idErr }
 
-    // Validate rating range
     if (data.rating !== undefined) {
         const ratingErr = validateRating(data.rating)
         if (ratingErr) return { error: ratingErr }
     }
 
-    // Sanitize review length
     const review = data.review !== undefined
         ? sanitizeText(data.review, MAX_REVIEW_LENGTH)
+        : undefined
+
+    const notes = data.notes !== undefined
+        ? sanitizeText(data.notes, MAX_NOTES_LENGTH)
         : undefined
 
     const attendance = await getOrCreateAttendance(eventId)
@@ -116,9 +117,10 @@ export async function saveMemory(
         .eq('attendance_id', attendance.id)
         .single()
 
-    const payload: { rating?: number; review?: string | null } = {}
+    const payload: { rating?: number; review?: string | null; notes?: string | null } = {}
     if (data.rating !== undefined) payload.rating = data.rating
     if (review !== undefined) payload.review = review
+    if (notes !== undefined) payload.notes = notes
 
     if (existing) {
         const { error } = await supabase
@@ -133,5 +135,5 @@ export async function saveMemory(
         if (error) return { error: sanitizeError(error) }
     }
 
-    redirect(routes.events.detail(eventId))
+    return {}
 }

@@ -1,6 +1,13 @@
 import { supabase } from '@/src/core/lib/supabase'
 import type { Expense } from '@/src/core/types'
 
+export interface ExpenseSummary {
+  total: number
+  byCategory: Record<string, number>
+  byYear: Record<string, number>
+  count: number
+}
+
 /**
  * Lista los gastos del usuario, ordenados por fecha descendente.
  * RLS filtra por user_id = auth.uid(); si no hay sesión devuelve [].
@@ -33,4 +40,34 @@ export async function getExpenseById(
     .single()
   if (error || !data) return null
   return data as Expense
+}
+
+/**
+ * Calcula el resumen de gastos: total general, por categoría y por año.
+ */
+export async function getExpensesSummary(userId: string | null): Promise<ExpenseSummary> {
+  const empty: ExpenseSummary = { total: 0, byCategory: {}, byYear: {}, count: 0 }
+  if (!userId) return empty
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('amount, category, date')
+    .eq('user_id', userId)
+
+  if (error || !data) return empty
+
+  const result: ExpenseSummary = { total: 0, byCategory: {}, byYear: {}, count: data.length }
+
+  for (const ex of data) {
+    const amount = Number(ex.amount)
+    result.total += amount
+
+    const cat = ex.category ?? 'Otro'
+    result.byCategory[cat] = (result.byCategory[cat] ?? 0) + amount
+
+    const year = new Date(ex.date).getFullYear().toString()
+    result.byYear[year] = (result.byYear[year] ?? 0) + amount
+  }
+
+  return result
 }

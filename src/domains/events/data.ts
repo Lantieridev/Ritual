@@ -1,7 +1,6 @@
 import { supabase } from '@/src/core/lib/supabase'
 import type { EventWithRelations } from '@/src/core/types'
-
-const DEV_USER_ID = '00000000-0000-0000-0000-000000000001'
+import { getDevUserId } from '@/src/core/lib/env'
 
 const EVENTS_SELECT = `
   *,
@@ -38,7 +37,7 @@ export async function getEvents(): Promise<EventWithRelations[]> {
   const { data, error } = await supabase
     .from('events')
     .select(EVENTS_SELECT)
-    .order('date', { ascending: true })
+    .order('date', { ascending: false })
 
   if (error) {
     console.error('Error cargando eventos:', error)
@@ -55,18 +54,18 @@ export async function getEventsWithAttendance(): Promise<EventWithAttendance[]> 
   const { data, error } = await supabase
     .from('events')
     .select(EVENTS_WITH_ATTENDANCE_SELECT)
-    .order('date', { ascending: true })
+    .order('date', { ascending: false })
 
   if (error) {
     console.error('Error cargando eventos con attendance:', error)
     return []
   }
 
-  // Filtrar attendance al DEV_USER_ID
+  // Filtrar attendance al usuario actual
   const events = (data ?? []) as EventWithAttendance[]
   return events.map((ev) => ({
     ...ev,
-    attendance: (ev.attendance ?? []).filter((a) => a.user_id === DEV_USER_ID),
+    attendance: (ev.attendance ?? []).filter((a) => a.user_id === getDevUserId()),
   }))
 }
 

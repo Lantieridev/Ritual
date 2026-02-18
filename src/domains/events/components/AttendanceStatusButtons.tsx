@@ -7,25 +7,34 @@ import type { AttendanceStatus } from '@/src/domains/events/attendance-actions'
 interface StatusButtonProps {
     eventId: string
     currentStatus: AttendanceStatus | null
+    isPast: boolean
 }
 
-const STATUS_OPTIONS: { value: AttendanceStatus; label: string; emoji: string }[] = [
-    { value: 'interested', label: 'Me interesa', emoji: '👀' },
-    { value: 'going', label: 'Voy a ir', emoji: '🎟️' },
+/**
+ * Opciones de asistencia según si el evento ya pasó o no.
+ *
+ * Pasado:   solo "Fui" (no tiene sentido "quiero ir" a algo que ya fue)
+ * Futuro:   "Me interesa" y "Voy a ir" (no "Fui" — todavía no pasó)
+ */
+const PAST_OPTIONS: { value: AttendanceStatus; label: string; emoji: string }[] = [
     { value: 'went', label: 'Fui', emoji: '✅' },
 ]
 
-/**
- * Botones de estado de asistencia: Interesado / Voy / Fui.
- * Actualiza en Supabase con loading state por botón.
- */
-export function AttendanceStatusButtons({ eventId, currentStatus }: StatusButtonProps) {
+const FUTURE_OPTIONS: { value: AttendanceStatus; label: string; emoji: string }[] = [
+    { value: 'interested', label: 'Me interesa', emoji: '👀' },
+    { value: 'going', label: 'Voy a ir', emoji: '🎟️' },
+]
+
+export function AttendanceStatusButtons({ eventId, currentStatus, isPast }: StatusButtonProps) {
     const [activeStatus, setActiveStatus] = useState<AttendanceStatus | null>(currentStatus)
     const [loadingStatus, setLoadingStatus] = useState<AttendanceStatus | null>(null)
     const [, startTransition] = useTransition()
 
+    const options = isPast ? PAST_OPTIONS : FUTURE_OPTIONS
+
     function handleSelect(status: AttendanceStatus) {
         if (loadingStatus) return
+        // Toggle: si ya está activo, deseleccionar (no tiene sentido en este contexto, pero por si acaso)
         setLoadingStatus(status)
         startTransition(async () => {
             const result = await setAttendanceStatus(eventId, status)
@@ -36,7 +45,7 @@ export function AttendanceStatusButtons({ eventId, currentStatus }: StatusButton
 
     return (
         <div className="flex flex-wrap gap-2">
-            {STATUS_OPTIONS.map(({ value, label, emoji }) => {
+            {options.map(({ value, label, emoji }) => {
                 const isActive = activeStatus === value
                 const isLoading = loadingStatus === value
                 return (
@@ -55,6 +64,15 @@ export function AttendanceStatusButtons({ eventId, currentStatus }: StatusButton
                     </button>
                 )
             })}
+
+            {/* Si el status guardado no coincide con las opciones disponibles, mostrar aviso */}
+            {activeStatus && !options.find((o) => o.value === activeStatus) && (
+                <p className="text-xs text-zinc-600 self-center">
+                    {isPast
+                        ? 'Tenías marcado "quiero ir" — ¿finalmente fuiste?'
+                        : 'Tenías marcado "fui" para un show futuro.'}
+                </p>
+            )}
         </div>
     )
 }

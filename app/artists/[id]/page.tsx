@@ -15,6 +15,8 @@ import {
     getBestLastFmImage,
     isLastFmConfigured,
 } from '@/src/core/lib/lastfm'
+import { WishlistButton } from '@/src/domains/artists/components/WishlistButton'
+import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
 
 interface ArtistDetailPageProps {
     params: Promise<{ id: string }>
@@ -36,14 +38,18 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
 
     if (!artist) notFound()
 
-    // Enriquecer con Spotify y Last.fm en paralelo
-    const [spotifyResult, lastfmResult] = await Promise.allSettled([
-        isSpotifyConfigured() ? searchSpotifyArtist(artist.name) : Promise.resolve({ artist: null }),
-        isLastFmConfigured() ? getLastFmArtistInfo(artist.name) : Promise.resolve({ artist: null }),
+    // Enriquecer con Spotify, Last.fm y wishlist en paralelo
+    const [[spotifyResult, lastfmResult], wishlistIds] = await Promise.all([
+        Promise.allSettled([
+            isSpotifyConfigured() ? searchSpotifyArtist(artist.name) : Promise.resolve({ artist: null }),
+            isLastFmConfigured() ? getLastFmArtistInfo(artist.name) : Promise.resolve({ artist: null }),
+        ]),
+        getWishlistArtistIds(),
     ])
 
     const spotifyArtist = spotifyResult.status === 'fulfilled' ? spotifyResult.value.artist : null
     const lastfmArtist = lastfmResult.status === 'fulfilled' ? lastfmResult.value.artist : null
+    const inWishlist = wishlistIds.includes(artist.id)
 
     const heroImage = spotifyArtist
         ? getBestSpotifyImage(spotifyArtist.images)
@@ -109,7 +115,7 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
             {/* Contenido */}
             <div className="max-w-3xl mx-auto px-6 md:px-8 py-10 space-y-10">
 
-                {/* Tags y stats */}
+                {/* Tags, stats y wishlist */}
                 <div className="flex flex-wrap items-center gap-4">
                     {tags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
@@ -128,6 +134,9 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
                             {listeners} oyentes en Last.fm
                         </p>
                     )}
+                    <div className="ml-auto">
+                        <WishlistButton artistId={artist.id} initialInWishlist={inWishlist} />
+                    </div>
                 </div>
 
                 {/* Bio */}

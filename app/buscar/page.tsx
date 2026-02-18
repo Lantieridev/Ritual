@@ -29,11 +29,6 @@ interface PageProps {
   searchParams: Promise<SearchParams>
 }
 
-/**
- * Página de búsqueda multi-fuente:
- * - Ticketmaster: shows futuros y presentes
- * - Setlist.fm: historial de shows pasados con setlists
- */
 export default async function BuscarPage({ searchParams }: PageProps) {
   const params = await searchParams
   const source = params.source ?? 'future'
@@ -42,11 +37,9 @@ export default async function BuscarPage({ searchParams }: PageProps) {
   const tmConfigured = isTicketmasterConfigured()
   const slConfigured = isSetlistFmConfigured()
 
-  // Resultados Ticketmaster (shows futuros)
   let tmEvents: ReturnType<typeof normalizeTicketmasterEvent>[] = []
   let tmError: string | undefined
 
-  // Resultados Setlist.fm (shows pasados)
   let slSetlists: Awaited<ReturnType<typeof getSetlistsByArtist>>['setlists'] = []
   let slError: string | undefined
 
@@ -80,11 +73,37 @@ export default async function BuscarPage({ searchParams }: PageProps) {
         </LinkButton>
       }
     >
+      {/* Aviso cuando ninguna API está configurada */}
       {!anyConfigured && (
-        <p className="rounded-lg border border-zinc-500/30 bg-zinc-500/10 text-zinc-300 px-4 py-3 text-sm mb-6">
-          Configurá al menos una API key en{' '}
-          <code className="bg-white/10 px-1 rounded">.env.local</code> para buscar recitales.
-        </p>
+        <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 px-5 py-4 mb-6 space-y-2">
+          <p className="text-sm font-semibold text-zinc-300">⚙️ APIs no configuradas</p>
+          <p className="text-sm text-zinc-500">
+            Para buscar shows futuros necesitás una{' '}
+            <strong className="text-zinc-400">TICKETMASTER_API_KEY</strong> en{' '}
+            <code className="bg-white/10 px-1 rounded text-xs">.env.local</code>.
+            Para historial pasado, una{' '}
+            <strong className="text-zinc-400">SETLISTFM_API_KEY</strong>.
+          </p>
+          <p className="text-xs text-zinc-600">
+            También podés cargar recitales a mano con el botón de arriba.
+          </p>
+        </div>
+      )}
+
+      {/* Aviso cuando solo Ticketmaster no está configurado y estamos en tab futuro */}
+      {!tmConfigured && slConfigured && source === 'future' && (
+        <div className="rounded-lg border border-zinc-700/40 bg-zinc-800/20 px-4 py-3 mb-4">
+          <p className="text-sm text-zinc-500">
+            🎟️ <strong className="text-zinc-400">TICKETMASTER_API_KEY</strong> no configurada —
+            la búsqueda de shows futuros no está disponible.{' '}
+            <a
+              href="?source=past"
+              className="text-zinc-400 underline underline-offset-2 hover:text-white transition-colors"
+            >
+              Ver historial pasado →
+            </a>
+          </p>
+        </div>
       )}
 
       {/* Tabs: Futuros / Pasados */}
@@ -102,6 +121,9 @@ export default async function BuscarPage({ searchParams }: PageProps) {
               Ticketmaster
             </span>
           )}
+          {!tmConfigured && (
+            <span className="ml-2 text-[10px] text-zinc-700">no disponible</span>
+          )}
         </a>
         <a
           href={`/buscar?${new URLSearchParams({ ...(params.artist ? { artist: params.artist } : {}), source: 'past' }).toString()}`}
@@ -115,6 +137,9 @@ export default async function BuscarPage({ searchParams }: PageProps) {
             <span className="ml-2 text-[10px] uppercase tracking-widest text-zinc-600">
               Setlist.fm
             </span>
+          )}
+          {!slConfigured && (
+            <span className="ml-2 text-[10px] text-zinc-700">no disponible</span>
           )}
         </a>
       </div>
@@ -132,9 +157,14 @@ export default async function BuscarPage({ searchParams }: PageProps) {
 
       {/* Errores */}
       {(tmError || slError) && (
-        <p className="mt-4 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3" role="alert">
-          {tmError || slError}
-        </p>
+        <div className="mt-4 rounded-lg border border-red-400/20 bg-red-400/10 px-4 py-3" role="alert">
+          <p className="text-sm text-red-400">{tmError || slError}</p>
+          {tmError && (
+            <p className="text-xs text-zinc-600 mt-1">
+              Tip: Ticketmaster puede no tener shows para Argentina. Probá buscar sin acento o en inglés.
+            </p>
+          )}
+        </div>
       )}
 
       {/* Aviso: historial solo por artista */}
@@ -148,12 +178,27 @@ export default async function BuscarPage({ searchParams }: PageProps) {
       {hasQuery && !tmError && !slError && (
         <>
           {source === 'future' && tmConfigured && (
-            <TicketmasterResults events={tmEvents} />
+            <TicketmasterResults events={tmEvents} searchQuery={params.artist ?? params.location ?? ''} />
           )}
           {source === 'past' && slConfigured && params.artist?.trim() && (
             <SetlistResults setlists={slSetlists} />
           )}
         </>
+      )}
+
+      {/* Cuando Ticketmaster está configurado pero no hay query todavía */}
+      {!hasQuery && source === 'future' && tmConfigured && (
+        <div className="mt-8 text-center py-12 border border-dashed border-white/10 rounded-xl">
+          <p className="text-zinc-500 text-sm">Escribí el nombre de un artista o ciudad para buscar shows futuros.</p>
+          <p className="text-zinc-700 text-xs mt-2">Los resultados vienen de Ticketmaster — puede que no haya shows en Argentina para todos los artistas.</p>
+        </div>
+      )}
+
+      {!hasQuery && source === 'past' && slConfigured && (
+        <div className="mt-8 text-center py-12 border border-dashed border-white/10 rounded-xl">
+          <p className="text-zinc-500 text-sm">Escribí el nombre exacto del artista para ver su historial de shows.</p>
+          <p className="text-zinc-700 text-xs mt-2">Los datos vienen de Setlist.fm — funciona mejor con nombres en inglés.</p>
+        </div>
       )}
     </PageShell>
   )

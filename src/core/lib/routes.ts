@@ -7,6 +7,8 @@
 export const routes = {
   home: '/',
   stats: '/stats',
+  wishlist: '/wishlist',
+  search: '/search',
 
   artists: {
     list: '/artists',

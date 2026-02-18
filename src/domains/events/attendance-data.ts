@@ -1,7 +1,6 @@
 import { supabase } from '@/src/core/lib/supabase'
+import { getDevUserId } from '@/src/core/lib/env'
 import type { AttendanceStatus } from './attendance-actions'
-
-const DEV_USER_ID = '00000000-0000-0000-0000-000000000001'
 
 export interface AttendanceWithMemory {
     id: string
@@ -10,6 +9,7 @@ export interface AttendanceWithMemory {
         id: string
         rating: number | null
         review: string | null
+        notes: string | null
     } | null
 }
 
@@ -20,15 +20,17 @@ export interface AttendanceWithMemory {
 export async function getAttendanceForEvent(
     eventId: string
 ): Promise<AttendanceWithMemory | null> {
+    const userId = getDevUserId()
+
     const { data, error } = await supabase
         .from('attendance')
         .select(`
       id,
       status,
-      memories ( id, rating, review )
+      memories ( id, rating, review, notes )
     `)
         .eq('event_id', eventId)
-        .eq('user_id', DEV_USER_ID)
+        .eq('user_id', userId)
         .single()
 
     if (error || !data) return null

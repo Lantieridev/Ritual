@@ -1,12 +1,11 @@
 import { supabase } from '@/src/core/lib/supabase'
-
-const DEV_USER_ID = '00000000-0000-0000-0000-000000000001'
+import { getDevUserId } from '@/src/core/lib/env'
 
 export interface StatsData {
     totalShows: number
     showsAttended: number
-    showsUpcoming: number
-    showsInterested: number
+    showsGoing: number        // status === 'going' (upcoming shows user plans to attend)
+    showsInterested: number   // status === 'interested'
     uniqueArtists: number
     uniqueVenues: number
     uniqueCities: string[]
@@ -56,12 +55,12 @@ export async function getPersonalStats(): Promise<StatsData> {
     // Filtrar attendance del usuario actual
     const eventsWithMyAttendance = events.map((ev: any) => ({
         ...ev,
-        myAttendance: (ev.attendance ?? []).find((a: any) => a.user_id === DEV_USER_ID) ?? null,
+        myAttendance: (ev.attendance ?? []).find((a: any) => a.user_id === getDevUserId()) ?? null,
     }))
 
     const totalShows = events.length
     const showsAttended = eventsWithMyAttendance.filter((e: any) => e.myAttendance?.status === 'went').length
-    const showsUpcoming = eventsWithMyAttendance.filter((e: any) => new Date(e.date) >= now).length
+    const showsGoing = eventsWithMyAttendance.filter((e: any) => e.myAttendance?.status === 'going').length
     const showsInterested = eventsWithMyAttendance.filter((e: any) => e.myAttendance?.status === 'interested').length
 
     // Artistas únicos
@@ -136,7 +135,7 @@ export async function getPersonalStats(): Promise<StatsData> {
     return {
         totalShows,
         showsAttended,
-        showsUpcoming,
+        showsGoing,
         showsInterested,
         uniqueArtists: artistSet.size,
         uniqueVenues: Object.keys(venueMap).length,
@@ -155,7 +154,7 @@ function emptyStats(): StatsData {
     return {
         totalShows: 0,
         showsAttended: 0,
-        showsUpcoming: 0,
+        showsGoing: 0,
         showsInterested: 0,
         uniqueArtists: 0,
         uniqueVenues: 0,

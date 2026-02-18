@@ -5,14 +5,16 @@ import { addExternalEvent } from '@/src/domains/events/actions'
 
 interface TicketmasterResultsProps {
     events: ReturnType<typeof import('@/src/core/lib/ticketmaster').normalizeTicketmasterEvent>[]
+    searchQuery?: string
 }
 
 /**
  * Lista de eventos de Ticketmaster con botón "Agregar a mis recitales".
  * Cada card tiene loading independiente.
  */
-export function TicketmasterResults({ events }: TicketmasterResultsProps) {
+export function TicketmasterResults({ events, searchQuery }: TicketmasterResultsProps) {
     const [loadingId, setLoadingId] = useState<string | null>(null)
+    const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
     const [, startTransition] = useTransition()
 
     function handleAdd(ev: (typeof events)[0]) {
@@ -29,6 +31,7 @@ export function TicketmasterResults({ events }: TicketmasterResultsProps) {
                 },
                 ev.lineup[0]
             )
+            setAddedIds((prev) => new Set([...prev, ev.id]))
             setLoadingId(null)
         })
     }
@@ -36,8 +39,14 @@ export function TicketmasterResults({ events }: TicketmasterResultsProps) {
     if (events.length === 0) {
         return (
             <div className="mt-10 flex flex-col items-center gap-3 py-16 text-center">
-                <p className="text-zinc-500 text-sm">No se encontraron shows futuros en Ticketmaster.</p>
-                <p className="text-zinc-600 text-xs">Probá con otro artista o buscá en el historial pasado.</p>
+                <p className="text-zinc-500 text-sm">
+                    {searchQuery
+                        ? `No se encontraron shows futuros para "${searchQuery}" en Ticketmaster.`
+                        : 'No se encontraron shows futuros en Ticketmaster.'}
+                </p>
+                <p className="text-zinc-600 text-xs max-w-sm">
+                    Ticketmaster tiene cobertura limitada para Argentina. Probá con el nombre en inglés, sin tildes, o buscá el historial pasado en Setlist.fm.
+                </p>
             </div>
         )
     }
@@ -96,11 +105,14 @@ export function TicketmasterResults({ events }: TicketmasterResultsProps) {
                         <div className="shrink-0">
                             <button
                                 type="button"
-                                disabled={isLoading}
+                                disabled={isLoading || addedIds.has(ev.id)}
                                 onClick={() => handleAdd(ev)}
-                                className="inline-flex items-center justify-center rounded-lg border border-white/15 px-4 py-2 text-xs font-semibold text-zinc-300 hover:border-white/30 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className={`inline-flex items-center justify-center rounded-lg border px-4 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${addedIds.has(ev.id)
+                                        ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                                        : 'border-white/15 text-zinc-300 hover:border-white/30 hover:text-white hover:bg-white/5 disabled:opacity-50'
+                                    }`}
                             >
-                                {isLoading ? 'Guardando…' : '+ Guardar'}
+                                {isLoading ? 'Guardando…' : addedIds.has(ev.id) ? '✓ Guardado' : '+ Guardar'}
                             </button>
                         </div>
                     </li>

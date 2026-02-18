@@ -7,39 +7,48 @@ interface RatingAndReviewFormProps {
     eventId: string
     initialRating?: number | null
     initialReview?: string | null
+    initialNotes?: string | null
 }
 
-/**
- * Formulario de rating (1-5 estrellas) y reseña personal del show.
- * Guarda en la tabla memories vinculada al attendance del evento.
- */
+const MAX_REVIEW = 2000
+const MAX_NOTES = 5000
+
 export function RatingAndReviewForm({
     eventId,
     initialRating,
     initialReview,
+    initialNotes,
 }: RatingAndReviewFormProps) {
     const [rating, setRating] = useState<number>(initialRating ?? 0)
     const [hovered, setHovered] = useState<number>(0)
     const [review, setReview] = useState(initialReview ?? '')
+    const [notes, setNotes] = useState(initialNotes ?? '')
     const [saved, setSaved] = useState(false)
+    const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         setSaved(false)
+        setError(null)
         startTransition(async () => {
-            await saveMemory(eventId, {
+            const result = await saveMemory(eventId, {
                 rating: rating > 0 ? rating : undefined,
                 review: review.trim() || undefined,
+                notes: notes.trim() || undefined,
             })
-            setSaved(true)
+            if (result?.error) {
+                setError(result.error)
+            } else {
+                setSaved(true)
+            }
         })
     }
 
     const displayRating = hovered || rating
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
             {/* Estrellas */}
             <div>
                 <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2">Tu rating</p>
@@ -54,9 +63,7 @@ export function RatingAndReviewForm({
                             className="text-2xl transition-transform hover:scale-110 focus:outline-none"
                             aria-label={`${star} estrella${star > 1 ? 's' : ''}`}
                         >
-                            <span className={displayRating >= star ? 'text-white' : 'text-zinc-700'}>
-                                ★
-                            </span>
+                            <span className={displayRating >= star ? 'text-white' : 'text-zinc-700'}>★</span>
                         </button>
                     ))}
                     {rating > 0 && (
@@ -74,16 +81,33 @@ export function RatingAndReviewForm({
             {/* Reseña */}
             <div>
                 <label htmlFor="review" className="text-xs uppercase tracking-widest text-zinc-500 block mb-2">
-                    Tu reseña
+                    Reseña
                 </label>
                 <textarea
                     id="review"
                     value={review}
-                    onChange={(e) => setReview(e.target.value)}
+                    onChange={(e) => setReview(e.target.value.slice(0, MAX_REVIEW))}
                     placeholder="¿Cómo estuvo el show? ¿Qué momento fue el mejor?..."
                     rows={3}
                     className="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder-zinc-600 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
                 />
+                <p className="text-right text-[10px] text-zinc-700 mt-1">{review.length}/{MAX_REVIEW}</p>
+            </div>
+
+            {/* Notas / Setlist */}
+            <div>
+                <label htmlFor="notes" className="text-xs uppercase tracking-widest text-zinc-500 block mb-2">
+                    Notas / Setlist
+                </label>
+                <textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value.slice(0, MAX_NOTES))}
+                    placeholder="Canciones que tocaron, con quién fuiste, momentos especiales..."
+                    rows={5}
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder-zinc-600 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none font-mono"
+                />
+                <p className="text-right text-[10px] text-zinc-700 mt-1">{notes.length}/{MAX_NOTES}</p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -94,6 +118,7 @@ export function RatingAndReviewForm({
                 >
                     {isPending ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar memoria'}
                 </button>
+                {error && <p className="text-sm text-red-400">{error}</p>}
             </div>
         </form>
     )
