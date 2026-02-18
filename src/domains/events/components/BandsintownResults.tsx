@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { Card } from '@/src/core/components/ui'
 import { Button } from '@/src/core/components/ui'
 import { addEventFromBandsintown } from '@/src/domains/events/actions'
@@ -13,14 +13,18 @@ interface BandsintownResultsProps {
 
 /**
  * Lista de eventos de Bandsintown con botón "Agregar a mis recitales".
+ * Cada card tiene su propio estado de loading independiente (loadingId).
  * Al agregar se crea evento/sede/artista en nuestra DB y se redirige al detalle.
  */
 export function BandsintownResults({ events, searchArtist }: BandsintownResultsProps) {
-  const [isPending, startTransition] = useTransition()
+  const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [, startTransition] = useTransition()
 
   function handleAdd(bitEvent: BandsintownEvent) {
-    startTransition(() => {
-      addEventFromBandsintown(bitEvent, searchArtist)
+    setLoadingId(bitEvent.id)
+    startTransition(async () => {
+      await addEventFromBandsintown(bitEvent, searchArtist)
+      setLoadingId(null)
     })
   }
 
@@ -40,12 +44,14 @@ export function BandsintownResults({ events, searchArtist }: BandsintownResultsP
           .join(', ')
         const dateLabel = ev.datetime
           ? new Date(ev.datetime).toLocaleDateString('es-AR', {
-              weekday: 'short',
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-            })
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })
           : ''
+
+        const isThisLoading = loadingId === ev.id
 
         return (
           <li key={ev.id}>
@@ -79,10 +85,10 @@ export function BandsintownResults({ events, searchArtist }: BandsintownResultsP
                   type="button"
                   variant="primary"
                   className="w-full text-sm"
-                  disabled={isPending}
+                  disabled={isThisLoading}
                   onClick={() => handleAdd(ev)}
                 >
-                  {isPending ? 'Agregando…' : 'Agregar a mis recitales'}
+                  {isThisLoading ? 'Agregando…' : 'Agregar a mis recitales'}
                 </Button>
               </div>
             </Card>

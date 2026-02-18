@@ -6,6 +6,7 @@
 
 export const routes = {
   home: '/',
+  stats: '/stats',
 
   artists: {
     list: '/artists',
@@ -16,6 +17,7 @@ export const routes = {
   venues: {
     list: '/venues',
     new: '/venues/nuevo',
+    detail: (id: string) => `/venues/${id}` as const,
   },
 
   events: {
@@ -35,5 +37,4 @@ export const routes = {
 
   // Reservado para cuando exista auth:
   // profile: '/perfil',
-  // myEvents: '/mis-reciales',
 } as const

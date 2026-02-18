@@ -55,15 +55,18 @@ export async function getBandsintownEventsByArtist(
 
   try {
     const res = await fetch(url, { next: { revalidate: 300 } })
+    if (res.status === 403) {
+      return { events: [], error: 'App ID inválido o sin permisos (403). Verificá que BANDSINTOWN_APP_ID en .env.local sea correcto y esté activo.' }
+    }
     if (!res.ok) {
-      return { events: [], error: `API respondió ${res.status}.` }
+      return { events: [], error: `La API respondió con error ${res.status}. Intentá de nuevo más tarde.` }
     }
     const data = await res.json()
     const events = Array.isArray(data) ? (data as BandsintownEvent[]) : []
     return { events }
   } catch (e) {
     console.error('Bandsintown artist events:', e)
-    return { events: [], error: 'Error al conectar con la API.' }
+    return { events: [], error: 'Error al conectar con la API. Verificá tu conexión.' }
   }
 }
 
@@ -84,14 +87,17 @@ export async function getBandsintownEventsByLocation(
 
   try {
     const res = await fetch(url, { next: { revalidate: 300 } })
+    if (res.status === 403) {
+      return { events: [], error: 'App ID inválido o sin permisos (403). Verificá que BANDSINTOWN_APP_ID en .env.local sea correcto y esté activo.' }
+    }
     if (!res.ok) {
-      return { events: [], error: `API respondió ${res.status}.` }
+      return { events: [], error: `La API respondió con error ${res.status}. Intentá de nuevo más tarde.` }
     }
     const data = await res.json()
     const events = Array.isArray(data) ? (data as BandsintownEvent[]) : []
     return { events }
   } catch (e) {
     console.error('Bandsintown location events:', e)
-    return { events: [], error: 'Error al conectar con la API.' }
+    return { events: [], error: 'Error al conectar con la API. Verificá tu conexión.' }
   }
 }

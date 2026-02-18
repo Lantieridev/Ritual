@@ -68,9 +68,10 @@ export interface Event {
  * Evento con relaciones expandidas (venue + lineups con artists).
  */
 export interface EventWithRelations extends Event {
-  venues: Pick<Venue, 'name' | 'city'> | null
+  venues: Pick<Venue, 'name' | 'city' | 'country'> | null
   lineups: LineupRow[] | null
 }
+
 
 /** Payload para crear un evento (nombre, fecha, sede, opcionalmente artistas del lineup). */
 export interface EventCreateInput {
