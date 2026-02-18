@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { supabase } from '@/src/core/lib/supabase'
 import { routes } from '@/src/core/lib/routes'
 import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
-import type { EventCreateInput, EventUpdateInput, ExternalEvent } from '@/src/core/types'
+import type { EventCreateInput, EventUpdateInput, FutureEvent } from '@/src/core/types'
 
 const MAX_NAME_LENGTH = 200
 const MAX_VENUE_NAME_LENGTH = 200
@@ -55,11 +55,11 @@ export async function createEvent(formData: EventCreateInput): Promise<{ error?:
 }
 
 /**
- * Crea en nuestra base un recital a partir de un evento externo (Ticketmaster, Setlist.fm, etc.).
+ * Crea en nuestra base un recital a partir de un evento externo (Ticketmaster, Setlist.fm, Last.fm, etc.).
  * Busca o crea sede y artista para no duplicar.
  */
 export async function addExternalEvent(
-  event: ExternalEvent,
+  event: FutureEvent,
   artistNameForLineup?: string
 ): Promise<{ error?: string; eventId?: string }> {
   const venueName = sanitizeText(event.venue?.name, MAX_VENUE_NAME_LENGTH)

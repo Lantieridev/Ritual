@@ -5,10 +5,20 @@ import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
 import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
 import { supabase } from '@/src/core/lib/supabase'
-import { getTicketmasterEventsByArtist, isTicketmasterConfigured, normalizeTicketmasterEvent } from '@/src/core/lib/ticketmaster'
+import {
+    getLastFmArtistInfo,
+    getArtistEvents,
+    isLastFmConfigured,
+    getBestLastFmImage,
+} from '@/src/core/lib/lastfm'
 import { EmptyState } from '@/src/core/components/ui/EmptyState'
-
-import { searchSpotifyArtist, getBestSpotifyImage, isSpotifyConfigured } from '@/src/core/lib/spotify'
+import {
+    searchSpotifyArtist,
+    getBestSpotifyImage,
+    isSpotifyConfigured,
+} from '@/src/core/lib/spotify'
+import { FutureEventsResults } from '@/src/domains/events/components/FutureEventsResults'
+import { FutureEvent } from '@/src/core/types'
 
 export const metadata: Metadata = {
     title: 'Wishlist | RITUAL',
@@ -17,8 +27,6 @@ export const metadata: Metadata = {
 
 export default async function WishlistPage() {
     const artistIds = await getWishlistArtistIds()
-
-    // ...
 
     if (artistIds.length === 0) {
         return (
@@ -45,27 +53,39 @@ export default async function WishlistPage() {
         .in('id', artistIds)
         .order('name')
 
-    // Fetch Spotify images and Ticketmaster shows for each artist in parallel
+    // Fetch Spotify images and Last.fm shows for each artist in parallel
     const enriched = await Promise.all(
         (artists ?? []).map(async (artist) => {
-            const [spotifyResult, ticketmasterResult] = await Promise.allSettled([
+            const [spotifyResult, lastfmResult, lastfmEventsResult] = await Promise.allSettled([
                 isSpotifyConfigured()
                     ? searchSpotifyArtist(artist.name)
                     : Promise.resolve({ artist: null }),
-                isTicketmasterConfigured()
-                    ? getTicketmasterEventsByArtist(artist.name)
+                isLastFmConfigured()
+                    ? getLastFmArtistInfo(artist.name)
+                    : Promise.resolve({ artist: null }),
+                isLastFmConfigured()
+                    ? getArtistEvents(artist.name)
                     : Promise.resolve({ events: [] }),
             ])
 
             const spotifyArtist =
                 spotifyResult.status === 'fulfilled' ? spotifyResult.value.artist : null
-            const upcomingEvents = ticketmasterResult.status === 'fulfilled'
-                ? ticketmasterResult.value.events.slice(0, 3).map(normalizeTicketmasterEvent)
-                : []
+            const lastfmArtist =
+                lastfmResult.status === 'fulfilled' ? lastfmResult.value.artist : null
+            const upcomingEvents: FutureEvent[] =
+                lastfmEventsResult.status === 'fulfilled'
+                    ? lastfmEventsResult.value.events.slice(0, 3)
+                    : []
+
+            const image = spotifyArtist
+                ? getBestSpotifyImage(spotifyArtist.images)
+                : lastfmArtist
+                    ? getBestLastFmImage(lastfmArtist.image)
+                    : null
 
             return {
                 ...artist,
-                image: spotifyArtist ? getBestSpotifyImage(spotifyArtist.images) : null,
+                image,
                 upcomingEvents,
             }
         })
@@ -124,23 +144,8 @@ export default async function WishlistPage() {
 
                             {/* Upcoming shows */}
                             {artist.upcomingEvents.length > 0 && (
-                                <div className="border-t border-white/[0.06] px-4 py-3 space-y-2">
-                                    <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-2">Shows próximos</p>
-                                    {artist.upcomingEvents.map((ev) => (
-                                        <div key={ev.id} className="flex items-center justify-between gap-3 text-sm">
-                                            <div className="min-w-0">
-                                                <p className="text-zinc-300 truncate">{ev.venue.name}</p>
-                                                <p className="text-xs text-zinc-600">{ev.venue.city}</p>
-                                            </div>
-                                            <p className="text-zinc-500 whitespace-nowrap text-xs">
-                                                {new Date(ev.datetime).toLocaleDateString('es-AR', {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                    year: 'numeric',
-                                                })}
-                                            </p>
-                                        </div>
-                                    ))}
+                                <div className="border-t border-white/[0.06] px-4 pb-3">
+                                    <FutureEventsResults events={artist.upcomingEvents} compact />
                                 </div>
                             )}
                         </div>

@@ -1,9 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
 import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
+import { getCurrentUserId } from '@/src/core/auth/session'
 
 const MAX_CAPTION_LENGTH = 200
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
@@ -25,6 +26,8 @@ export interface EventPhoto {
 export async function getEventPhotos(eventId: string): Promise<EventPhoto[]> {
     const idErr = validateUUID(eventId, 'Evento')
     if (idErr) return []
+
+    const supabase = await createClient()
 
     const { data, error } = await supabase
         .from('event_photos')
@@ -54,11 +57,16 @@ export async function uploadEventPhoto(
     const idErr = validateUUID(eventId, 'Evento')
     if (idErr) return { error: idErr }
 
+    const userId = await getCurrentUserId()
+    if (!userId) return { error: 'Debes iniciar sesión para subir fotos.' }
+
     if (!file || file.size === 0) return { error: 'Seleccioná una imagen.' }
     if (file.size > MAX_FILE_SIZE_BYTES) return { error: 'La imagen no puede superar 5MB.' }
     if (!ALLOWED_TYPES.includes(file.type)) {
         return { error: 'Formato no soportado. Usá JPG, PNG, WebP o GIF.' }
     }
+
+    const supabase = await createClient()
 
     // Generar path único: eventId/timestamp-filename
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
@@ -123,14 +131,18 @@ export async function deleteEventPhoto(
     const eventIdErr = validateUUID(eventId, 'Evento')
     if (eventIdErr) return { error: eventIdErr }
 
-    // Obtener el path antes de eliminar
+    const userId = await getCurrentUserId()
+    if (!userId) return { error: 'No autorizado.' }
+
+    const supabase = await createClient()
+
     const { data: photo, error: fetchErr } = await supabase
         .from('event_photos')
         .select('storage_path')
         .eq('id', photoId)
         .single()
 
-    if (fetchErr || !photo) return { error: 'Foto no encontrada.' }
+    if (fetchErr || !photo) return { error: 'Foto no encontrada o no tienes permiso.' }
 
     // Eliminar de Storage
     const { error: storageErr } = await supabase.storage

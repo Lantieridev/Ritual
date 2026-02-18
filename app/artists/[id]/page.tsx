@@ -14,12 +14,8 @@ import {
     getLastFmTags,
     getBestLastFmImage,
     isLastFmConfigured,
+    getArtistEvents,
 } from '@/src/core/lib/lastfm'
-import {
-    getTicketmasterEventsByArtist,
-    isTicketmasterConfigured,
-    normalizeTicketmasterEvent,
-} from '@/src/core/lib/ticketmaster'
 import { WishlistButton } from '@/src/domains/artists/components/WishlistButton'
 import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
 
@@ -44,12 +40,12 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
     if (!artist) notFound()
 
     // Fetch all external data + wishlist in parallel
-    const [[spotifyResult, lastfmResult, ticketmasterResult], wishlistIds] = await Promise.all([
+    const [[spotifyResult, lastfmResult, lastfmEventsResult], wishlistIds] = await Promise.all([
         Promise.allSettled([
             isSpotifyConfigured() ? searchSpotifyArtist(artist.name) : Promise.resolve({ artist: null }),
             isLastFmConfigured() ? getLastFmArtistInfo(artist.name) : Promise.resolve({ artist: null }),
-            isTicketmasterConfigured()
-                ? getTicketmasterEventsByArtist(artist.name)
+            isLastFmConfigured()
+                ? getArtistEvents(artist.name)
                 : Promise.resolve({ events: [] }),
         ]),
         getWishlistArtistIds(),
@@ -57,10 +53,7 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
 
     const spotifyArtist = spotifyResult.status === 'fulfilled' ? spotifyResult.value.artist : null
     const lastfmArtist = lastfmResult.status === 'fulfilled' ? lastfmResult.value.artist : null
-    const tmResult = ticketmasterResult.status === 'fulfilled' ? ticketmasterResult.value : { events: [] }
-    const upcomingFromTicketmaster = tmResult.events
-        .slice(0, 5)
-        .map(normalizeTicketmasterEvent)
+    const upcomingFromLastFm = lastfmEventsResult.status === 'fulfilled' ? lastfmEventsResult.value.events.slice(0, 5) : []
 
     const inWishlist = wishlistIds.includes(artist.id)
 
@@ -191,15 +184,15 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
                     </section>
                 )}
 
-                {/* Shows próximos desde Ticketmaster */}
-                {upcomingFromTicketmaster.length > 0 && (
+                {/* Shows próximos desde Last.fm */}
+                {upcomingFromLastFm.length > 0 && (
                     <section>
                         <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5 flex items-center gap-3">
                             Shows próximos
-                            <span className="text-[10px] text-zinc-700 normal-case tracking-normal">vía Ticketmaster</span>
+                            <span className="text-[10px] text-zinc-700 normal-case tracking-normal">vía Last.fm</span>
                         </h2>
                         <ul className="divide-y divide-white/[0.05]">
-                            {upcomingFromTicketmaster.map((ev) => {
+                            {upcomingFromLastFm.map((ev) => {
                                 const dateObj = new Date(ev.datetime)
                                 return (
                                     <li key={ev.id}>

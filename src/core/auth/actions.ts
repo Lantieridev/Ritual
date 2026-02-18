@@ -55,39 +55,3 @@ export async function signout() {
     redirect('/login')
 }
 
-export async function claimLegacyData() {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) return { error: 'No user logged in' }
-
-    // Hardcoded legacy ID for migration purposes only
-    const oldUserId = '00000000-0000-0000-0000-000000000001'
-    const newUserId = user.id
-
-    try {
-        console.log(`Migrating data from ${oldUserId} to ${newUserId}...`)
-
-        const updates = [
-            supabase.from('attendance').update({ user_id: newUserId }).eq('user_id', oldUserId),
-            supabase.from('memories').update({ user_id: newUserId }).eq('user_id', oldUserId),
-            supabase.from('wishlist').update({ user_id: newUserId }).eq('user_id', oldUserId),
-            supabase.from('expenses').update({ user_id: newUserId }).eq('user_id', oldUserId),
-            supabase.from('festival_attendance').update({ user_id: newUserId }).eq('user_id', oldUserId),
-        ]
-
-        const results = await Promise.all(updates)
-
-        const errors = results.filter(r => r.error).map(r => r.error?.message)
-
-        if (errors.length > 0) {
-            console.error('Migration errors:', errors)
-            return { error: `Error parcial: ${errors.join(', ')}` }
-        }
-
-        return { success: true }
-    } catch (e) {
-        console.error('Migration failed:', e)
-        return { error: 'Migration failed due to unexpected error.' }
-    }
-}

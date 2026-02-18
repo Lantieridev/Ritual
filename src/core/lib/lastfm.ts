@@ -96,3 +96,135 @@ export function getBestLastFmImage(images: LastFmImage[]): string | null {
 export function getLastFmTags(artist: LastFmArtist, max = 5): string[] {
     return (artist.tags?.tag ?? []).slice(0, max).map((t) => t.name)
 }
+
+/**
+ * Busca eventos futuros de un artista en Last.fm.
+ * Mapea la respuesta al formato unificado FutureEvent.
+ */
+import { FutureEvent } from '@/src/core/types'
+
+interface LastFmEventResponse {
+    events: {
+        event: Array<{
+            id: string
+            title: string
+            artists: {
+                artist: string // headliner name
+                headliner: string
+            }
+            venue: {
+                name: string
+                location: {
+                    city: string
+                    country: string
+                    street: string
+                    postalcode: string
+                    'geo:point': {
+                        'geo:lat': string
+                        'geo:long': string
+                    }
+                }
+                url: string
+            }
+            startDate: string // "Thu, 07 Apr 2022 20:00:00"
+            description: string
+            image: LastFmImage[]
+            url: string
+            tag: { tag: string[] } | null
+        }>
+        '@attr': {
+            artist: string
+            total: string
+            page: string
+            perPage: string
+            totalPages: string
+        }
+    }
+}
+
+export async function getArtistEvents(
+    artistName: string
+): Promise<{ events: FutureEvent[]; error?: string }> {
+    const apiKey = getLastFmApiKey()
+    if (!apiKey) {
+        return { events: [], error: 'LASTFM_API_KEY no configurado.' }
+    }
+
+    const params = new URLSearchParams({
+        method: 'artist.getevents',
+        artist: artistName.trim(),
+        api_key: apiKey,
+        format: 'json',
+        autocorrect: '1',
+        limit: '20', // Reasonable limit
+    })
+
+    try {
+        const res = await fetch(`${BASE}/?${params}`, {
+            next: { revalidate: 3600 },
+        })
+
+        if (res.status === 404) {
+            // Artist not found likely
+            return { events: [] }
+        }
+
+        if (!res.ok) {
+            return { events: [], error: `Last.fm respondió con error ${res.status}.` }
+        }
+
+        const data = await res.json()
+
+        if (data.error) {
+            if (data.error === 6) return { events: [] } // Artist not found
+            return { events: [], error: data.message }
+        }
+
+        const rawEvents = data.events?.event
+        if (!rawEvents || !Array.isArray(rawEvents)) {
+            return { events: [] }
+        }
+
+        const events: FutureEvent[] = rawEvents.map((ev: any) => {
+            // Parse date. Last.fm format: "Thu, 07 Apr 2022 20:00:00" -> ISO
+            // But sometimes it's just a date. JS Date() usually parses it fine.
+            const date = new Date(ev.startDate)
+            const isoDate = !isNaN(date.getTime()) ? date.toISOString() : ev.startDate
+
+            const venue = ev.venue
+            const location = venue?.location
+
+            // Extract city. Sometimes empty.
+            const city = location?.city || location?.['geo:point'] ? undefined : undefined // What logic?
+            // Helper to find valid city
+            const validCity = location?.city || ''
+            const validCountry = location?.country || ''
+
+            return {
+                id: String(ev.id), // Last.fm numeric ID
+                title: ev.title || `${ev.artists.headliner} en ${venue?.name}`,
+                datetime: isoDate,
+                venue: {
+                    name: venue?.name || 'Sede desconocida',
+                    city: validCity,
+                    country: validCountry,
+                },
+                lineup: [ev.artists.headliner], // Start with headliner
+                url: ev.url,
+                image: getBestLastFmImage(ev.image || []) || undefined,
+                // No price range in Last.fm
+            }
+        })
+
+        // Filter out past events if Last.fm returns them? Last.fm usually returns future by default.
+        // We can filter just in case.
+        const now = new Date()
+        const futureEvents = events.filter(e => new Date(e.datetime) >= now)
+
+        return { events: futureEvents }
+
+    } catch (e) {
+        console.error('Last.fm artist events:', e)
+        return { events: [], error: 'Error al conectar con Last.fm.' }
+    }
+}

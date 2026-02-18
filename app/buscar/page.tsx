@@ -4,24 +4,23 @@ import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
 import { LinkButton } from '@/src/core/components/ui'
 import { SearchEventsForm } from '@/src/domains/events/components/SearchEventsForm'
-import { TicketmasterResults } from '@/src/domains/events/components/TicketmasterResults'
+import { FutureEventsResults } from '@/src/domains/events/components/FutureEventsResults'
 import { SetlistResults } from '@/src/domains/events/components/SetlistResults'
 import {
-  isTicketmasterConfigured,
-  getTicketmasterEventsByArtist,
-  getTicketmasterEventsByLocation,
-  normalizeTicketmasterEvent,
-} from '@/src/core/lib/ticketmaster'
+  isLastFmConfigured,
+  getArtistEvents,
+} from '@/src/core/lib/lastfm'
 import {
   isSetlistFmConfigured,
   getSetlistsByArtist,
 } from '@/src/core/lib/setlistfm'
 import { EmptyState } from '@/src/core/components/ui/EmptyState'
+import { FutureEvent } from '@/src/core/types'
 
 export const metadata: Metadata = {
   title: 'Buscar recitales | RITUAL',
   description:
-    'Buscá shows futuros con Ticketmaster o historial pasado con Setlist.fm. Guardá solo los que quieras en tu agenda.',
+    'Buscá shows futuros vía Last.fm o historial pasado con Setlist.fm. Guardá solo los que quieras en tu agenda.',
 }
 
 type SearchParams = { artist?: string; location?: string; source?: 'future' | 'past' }
@@ -33,27 +32,25 @@ interface PageProps {
 export default async function BuscarPage({ searchParams }: PageProps) {
   const params = await searchParams
   const source = params.source ?? 'future'
-  const hasQuery = Boolean(params.artist?.trim() || params.location?.trim())
+  const hasQuery = Boolean(params.artist?.trim())
 
-  const tmConfigured = isTicketmasterConfigured()
+  const fmConfigured = isLastFmConfigured()
   const slConfigured = isSetlistFmConfigured()
 
-  let tmEvents: ReturnType<typeof normalizeTicketmasterEvent>[] = []
-  let tmError: string | undefined
+  let futureEvents: FutureEvent[] = []
+  let fmError: string | undefined
 
   let slSetlists: Awaited<ReturnType<typeof getSetlistsByArtist>>['setlists'] = []
   let slError: string | undefined
 
-  if (hasQuery && source === 'future' && tmConfigured) {
+  if (hasQuery && source === 'future' && fmConfigured) {
     if (params.artist?.trim()) {
-      const result = await getTicketmasterEventsByArtist(params.artist.trim())
-      tmEvents = result.events.map(normalizeTicketmasterEvent)
-      tmError = result.error
-    } else if (params.location?.trim()) {
-      const result = await getTicketmasterEventsByLocation(params.location.trim())
-      tmEvents = result.events.map(normalizeTicketmasterEvent)
-      tmError = result.error
+      const result = await getArtistEvents(params.artist.trim())
+      futureEvents = result.events
+      fmError = result.error
     }
+    // Location search not supported with getArtistEvents. 
+    // If user tries location, we could show a message or just ignore.
   }
 
   if (hasQuery && source === 'past' && slConfigured && params.artist?.trim()) {
@@ -62,12 +59,12 @@ export default async function BuscarPage({ searchParams }: PageProps) {
     slError = result.error
   }
 
-  const anyConfigured = tmConfigured || slConfigured
+  const anyConfigured = fmConfigured || slConfigured
 
   return (
     <PageShell
       title="Buscar recitales"
-      description="Shows futuros vía Ticketmaster · Historial pasado vía Setlist.fm"
+      description="Shows futuros vía Last.fm · Historial pasado vía Setlist.fm"
       action={
         <LinkButton href={routes.events.new} variant="secondary" className="px-4 py-2 text-sm">
           + Cargar a mano
@@ -80,7 +77,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
           <p className="text-sm font-semibold text-zinc-300">⚙️ APIs no configuradas</p>
           <p className="text-sm text-zinc-500">
             Para buscar shows futuros necesitás una{' '}
-            <strong className="text-zinc-400">TICKETMASTER_API_KEY</strong> en{' '}
+            <strong className="text-zinc-400">LASTFM_API_KEY</strong> en{' '}
             <code className="bg-white/10 px-1 rounded text-xs">.env.local</code>.
             Para historial pasado, una{' '}
             <strong className="text-zinc-400">SETLISTFM_API_KEY</strong>.
@@ -91,38 +88,22 @@ export default async function BuscarPage({ searchParams }: PageProps) {
         </div>
       )}
 
-      {/* Aviso cuando solo Ticketmaster no está configurado y estamos en tab futuro */}
-      {!tmConfigured && slConfigured && source === 'future' && (
-        <div className="rounded-lg border border-zinc-700/40 bg-zinc-800/20 px-4 py-3 mb-4">
-          <p className="text-sm text-zinc-500">
-            🎟️ <strong className="text-zinc-400">TICKETMASTER_API_KEY</strong> no configurada —
-            la búsqueda de shows futuros no está disponible.{' '}
-            <a
-              href="?source=past"
-              className="text-zinc-400 underline underline-offset-2 hover:text-white transition-colors"
-            >
-              Ver historial pasado →
-            </a>
-          </p>
-        </div>
-      )}
-
       {/* Tabs: Futuros / Pasados */}
       <div className="flex gap-1 border-b border-white/[0.06] mb-6">
         <a
-          href={`/buscar?${new URLSearchParams({ ...(params.artist ? { artist: params.artist } : {}), ...(params.location ? { location: params.location } : {}), source: 'future' }).toString()}`}
+          href={`/buscar?${new URLSearchParams({ ...(params.artist ? { artist: params.artist } : {}), source: 'future' }).toString()}`}
           className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${source === 'future'
             ? 'border-white text-white'
             : 'border-transparent text-zinc-500 hover:text-zinc-300'
             }`}
         >
           Shows futuros
-          {tmConfigured && (
+          {fmConfigured && (
             <span className="ml-2 text-[10px] uppercase tracking-widest text-zinc-600">
-              Ticketmaster
+              Last.fm
             </span>
           )}
-          {!tmConfigured && (
+          {!fmConfigured && (
             <span className="ml-2 text-[10px] text-zinc-700">no disponible</span>
           )}
         </a>
@@ -150,21 +131,16 @@ export default async function BuscarPage({ searchParams }: PageProps) {
         <SearchEventsForm
           configured={anyConfigured}
           initialArtist={params.artist}
-          initialLocation={source === 'future' ? params.location : undefined}
-          showLocationTab={source === 'future'}
+          initialLocation={undefined} // Hide location tab logic/UI?
+          showLocationTab={false} // Force hide location tab
           source={source}
         />
       </Suspense>
 
       {/* Errores */}
-      {(tmError || slError) && (
+      {(fmError || slError) && (
         <div className="mt-4 rounded-lg border border-red-400/20 bg-red-400/10 px-4 py-3" role="alert">
-          <p className="text-sm text-red-400">{tmError || slError}</p>
-          {tmError && (
-            <p className="text-xs text-zinc-600 mt-1">
-              Tip: Ticketmaster puede no tener shows para Argentina. Probá buscar sin acento o en inglés.
-            </p>
-          )}
+          <p className="text-sm text-red-400">{fmError || slError}</p>
         </div>
       )}
 
@@ -176,10 +152,10 @@ export default async function BuscarPage({ searchParams }: PageProps) {
       )}
 
       {/* Resultados */}
-      {hasQuery && !tmError && !slError && (
+      {hasQuery && !fmError && !slError && (
         <>
-          {source === 'future' && tmConfigured && (
-            <TicketmasterResults events={tmEvents} searchQuery={params.artist ?? params.location ?? ''} />
+          {source === 'future' && fmConfigured && (
+            <FutureEventsResults events={futureEvents} searchQuery={params.artist} />
           )}
           {source === 'past' && slConfigured && params.artist?.trim() && (
             <SetlistResults setlists={slSetlists} />
@@ -187,11 +163,11 @@ export default async function BuscarPage({ searchParams }: PageProps) {
         </>
       )}
 
-      {/* Cuando Ticketmaster está configurado pero no hay query todavía */}
-      {!hasQuery && source === 'future' && tmConfigured && (
+      {/* Empty States */}
+      {!hasQuery && source === 'future' && fmConfigured && (
         <EmptyState
           title="Buscá tu música"
-          description="Escribí el nombre de un artista o ciudad para buscar shows futuros. Los resultados vienen de Ticketmaster."
+          description="Escribí el nombre de un artista para buscar shows futuros vía Last.fm."
           icon={<span className="text-4xl grayscale">🔍</span>}
           className="border-dashed mt-8"
         />

@@ -4,24 +4,26 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addExternalEvent } from '@/src/domains/events/actions'
 import { routes } from '@/src/core/lib/routes'
+import { FutureEvent } from '@/src/core/types'
 
-interface TicketmasterResultsProps {
-    events: ReturnType<typeof import('@/src/core/lib/ticketmaster').normalizeTicketmasterEvent>[]
+interface FutureEventsResultsProps {
+    events: FutureEvent[]
     searchQuery?: string
+    compact?: boolean // New: for wishlist view?
 }
 
 /**
- * Lista de eventos de Ticketmaster con botón "Agregar a mis recitales".
- * Cada card tiene loading independiente.
+ * Lista de eventos futuros (Last.fm).
+ * Reutilizable en Buscar y Wishlist.
  */
-export function TicketmasterResults({ events, searchQuery }: TicketmasterResultsProps) {
+export function FutureEventsResults({ events, searchQuery, compact }: FutureEventsResultsProps) {
     const router = useRouter()
     const [loadingId, setLoadingId] = useState<string | null>(null)
     const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [, startTransition] = useTransition()
 
-    function handleAdd(ev: (typeof events)[0]) {
+    function handleAdd(ev: FutureEvent) {
         setLoadingId(ev.id)
         setErrors((prev) => { const next = { ...prev }; delete next[ev.id]; return next })
         startTransition(async () => {
@@ -41,11 +43,10 @@ export function TicketmasterResults({ events, searchQuery }: TicketmasterResults
                     setErrors((prev) => ({ ...prev, [ev.id]: result.error! }))
                 } else if (result.eventId) {
                     setAddedIds((prev) => new Set([...prev, ev.id]))
-                    // Navigate to the new event detail page
                     router.push(routes.events.detail(result.eventId))
                 }
             } catch {
-                setErrors((prev) => ({ ...prev, [ev.id]: 'Error al guardar. Intentá de nuevo.' }))
+                setErrors((prev) => ({ ...prev, [ev.id]: 'Error al guardar.' }))
             } finally {
                 setLoadingId(null)
             }
@@ -53,22 +54,20 @@ export function TicketmasterResults({ events, searchQuery }: TicketmasterResults
     }
 
     if (events.length === 0) {
+        if (compact) return <p className="text-xs text-zinc-500 italic">No se encontraron shows próximos.</p>
         return (
             <div className="mt-10 flex flex-col items-center gap-3 py-16 text-center">
                 <p className="text-zinc-500 text-sm">
                     {searchQuery
-                        ? `No se encontraron shows futuros para "${searchQuery}" en Ticketmaster.`
-                        : 'No se encontraron shows futuros en Ticketmaster.'}
-                </p>
-                <p className="text-zinc-600 text-xs max-w-sm">
-                    Ticketmaster tiene cobertura limitada para Argentina. Probá con el nombre en inglés, sin tildes, o buscá el historial pasado en Setlist.fm.
+                        ? `No se encontraron shows futuros para "${searchQuery}".`
+                        : 'No se encontraron shows futuros.'}
                 </p>
             </div>
         )
     }
 
     return (
-        <ul className="mt-6 divide-y divide-white/[0.06]">
+        <ul className={`divide-y divide-white/[0.06] ${compact ? 'mt-2' : 'mt-6'}`}>
             {events.map((ev) => {
                 const isLoading = loadingId === ev.id
                 const isAdded = addedIds.has(ev.id)
@@ -78,19 +77,17 @@ export function TicketmasterResults({ events, searchQuery }: TicketmasterResults
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',
-                    year: 'numeric',
+                    year: compact ? undefined : 'numeric', // hide year in compact?
                 })
-                const venueLabel = [ev.venue.name, ev.venue.city, ev.venue.country]
-                    .filter(Boolean)
-                    .join(', ')
+                const venueLabel = [ev.venue.name, ev.venue.city].filter(Boolean).join(', ')
 
                 return (
                     <li
                         key={ev.id}
-                        className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 group"
+                        className={`flex flex-col sm:flex-row sm:items-center gap-4 py-4 group ${compact ? 'py-3' : ''}`}
                     >
                         {/* Fecha */}
-                        <div className="w-32 shrink-0">
+                        <div className="w-24 shrink-0">
                             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
                                 {dateLabel}
                             </p>
@@ -98,29 +95,14 @@ export function TicketmasterResults({ events, searchQuery }: TicketmasterResults
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-white truncate">{ev.title}</p>
-                            <p className="text-sm text-zinc-500 mt-0.5 truncate">
-                                📍 {venueLabel || 'Sede por confirmar'}
+                            <p className="font-semibold text-white truncate text-sm">{ev.title}</p>
+                            <p className="text-xs text-zinc-500 mt-0.5 truncate">
+                                📍 {venueLabel}
                             </p>
-                            {ev.genre && (
-                                <span className="inline-block mt-1 text-[10px] uppercase tracking-widest text-zinc-600 border border-white/10 rounded px-1.5 py-0.5">
-                                    {ev.genre}
-                                </span>
-                            )}
                             {error && (
                                 <p className="mt-1 text-xs text-red-400">{error}</p>
                             )}
                         </div>
-
-                        {/* Precio (si existe) */}
-                        {ev.priceRange && (
-                            <div className="shrink-0 text-right hidden sm:block">
-                                <p className="text-xs text-zinc-600">
-                                    {ev.priceRange.currency} {ev.priceRange.min.toLocaleString()}
-                                    {ev.priceRange.max !== ev.priceRange.min && ` – ${ev.priceRange.max.toLocaleString()}`}
-                                </p>
-                            </div>
-                        )}
 
                         {/* Acción */}
                         <div className="shrink-0">
@@ -128,12 +110,12 @@ export function TicketmasterResults({ events, searchQuery }: TicketmasterResults
                                 type="button"
                                 disabled={isLoading || isAdded}
                                 onClick={() => handleAdd(ev)}
-                                className={`inline-flex items-center justify-center rounded-lg border px-4 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${isAdded
-                                        ? 'border-green-500/30 bg-green-500/10 text-green-400'
-                                        : 'border-white/15 text-zinc-300 hover:border-white/30 hover:text-white hover:bg-white/5 disabled:opacity-50'
+                                className={`inline-flex items-center justify-center rounded border px-3 py-1.5 text-[10px] font-semibold transition-colors disabled:cursor-not-allowed ${isAdded
+                                    ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                                    : 'border-white/15 text-zinc-300 hover:border-white/30 hover:text-white hover:bg-white/5 disabled:opacity-50'
                                     }`}
                             >
-                                {isLoading ? 'Guardando…' : isAdded ? '✓ Guardado' : '+ Guardar'}
+                                {isLoading ? '…' : isAdded ? '✓' : '+'}
                             </button>
                         </div>
                     </li>

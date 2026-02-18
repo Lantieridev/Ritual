@@ -123,7 +123,12 @@ export interface ExpenseUpdateInput {
  * Formato normalizado para eventos provenientes de APIs externas
  * (Ticketmaster, Setlist.fm, etc.). Usado por addExternalEvent en actions.ts.
  */
-export interface ExternalEvent {
+/**
+ * Formato normalizado para eventos provenientes de APIs externas
+ * (Ticketmaster, Setlist.fm, Last.fm, etc.).
+ * Reemplaza a TicketmasterEvent y ExternalEvent previos.
+ */
+export interface FutureEvent {
   id: string
   title: string
   datetime: string
@@ -132,6 +137,24 @@ export interface ExternalEvent {
     city?: string | null
     country?: string | null
   }
-  lineup?: string[]
+  lineup: string[]
   url?: string
+  image?: string
+  priceRange?: { min: number; max: number; currency: string }
+  genre?: string
+  status?: string
+}
+
+/**
+ * Perfil público del usuario.
+ */
+export interface Profile {
+  id: string
+  username?: string | null
+  full_name?: string | null
+  avatar_url?: string | null
+  website?: string | null
+  bio?: string | null
+  location?: string | null
+  updated_at?: string | null
 }

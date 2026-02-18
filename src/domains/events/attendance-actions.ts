@@ -1,6 +1,6 @@
 'use server'
 
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import { validateUUID, validateRating, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
@@ -25,6 +25,8 @@ export async function getOrCreateAttendance(
 
     const userId = await getCurrentUserId()
     if (!userId) return null
+
+    const supabase = await createClient()
 
     const { data: existing } = await supabase
         .from('attendance')
@@ -62,6 +64,8 @@ export async function setAttendanceStatus(
 
     const userId = await getCurrentUserId()
     if (!userId) return { error: 'Usuario no autenticado' }
+
+    const supabase = await createClient()
 
     const { data: existing } = await supabase
         .from('attendance')
@@ -112,6 +116,8 @@ export async function saveMemory(
 
     const attendance = await getOrCreateAttendance(eventId)
     if (!attendance) return { error: 'No se pudo obtener el registro de asistencia.' }
+
+    const supabase = await createClient()
 
     const { data: existing } = await supabase
         .from('memories')
