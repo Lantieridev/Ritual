@@ -1,5 +1,5 @@
-import { supabase } from '@/src/core/lib/supabase'
-import { getDevUserId } from '@/src/core/lib/env'
+import { createClient } from '@/src/core/lib/supabase-server'
+import { getCurrentUserId } from '@/src/domains/auth/data'
 import type { AttendanceStatus } from './attendance-actions'
 
 export interface AttendanceWithMemory {
@@ -20,7 +20,10 @@ export interface AttendanceWithMemory {
 export async function getAttendanceForEvent(
     eventId: string
 ): Promise<AttendanceWithMemory | null> {
-    const userId = getDevUserId()
+    const supabase = await createClient()
+    const userId = await getCurrentUserId()
+
+    if (!userId) return null
 
     const { data, error } = await supabase
         .from('attendance')
