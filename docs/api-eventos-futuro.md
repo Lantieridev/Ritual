@@ -1,6 +1,15 @@
-# Integración futura: API de eventos automáticos
+# API de eventos: Bandsintown (implementado) y ampliaciones futuras
 
-Este doc describe cómo encajar una API externa de recitales (Songkick, Bandsintown, etc.) sin romper lo que ya existe.
+## Implementado: Bandsintown
+
+- **Objetivo**: Buscar recitales por artista o por ciudad sin cargar la base de datos. Solo se persiste lo que el usuario agrega.
+- **Config**: `BANDSINTOWN_APP_ID` en `.env.local` (opcional; sin él la búsqueda no está disponible).
+- **Ruta**: `/buscar`. Desde ahí se busca por artista o por ubicación; los resultados vienen de la API. Cada resultado tiene "Agregar a mis recitales", que crea evento + sede + artista en nuestra DB si no existen.
+- **Código**: `src/core/lib/bandsintown.ts` (cliente), `src/domains/events/actions.ts` → `addEventFromBandsintown`, página `app/buscar/page.tsx`.
+
+---
+
+## Ampliaciones futuras (doc original)
 
 ## Objetivo
 

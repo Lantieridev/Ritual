@@ -1,14 +1,22 @@
 import { notFound } from 'next/navigation'
-import { getEventById } from '@/src/lib/events'
-import { getVenues } from '@/src/lib/venues'
-import { getArtists } from '@/src/lib/artists'
-import { routes } from '@/src/lib/routes'
-import { EventForm } from '@/src/components/events'
-import { PageShell } from '@/src/components/layout/PageShell'
-import { updateEvent } from '../../actions'
+import type { Metadata } from 'next'
+import { getEventById } from '@/src/domains/events/data'
+import { getVenues } from '@/src/domains/venues/data'
+import { getArtists } from '@/src/domains/artists/data'
+import { updateEvent } from '@/src/domains/events/actions'
+import { routes } from '@/src/core/lib/routes'
+import { EventForm } from '@/src/domains/events/components'
+import { PageShell } from '@/src/core/components/layout'
 
 interface EditEventPageProps {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: EditEventPageProps): Promise<Metadata> {
+  const { id } = await params
+  const event = await getEventById(id)
+  if (!event) return { title: 'Recital no encontrado | RITUAL' }
+  return { title: `Editar ${event.name || 'recital'} | RITUAL` }
 }
 
 /**

@@ -1,7 +1,13 @@
-import { getArtists } from '@/src/lib/artists'
-import { routes } from '@/src/lib/routes'
-import { Card, LinkButton } from '@/src/components/ui'
-import { PageShell } from '@/src/components/layout/PageShell'
+import type { Metadata } from 'next'
+import { getArtists } from '@/src/domains/artists/data'
+import { routes } from '@/src/core/lib/routes'
+import { Card, LinkButton } from '@/src/core/components/ui'
+import { PageShell } from '@/src/core/components/layout'
+
+export const metadata: Metadata = {
+  title: 'Artistas | RITUAL',
+  description: 'Artistas para armar lineups en tus recitales.',
+}
 
 /**
  * Listado de artistas. Permite agregar uno nuevo y armar lineups en recitales.
@@ -22,9 +28,14 @@ export default async function ArtistsPage() {
       }
     >
       {artists.length === 0 ? (
-        <p className="text-zinc-500 mb-4">
-          No hay artistas cargados. Agregá uno para poder armar lineups en los recitales.
-        </p>
+        <div className="flex flex-col items-center gap-4 py-12 text-center">
+          <p className="text-zinc-500 max-w-sm">
+            No hay artistas cargados. Agregá uno para poder armar lineups en los recitales.
+          </p>
+          <LinkButton href={routes.artists.new} variant="primary" className="px-6 py-2.5">
+            + Nuevo artista
+          </LinkButton>
+        </div>
       ) : (
         <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {artists.map((a) => (

@@ -1,13 +1,31 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getEventById } from '@/src/lib/events'
-import { routes } from '@/src/lib/routes'
-import { Card, LinkButton } from '@/src/components/ui'
-import { DeleteEventButton } from '@/src/components/events'
-import { deleteEvent } from '../actions'
+import type { Metadata } from 'next'
+import { getEventById } from '@/src/domains/events/data'
+import { deleteEvent } from '@/src/domains/events/actions'
+import { routes } from '@/src/core/lib/routes'
+import { Card, LinkButton } from '@/src/core/components/ui'
+import { DeleteEventButton } from '@/src/domains/events/components'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
+}
+
+/**
+ * Metadata dinámica para detalle de recital (título y descripción).
+ */
+export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
+  const { id } = await params
+  const event = await getEventById(id)
+  if (!event) return { title: 'Recital no encontrado | RITUAL' }
+  const title = `${event.name || 'Recital'} | RITUAL`
+  const venueLabel = event.venues
+    ? [event.venues.name, event.venues.city].filter(Boolean).join(', ')
+    : 'Sede por confirmar'
+  return {
+    title,
+    description: `${event.name || 'Recital'} — ${new Date(event.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })} · ${venueLabel}`,
+  }
 }
 
 /**
@@ -31,7 +49,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       <div className="flex flex-wrap items-center gap-4 mb-8">
         <Link
           href={routes.home}
-          className="inline-flex items-center gap-2 text-zinc-400 hover:text-yellow-500 transition-colors"
+          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors"
         >
           ← Volver al listado
         </Link>
@@ -50,7 +68,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               year: 'numeric',
             })}
           </p>
-          <h1 className="text-4xl md:text-5xl font-bold text-yellow-500 mt-1 tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mt-1 tracking-tight">
             {event.name || 'Recital'}
           </h1>
         </header>
@@ -73,10 +91,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 <ul className="flex flex-wrap gap-2">
                   {event.lineups.map((row) => (
                     <li key={row.artists.id}>
-                      <span className="inline-block bg-yellow-500/10 text-yellow-500 font-bold px-3 py-1.5 rounded-lg">
+                      <span className="inline-block bg-white/10 text-zinc-300 font-medium px-3 py-1.5 rounded-lg">
                         {row.artists.name}
                         {row.artists.genre && (
-                          <span className="text-yellow-500/80 font-normal ml-1.5">
+                          <span className="text-zinc-500 font-normal ml-1.5">
                             · {row.artists.genre}
                           </span>
                         )}

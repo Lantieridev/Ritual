@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { routes } from '@/src/lib/routes'
+import { routes } from '@/src/core/lib/routes'
 
 /**
  * Página mostrada cuando el evento no existe (notFound() en [id]/page).
@@ -15,7 +15,7 @@ export default function EventNotFound() {
       </p>
       <Link
         href={routes.home}
-        className="inline-flex items-center justify-center rounded-lg font-medium bg-yellow-500 text-neutral-950 hover:bg-yellow-400 px-6 py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+        className="inline-flex items-center justify-center rounded-lg font-medium bg-white text-neutral-950 hover:bg-zinc-200 px-6 py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-white/30"
       >
         Volver al listado
       </Link>
