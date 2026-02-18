@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { addExternalEvent } from '@/src/domains/events/actions'
+import { routes } from '@/src/core/lib/routes'
 
 interface TicketmasterResultsProps {
     events: ReturnType<typeof import('@/src/core/lib/ticketmaster').normalizeTicketmasterEvent>[]
@@ -13,26 +15,40 @@ interface TicketmasterResultsProps {
  * Cada card tiene loading independiente.
  */
 export function TicketmasterResults({ events, searchQuery }: TicketmasterResultsProps) {
+    const router = useRouter()
     const [loadingId, setLoadingId] = useState<string | null>(null)
     const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
+    const [errors, setErrors] = useState<Record<string, string>>({})
     const [, startTransition] = useTransition()
 
     function handleAdd(ev: (typeof events)[0]) {
         setLoadingId(ev.id)
+        setErrors((prev) => { const next = { ...prev }; delete next[ev.id]; return next })
         startTransition(async () => {
-            await addExternalEvent(
-                {
-                    id: ev.id,
-                    title: ev.title,
-                    datetime: ev.datetime,
-                    venue: ev.venue,
-                    lineup: ev.lineup,
-                    url: ev.url,
-                },
-                ev.lineup[0]
-            )
-            setAddedIds((prev) => new Set([...prev, ev.id]))
-            setLoadingId(null)
+            try {
+                const result = await addExternalEvent(
+                    {
+                        id: ev.id,
+                        title: ev.title,
+                        datetime: ev.datetime,
+                        venue: ev.venue,
+                        lineup: ev.lineup,
+                        url: ev.url,
+                    },
+                    ev.lineup[0]
+                )
+                if (result.error) {
+                    setErrors((prev) => ({ ...prev, [ev.id]: result.error! }))
+                } else if (result.eventId) {
+                    setAddedIds((prev) => new Set([...prev, ev.id]))
+                    // Navigate to the new event detail page
+                    router.push(routes.events.detail(result.eventId))
+                }
+            } catch {
+                setErrors((prev) => ({ ...prev, [ev.id]: 'Error al guardar. Intentá de nuevo.' }))
+            } finally {
+                setLoadingId(null)
+            }
         })
     }
 
@@ -55,6 +71,8 @@ export function TicketmasterResults({ events, searchQuery }: TicketmasterResults
         <ul className="mt-6 divide-y divide-white/[0.06]">
             {events.map((ev) => {
                 const isLoading = loadingId === ev.id
+                const isAdded = addedIds.has(ev.id)
+                const error = errors[ev.id]
                 const date = new Date(ev.datetime)
                 const dateLabel = date.toLocaleDateString('es-AR', {
                     weekday: 'short',
@@ -89,6 +107,9 @@ export function TicketmasterResults({ events, searchQuery }: TicketmasterResults
                                     {ev.genre}
                                 </span>
                             )}
+                            {error && (
+                                <p className="mt-1 text-xs text-red-400">{error}</p>
+                            )}
                         </div>
 
                         {/* Precio (si existe) */}
@@ -105,14 +126,14 @@ export function TicketmasterResults({ events, searchQuery }: TicketmasterResults
                         <div className="shrink-0">
                             <button
                                 type="button"
-                                disabled={isLoading || addedIds.has(ev.id)}
+                                disabled={isLoading || isAdded}
                                 onClick={() => handleAdd(ev)}
-                                className={`inline-flex items-center justify-center rounded-lg border px-4 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${addedIds.has(ev.id)
+                                className={`inline-flex items-center justify-center rounded-lg border px-4 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${isAdded
                                         ? 'border-green-500/30 bg-green-500/10 text-green-400'
                                         : 'border-white/15 text-zinc-300 hover:border-white/30 hover:text-white hover:bg-white/5 disabled:opacity-50'
                                     }`}
                             >
-                                {isLoading ? 'Guardando…' : addedIds.has(ev.id) ? '✓ Guardado' : '+ Guardar'}
+                                {isLoading ? 'Guardando…' : isAdded ? '✓ Guardado' : '+ Guardar'}
                             </button>
                         </div>
                     </li>

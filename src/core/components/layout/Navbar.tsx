@@ -8,6 +8,7 @@ const NAV_LINKS = [
     { label: 'Inicio', href: routes.home },
     { label: 'Buscar', href: routes.events.search },
     { label: 'Artistas', href: routes.artists.list },
+    { label: 'Festivales', href: routes.festivals.list },
     { label: 'Sedes', href: routes.venues.list },
     { label: 'Wishlist', href: routes.wishlist },
     { label: 'Gastos', href: routes.expenses.list },
@@ -47,8 +48,8 @@ export function Navbar() {
                                     key={href}
                                     href={href}
                                     className={`relative px-3 py-1.5 text-sm rounded-md transition-colors whitespace-nowrap ${active
-                                            ? 'text-white bg-white/[0.08]'
-                                            : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                                        ? 'text-white bg-white/[0.08]'
+                                        : 'text-zinc-400 hover:text-white hover:bg-white/5'
                                         }`}
                                 >
                                     {label}

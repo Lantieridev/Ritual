@@ -61,7 +61,7 @@ export async function createEvent(formData: EventCreateInput): Promise<{ error?:
 export async function addExternalEvent(
   event: ExternalEvent,
   artistNameForLineup?: string
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; eventId?: string }> {
   const venueName = sanitizeText(event.venue?.name, MAX_VENUE_NAME_LENGTH)
   if (!venueName) return { error: 'El evento no tiene sede.' }
 
@@ -138,7 +138,10 @@ export async function addExternalEvent(
   }
 
   await supabase.from('lineups').insert({ event_id: newEvent.id, artist_id: artistId })
-  redirect(routes.events.detail(newEvent.id))
+  // Return the new event ID — the client component handles navigation.
+  // DO NOT call redirect() here: it throws NEXT_REDIRECT which useTransition
+  // silently swallows, making the button appear to do nothing.
+  return { eventId: newEvent.id }
 }
 
 export async function updateEvent(

@@ -74,6 +74,13 @@ export async function uploadEventPhoto(
 
     if (uploadError) {
         console.error('Error subiendo foto:', uploadError)
+        // Bucket not found — give a clear actionable message
+        const msg = uploadError.message?.toLowerCase() ?? ''
+        if (msg.includes('bucket') || msg.includes('not found') || uploadError.statusCode === '404') {
+            return {
+                error: 'El bucket de fotos no existe en Supabase Storage. Crealo en el dashboard: Storage → New bucket → "event-photos" → Public.',
+            }
+        }
         return { error: sanitizeError(uploadError) }
     }
 

@@ -9,6 +9,7 @@ export const routes = {
   stats: '/stats',
   wishlist: '/wishlist',
   search: '/search',
+  wrapped: '/wrapped',
 
   artists: {
     list: '/artists',
@@ -35,6 +36,12 @@ export const routes = {
     new: '/expenses/nuevo',
     detail: (id: string) => `/expenses/${id}` as const,
     edit: (id: string) => `/expenses/${id}/editar` as const,
+  },
+
+  festivals: {
+    list: '/festivals',
+    new: '/festivals/nuevo',
+    detail: (id: string) => `/festivals/${id}` as const,
   },
 
   // Reservado para cuando exista auth:

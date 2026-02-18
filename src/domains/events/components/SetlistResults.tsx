@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { addExternalEvent } from '@/src/domains/events/actions'
+import { routes } from '@/src/core/lib/routes'
 import type { Setlist } from '@/src/core/lib/setlistfm'
 import { parseSetlistDate } from '@/src/core/lib/setlistfm'
 
@@ -14,30 +16,45 @@ interface SetlistResultsProps {
  * Muestra el setlist (canciones) de cada show.
  */
 export function SetlistResults({ setlists }: SetlistResultsProps) {
+    const router = useRouter()
     const [loadingId, setLoadingId] = useState<string | null>(null)
+    const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
     const [expandedId, setExpandedId] = useState<string | null>(null)
+    const [errors, setErrors] = useState<Record<string, string>>({})
     const [, startTransition] = useTransition()
 
     function handleAdd(setlist: Setlist) {
         setLoadingId(setlist.id)
+        setErrors((prev) => { const next = { ...prev }; delete next[setlist.id]; return next })
         startTransition(async () => {
-            const isoDate = parseSetlistDate(setlist.eventDate)
-            await addExternalEvent(
-                {
-                    id: setlist.id,
-                    title: `${setlist.artist.name} @ ${setlist.venue.name}`,
-                    datetime: isoDate + 'T00:00:00Z',
-                    venue: {
-                        name: setlist.venue.name,
-                        city: setlist.venue.city.name,
-                        country: setlist.venue.city.country.name,
+            try {
+                const isoDate = parseSetlistDate(setlist.eventDate)
+                const result = await addExternalEvent(
+                    {
+                        id: setlist.id,
+                        title: `${setlist.artist.name} @ ${setlist.venue.name}`,
+                        datetime: isoDate + 'T00:00:00Z',
+                        venue: {
+                            name: setlist.venue.name,
+                            city: setlist.venue.city.name,
+                            country: setlist.venue.city.country.name,
+                        },
+                        lineup: [setlist.artist.name],
+                        url: setlist.url,
                     },
-                    lineup: [setlist.artist.name],
-                    url: setlist.url,
-                },
-                setlist.artist.name
-            )
-            setLoadingId(null)
+                    setlist.artist.name
+                )
+                if (result.error) {
+                    setErrors((prev) => ({ ...prev, [setlist.id]: result.error! }))
+                } else if (result.eventId) {
+                    setAddedIds((prev) => new Set([...prev, setlist.id]))
+                    router.push(routes.events.detail(result.eventId))
+                }
+            } catch {
+                setErrors((prev) => ({ ...prev, [setlist.id]: 'Error al guardar. Intentá de nuevo.' }))
+            } finally {
+                setLoadingId(null)
+            }
         })
     }
 
@@ -54,7 +71,9 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
         <ul className="mt-6 divide-y divide-white/[0.06]">
             {setlists.map((setlist) => {
                 const isLoading = loadingId === setlist.id
+                const isAdded = addedIds.has(setlist.id)
                 const isExpanded = expandedId === setlist.id
+                const error = errors[setlist.id]
                 const isoDate = parseSetlistDate(setlist.eventDate)
                 const dateLabel = new Date(isoDate).toLocaleDateString('es-AR', {
                     weekday: 'short',
@@ -96,17 +115,23 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
                                         {isExpanded ? '▲ Ocultar setlist' : `▼ Ver setlist (${allSongs.length} canciones)`}
                                     </button>
                                 )}
+                                {error && (
+                                    <p className="mt-1 text-xs text-red-400">{error}</p>
+                                )}
                             </div>
 
                             {/* Acción */}
                             <div className="shrink-0">
                                 <button
                                     type="button"
-                                    disabled={isLoading}
+                                    disabled={isLoading || isAdded}
                                     onClick={() => handleAdd(setlist)}
-                                    className="inline-flex items-center justify-center rounded-lg border border-white/15 px-4 py-2 text-xs font-semibold text-zinc-300 hover:border-white/30 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className={`inline-flex items-center justify-center rounded-lg border px-4 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${isAdded
+                                            ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                                            : 'border-white/15 text-zinc-300 hover:border-white/30 hover:text-white hover:bg-white/5 disabled:opacity-50'
+                                        }`}
                                 >
-                                    {isLoading ? 'Guardando…' : '+ Guardar'}
+                                    {isLoading ? 'Guardando…' : isAdded ? '✓ Guardado' : '+ Guardar'}
                                 </button>
                             </div>
                         </div>
