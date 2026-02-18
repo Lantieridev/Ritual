@@ -11,51 +11,73 @@ import { getCurrentUserId } from '@/src/core/auth/session'
  */
 export async function getWishlistArtistIds(): Promise<string[]> {
     const userId = await getCurrentUserId()
-    if (!userId) throw new Error('Usuario no autenticado')
-    const { data } = await supabase
+    // console.log('[Wishlist] getWishlistArtistIds user:', userId)
+    if (!userId) return [] // Don't throw, just return empty for safety in UI
+    const { data, error } = await supabase
         .from('wishlist')
         .select('artist_id')
         .eq('user_id', userId)
+
+    if (error) {
+        console.error('[Wishlist] Error fetching IDs:', error)
+        return []
+    }
     return (data ?? []).map((r) => r.artist_id)
 }
 
-/**
- * Agrega o quita un artista de la wishlist (toggle).
- * Devuelve el nuevo estado: true = está en wishlist, false = no está.
- */
 export async function toggleWishlist(
     artistId: string
 ): Promise<{ inWishlist: boolean; error?: string }> {
+    console.log('[Wishlist] Toggling artist:', artistId)
+
     const idErr = validateUUID(artistId, 'Artista')
-    if (idErr) return { inWishlist: false, error: idErr }
+    if (idErr) {
+        console.error('[Wishlist] Invalid ID:', artistId, idErr)
+        return { inWishlist: false, error: idErr }
+    }
 
     const userId = await getCurrentUserId()
-    if (!userId) return { inWishlist: false, error: 'Usuario no autenticado' }
+    console.log('[Wishlist] User ID:', userId)
+
+    if (!userId) return { inWishlist: false, error: 'Inicia sesión para guardar artistas.' }
 
     // Verificar si ya existe
-    const { data: existing } = await supabase
+    const { data: existing, error: selectError } = await supabase
         .from('wishlist')
         .select('id')
         .eq('user_id', userId)
         .eq('artist_id', artistId)
         .single()
 
+    if (selectError && selectError.code !== 'PGRST116') {
+        console.error('[Wishlist] Check error:', selectError)
+        return { inWishlist: false, error: 'Error al verificar wishlist.' }
+    }
+
     if (existing) {
         // Quitar de wishlist
+        console.log('[Wishlist] Removing...')
         const { error } = await supabase
             .from('wishlist')
             .delete()
             .eq('id', existing.id)
-        if (error) return { inWishlist: true, error: sanitizeError(error) }
+        if (error) {
+            console.error('[Wishlist] Delete error:', error)
+            return { inWishlist: true, error: sanitizeError(error) }
+        }
         revalidatePath(routes.artists.detail(artistId))
         revalidatePath('/wishlist')
         return { inWishlist: false }
     } else {
         // Agregar a wishlist
+        console.log('[Wishlist] Adding...')
         const { error } = await supabase
             .from('wishlist')
             .insert({ user_id: userId, artist_id: artistId })
-        if (error) return { inWishlist: false, error: sanitizeError(error) }
+        if (error) {
+            console.error('[Wishlist] Insert error:', error)
+            return { inWishlist: false, error: sanitizeError(error) }
+        }
         revalidatePath(routes.artists.detail(artistId))
         revalidatePath('/wishlist')
         return { inWishlist: true }

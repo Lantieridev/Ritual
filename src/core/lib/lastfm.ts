@@ -147,8 +147,11 @@ export async function getArtistEvents(
 ): Promise<{ events: FutureEvent[]; error?: string }> {
     const apiKey = getLastFmApiKey()
     if (!apiKey) {
+        console.error('[LastFM] API Key missing')
         return { events: [], error: 'LASTFM_API_KEY no configurado.' }
     }
+
+    console.log('[LastFM] Fetching events for:', artistName)
 
     const params = new URLSearchParams({
         method: 'artist.getevents',
@@ -164,24 +167,30 @@ export async function getArtistEvents(
             next: { revalidate: 3600 },
         })
 
+        console.log('[LastFM] Response Status:', res.status)
+
         if (res.status === 404) {
             // Artist not found likely
             return { events: [] }
         }
 
         if (!res.ok) {
+            const text = await res.text()
+            console.error('[LastFM] Error body:', text)
             return { events: [], error: `Last.fm respondió con error ${res.status}.` }
         }
 
         const data = await res.json()
 
         if (data.error) {
+            console.error('[LastFM] API Error:', data.error, data.message)
             if (data.error === 6) return { events: [] } // Artist not found
             return { events: [], error: data.message }
         }
 
         const rawEvents = data.events?.event
         if (!rawEvents || !Array.isArray(rawEvents)) {
+            // console.log('[LastFM] No events found (empty array or invalid format).')
             return { events: [] }
         }
 
@@ -224,7 +233,7 @@ export async function getArtistEvents(
         return { events: futureEvents }
 
     } catch (e) {
-        console.error('Last.fm artist events:', e)
+        console.error('Last.fm artist events exception:', e)
         return { events: [], error: 'Error al conectar con Last.fm.' }
     }
 }

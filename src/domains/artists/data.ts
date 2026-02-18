@@ -7,6 +7,7 @@ export interface ArtistWithEvents extends Artist {
     name: string | null
     date: string
     venues: { name: string; city: string | null } | null
+    event_photos: Array<{ storage_path: string; caption: string | null }>
   }>
 }
 
@@ -30,7 +31,8 @@ export async function getArtistById(id: string): Promise<ArtistWithEvents | null
       lineups (
         events (
           id, name, date,
-          venues ( name, city )
+          venues ( name, city ),
+          event_photos ( storage_path, caption )
         )
       )
     `)
