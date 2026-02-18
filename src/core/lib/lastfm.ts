@@ -4,6 +4,8 @@
  * Solo se usa en servidor. Requiere LASTFM_API_KEY en .env.local.
  * Docs: https://www.last.fm/api
  */
+import 'server-only'
+import { getLastFmApiKey } from '@/src/core/lib/env'
 
 const BASE = 'https://ws.audioscrobbler.com/2.0'
 
@@ -34,12 +36,8 @@ export interface LastFmArtist {
     }
 }
 
-function getApiKey(): string | undefined {
-    return process.env.LASTFM_API_KEY
-}
-
 export function isLastFmConfigured(): boolean {
-    return Boolean(getApiKey()?.trim())
+    return Boolean(getLastFmApiKey())
 }
 
 /**
@@ -48,8 +46,8 @@ export function isLastFmConfigured(): boolean {
 export async function getLastFmArtistInfo(
     artistName: string
 ): Promise<{ artist: LastFmArtist | null; error?: string }> {
-    const apiKey = getApiKey()
-    if (!apiKey?.trim()) {
+    const apiKey = getLastFmApiKey()
+    if (!apiKey) {
         return { artist: null, error: 'LASTFM_API_KEY no configurado.' }
     }
 

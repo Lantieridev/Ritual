@@ -3,7 +3,13 @@
  * Usado para buscar shows PASADOS de un artista (historial + setlists).
  * Solo se usa en servidor. Requiere SETLISTFM_API_KEY en .env.local.
  * Docs: https://api.setlist.fm/docs/1.0/index.html
+ *
+ * NOTA DE SEGURIDAD: Este archivo exporta tipos y utilidades puras que son importados
+ * por Client Components. La API key NUNCA se expone al cliente porque:
+ * 1. Solo se accede en funciones async que solo se llaman desde Server Components.
+ * 2. Las variables de entorno sin NEXT_PUBLIC_ nunca se incluyen en el bundle del cliente.
  */
+import { getSetlistFmApiKey } from '@/src/core/lib/env'
 
 const BASE = 'https://api.setlist.fm/rest/1.0'
 
@@ -51,12 +57,8 @@ export interface Setlist {
     lastUpdated: string
 }
 
-function getApiKey(): string | undefined {
-    return process.env.SETLISTFM_API_KEY
-}
-
 export function isSetlistFmConfigured(): boolean {
-    return Boolean(getApiKey()?.trim())
+    return Boolean(getSetlistFmApiKey())
 }
 
 /**
@@ -67,8 +69,8 @@ export async function getSetlistsByArtist(
     artistName: string,
     page = 1
 ): Promise<{ setlists: Setlist[]; total: number; error?: string }> {
-    const apiKey = getApiKey()
-    if (!apiKey?.trim()) {
+    const apiKey = getSetlistFmApiKey()
+    if (!apiKey) {
         return { setlists: [], total: 0, error: 'SETLISTFM_API_KEY no configurado.' }
     }
 

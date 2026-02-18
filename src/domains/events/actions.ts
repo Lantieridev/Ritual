@@ -3,13 +3,20 @@
 import { redirect } from 'next/navigation'
 import { supabase } from '@/src/core/lib/supabase'
 import { routes } from '@/src/core/lib/routes'
+import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import type { EventCreateInput, EventUpdateInput } from '@/src/core/types'
 import type { BandsintownEvent } from '@/src/core/lib/bandsintown'
 
+const MAX_NAME_LENGTH = 200
+const MAX_VENUE_NAME_LENGTH = 200
+const MAX_ARTIST_NAME_LENGTH = 200
+
 function validateCreate(data: EventCreateInput): string | null {
-  if (!data.name?.trim()) return 'El nombre del recital es obligatorio.'
+  const name = sanitizeText(data.name, MAX_NAME_LENGTH)
+  if (!name) return 'El nombre del recital es obligatorio.'
   if (!data.date) return 'La fecha es obligatoria.'
   if (!data.venue_id) return 'Debes elegir una sede.'
+  if (data.venue_id && validateUUID(data.venue_id, 'Sede')) return validateUUID(data.venue_id, 'Sede')
   return null
 }
 
@@ -17,10 +24,12 @@ export async function createEvent(formData: EventCreateInput): Promise<{ error?:
   const err = validateCreate(formData)
   if (err) return { error: err }
 
+  const name = sanitizeText(formData.name, MAX_NAME_LENGTH)!
+
   const { data: newEvent, error } = await supabase
     .from('events')
     .insert({
-      name: formData.name.trim(),
+      name,
       date: formData.date,
       venue_id: formData.venue_id,
     })
@@ -29,10 +38,14 @@ export async function createEvent(formData: EventCreateInput): Promise<{ error?:
 
   if (error || !newEvent) {
     console.error('Error creando evento:', error)
-    return { error: error?.message ?? 'Error creando evento.' }
+    return { error: sanitizeError(error) }
   }
 
   if (formData.artist_ids?.length) {
+    // Validate all artist IDs are UUIDs before inserting
+    const invalidId = formData.artist_ids.find((id) => validateUUID(id) !== null)
+    if (invalidId) return { error: 'ID de artista inválido.' }
+
     const { error: lineupsError } = await supabase.from('lineups').insert(
       formData.artist_ids.map((artist_id) => ({ event_id: newEvent.id, artist_id }))
     )
@@ -43,25 +56,26 @@ export async function createEvent(formData: EventCreateInput): Promise<{ error?:
 }
 
 /**
- * Crea en nuestra base un recital a partir de un evento de Bandsintown.
- * Busca o crea sede y artista para no duplicar. La base solo guarda lo que el usuario agrega.
+ * Crea en nuestra base un recital a partir de un evento de Bandsintown/Ticketmaster/Setlist.fm.
+ * Busca o crea sede y artista para no duplicar.
  */
 export async function addEventFromBandsintown(
   bitEvent: BandsintownEvent,
   artistNameForLineup?: string
 ): Promise<{ error?: string }> {
-  const venueName = bitEvent.venue?.name?.trim()
+  const venueName = sanitizeText(bitEvent.venue?.name, MAX_VENUE_NAME_LENGTH)
   if (!venueName) return { error: 'El evento no tiene sede.' }
 
   const dateStr = bitEvent.datetime
   if (!dateStr) return { error: 'El evento no tiene fecha.' }
 
   const artistName =
-    artistNameForLineup?.trim() ||
-    bitEvent.lineup?.[0]?.trim() ||
-    bitEvent.title?.trim() ||
+    sanitizeText(artistNameForLineup, MAX_ARTIST_NAME_LENGTH) ||
+    sanitizeText(bitEvent.lineup?.[0], MAX_ARTIST_NAME_LENGTH) ||
+    sanitizeText(bitEvent.title, MAX_ARTIST_NAME_LENGTH) ||
     'Artista'
-  const eventName = bitEvent.title?.trim() || `${artistName} @ ${venueName}`
+
+  const eventName = sanitizeText(bitEvent.title, MAX_NAME_LENGTH) || `${artistName} @ ${venueName}`
 
   let venueId: string | null = null
   const { data: existingVenues } = await supabase
@@ -76,14 +90,14 @@ export async function addEventFromBandsintown(
       .from('venues')
       .insert({
         name: venueName,
-        city: bitEvent.venue.city?.trim() || null,
-        country: bitEvent.venue.country?.trim() || null,
+        city: sanitizeText(bitEvent.venue.city, 100),
+        country: sanitizeText(bitEvent.venue.country, 100),
       })
       .select('id')
       .single()
     if (venueErr || !newVenue) {
       console.error('Error creando sede:', venueErr)
-      return { error: venueErr?.message ?? 'Error creando sede.' }
+      return { error: sanitizeError(venueErr) }
     }
     venueId = newVenue.id
   }
@@ -104,7 +118,7 @@ export async function addEventFromBandsintown(
       .single()
     if (artistErr || !newArtist) {
       console.error('Error creando artista:', artistErr)
-      return { error: artistErr?.message ?? 'Error creando artista.' }
+      return { error: sanitizeError(artistErr) }
     }
     artistId = newArtist.id
   }
@@ -121,7 +135,7 @@ export async function addEventFromBandsintown(
 
   if (eventErr || !newEvent) {
     console.error('Error creando evento:', eventErr)
-    return { error: eventErr?.message ?? 'Error creando evento.' }
+    return { error: sanitizeError(eventErr) }
   }
 
   await supabase.from('lineups').insert({ event_id: newEvent.id, artist_id: artistId })
@@ -132,18 +146,28 @@ export async function updateEvent(
   id: string,
   formData: EventUpdateInput
 ): Promise<{ error?: string }> {
-  if (!id) return { error: 'ID de evento inválido.' }
+  const idErr = validateUUID(id, 'Evento')
+  if (idErr) return { error: idErr }
 
   const payload: { name?: string | null; date?: string; venue_id?: string | null } = {}
-  if (formData.name !== undefined) payload.name = formData.name.trim() || null
+
+  if (formData.name !== undefined) {
+    payload.name = sanitizeText(formData.name, MAX_NAME_LENGTH)
+  }
   if (formData.date !== undefined) payload.date = formData.date
-  if (formData.venue_id !== undefined) payload.venue_id = formData.venue_id || null
+  if (formData.venue_id !== undefined) {
+    if (formData.venue_id) {
+      const venueErr = validateUUID(formData.venue_id, 'Sede')
+      if (venueErr) return { error: venueErr }
+    }
+    payload.venue_id = formData.venue_id || null
+  }
 
   if (Object.keys(payload).length > 0) {
     const { error } = await supabase.from('events').update(payload).eq('id', id)
     if (error) {
       console.error('Error actualizando evento:', error)
-      return { error: error.message }
+      return { error: sanitizeError(error) }
     }
   }
 
@@ -151,15 +175,18 @@ export async function updateEvent(
     const { error: delErr } = await supabase.from('lineups').delete().eq('event_id', id)
     if (delErr) {
       console.error('Error eliminando lineups:', delErr)
-      return { error: delErr.message }
+      return { error: sanitizeError(delErr) }
     }
     if (formData.artist_ids.length > 0) {
+      const invalidId = formData.artist_ids.find((aid) => validateUUID(aid) !== null)
+      if (invalidId) return { error: 'ID de artista inválido.' }
+
       const { error: insErr } = await supabase.from('lineups').insert(
         formData.artist_ids.map((artist_id) => ({ event_id: id, artist_id }))
       )
       if (insErr) {
         console.error('Error insertando lineups:', insErr)
-        return { error: insErr.message }
+        return { error: sanitizeError(insErr) }
       }
     }
   }
@@ -168,18 +195,19 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(id: string): Promise<{ error?: string }> {
-  if (!id) return { error: 'ID de evento inválido.' }
+  const idErr = validateUUID(id, 'Evento')
+  if (idErr) return { error: idErr }
 
   const { error: lineupsError } = await supabase.from('lineups').delete().eq('event_id', id)
   if (lineupsError) {
     console.error('Error eliminando lineups:', lineupsError)
-    return { error: lineupsError.message }
+    return { error: sanitizeError(lineupsError) }
   }
 
   const { error: eventError } = await supabase.from('events').delete().eq('id', id)
   if (eventError) {
     console.error('Error eliminando evento:', eventError)
-    return { error: eventError.message }
+    return { error: sanitizeError(eventError) }
   }
 
   redirect(routes.home)

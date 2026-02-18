@@ -3,9 +3,15 @@
  * Usado para buscar eventos futuros y presentes.
  * Solo se usa en servidor. Requiere TICKETMASTER_API_KEY en .env.local.
  * Docs: https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/
+ *
+ * NOTA DE SEGURIDAD: Este archivo exporta tipos que son importados por Client Components.
+ * La API key NUNCA se expone al cliente: las variables sin NEXT_PUBLIC_ no se incluyen
+ * en el bundle del cliente, y las funciones async solo se llaman desde Server Components.
  */
+import { getTicketmasterApiKey } from '@/src/core/lib/env'
 
 const BASE = 'https://app.ticketmaster.com/discovery/v2'
+
 
 export interface TicketmasterVenue {
     id: string
@@ -48,12 +54,8 @@ export interface TicketmasterEvent {
     }>
 }
 
-function getApiKey(): string | undefined {
-    return process.env.TICKETMASTER_API_KEY
-}
-
 export function isTicketmasterConfigured(): boolean {
-    return Boolean(getApiKey()?.trim())
+    return Boolean(getTicketmasterApiKey())
 }
 
 /**
@@ -64,13 +66,13 @@ export async function getTicketmasterEventsByArtist(
     artistName: string,
     countryCode = 'AR'
 ): Promise<{ events: TicketmasterEvent[]; error?: string }> {
-    const apiKey = getApiKey()
-    if (!apiKey?.trim()) {
+    const apiKey = getTicketmasterApiKey()
+    if (!apiKey) {
         return { events: [], error: 'TICKETMASTER_API_KEY no configurado.' }
     }
 
+    // API key sent as header (not query param) to avoid exposure in server/proxy logs
     const params = new URLSearchParams({
-        apikey: apiKey,
         keyword: artistName.trim(),
         countryCode,
         sort: 'date,asc',
@@ -80,6 +82,7 @@ export async function getTicketmasterEventsByArtist(
 
     try {
         const res = await fetch(`${BASE}/events.json?${params}`, {
+            headers: { 'X-Api-Key': apiKey },
             next: { revalidate: 300 },
         })
         if (res.status === 401) {
@@ -104,13 +107,12 @@ export async function getTicketmasterEventsByLocation(
     city: string,
     countryCode = 'AR'
 ): Promise<{ events: TicketmasterEvent[]; error?: string }> {
-    const apiKey = getApiKey()
-    if (!apiKey?.trim()) {
+    const apiKey = getTicketmasterApiKey()
+    if (!apiKey) {
         return { events: [], error: 'TICKETMASTER_API_KEY no configurado.' }
     }
 
     const params = new URLSearchParams({
-        apikey: apiKey,
         city: city.trim(),
         countryCode,
         sort: 'date,asc',
@@ -120,6 +122,7 @@ export async function getTicketmasterEventsByLocation(
 
     try {
         const res = await fetch(`${BASE}/events.json?${params}`, {
+            headers: { 'X-Api-Key': apiKey },
             next: { revalidate: 300 },
         })
         if (res.status === 401) {

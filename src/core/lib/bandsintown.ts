@@ -2,9 +2,13 @@
  * Cliente para la API de Bandsintown (recitales y artistas).
  * Solo se usa en servidor. Requiere BANDSINTOWN_APP_ID en .env.local.
  * Así la búsqueda no sobrecarga la base: se consulta la API y solo se persiste lo que el usuario agrega.
+ *
+ * NOTA DE SEGURIDAD: Este archivo exporta tipos usados por Client Components.
+ * BANDSINTOWN_APP_ID nunca se expone al cliente (no tiene prefijo NEXT_PUBLIC_).
  */
 
 const BASE = 'https://rest.bandsintown.com'
+
 
 /** Respuesta de venue en un evento Bandsintown. */
 export interface BandsintownVenue {

@@ -5,6 +5,8 @@
  * Solo se usa en servidor. Requiere SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET en .env.local.
  * Docs: https://developer.spotify.com/documentation/web-api
  */
+import 'server-only'
+import { getSpotifyClientId, getSpotifyClientSecret } from '@/src/core/lib/env'
 
 const TOKEN_URL = 'https://accounts.spotify.com/api/token'
 const BASE = 'https://api.spotify.com/v1'
@@ -25,16 +27,8 @@ export interface SpotifyArtist {
     external_urls: { spotify: string }
 }
 
-function getCredentials() {
-    return {
-        clientId: process.env.SPOTIFY_CLIENT_ID,
-        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-    }
-}
-
 export function isSpotifyConfigured(): boolean {
-    const { clientId, clientSecret } = getCredentials()
-    return Boolean(clientId?.trim() && clientSecret?.trim())
+    return Boolean(getSpotifyClientId() && getSpotifyClientSecret())
 }
 
 /**
@@ -42,7 +36,8 @@ export function isSpotifyConfigured(): boolean {
  * No requiere login de usuario — solo credenciales de la app.
  */
 async function getAccessToken(): Promise<string | null> {
-    const { clientId, clientSecret } = getCredentials()
+    const clientId = getSpotifyClientId()
+    const clientSecret = getSpotifyClientSecret()
     if (!clientId || !clientSecret) return null
 
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
