@@ -1,5 +1,5 @@
 import { supabase } from '@/src/core/lib/supabase'
-import { getDevUserId } from '@/src/core/lib/env'
+import { getCurrentUserId } from '@/src/core/auth/session'
 
 export interface StatsData {
     totalShows: number
@@ -50,12 +50,13 @@ export async function getPersonalStats(): Promise<StatsData> {
         return emptyStats()
     }
 
+    const userId = await getCurrentUserId()
     const now = new Date()
 
-    // Filtrar attendance del usuario actual
+    // Filtrar attendance del usuario actual (RLS ya filtra, tomamos el primero si existe)
     const eventsWithMyAttendance = events.map((ev: any) => ({
         ...ev,
-        myAttendance: (ev.attendance ?? []).find((a: any) => a.user_id === getDevUserId()) ?? null,
+        myAttendance: userId ? (ev.attendance?.[0] ?? null) : null,
     }))
 
     const totalShows = events.length

@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
-import { getDevUserId } from '@/src/core/lib/env'
 import { routes } from '@/src/core/lib/routes'
 
 export async function login(prevState: any, formData: FormData) {
@@ -62,12 +61,9 @@ export async function claimLegacyData() {
 
     if (!user) return { error: 'No user logged in' }
 
-    const oldUserId = getDevUserId()
+    // Hardcoded legacy ID for migration purposes only
+    const oldUserId = '00000000-0000-0000-0000-000000000001'
     const newUserId = user.id
-
-    if (!oldUserId) {
-        return { error: 'DEV_USER_ID no configurado en .env.local' }
-    }
 
     try {
         console.log(`Migrating data from ${oldUserId} to ${newUserId}...`)

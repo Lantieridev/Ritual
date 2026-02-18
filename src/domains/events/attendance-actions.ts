@@ -2,7 +2,7 @@
 
 import { supabase } from '@/src/core/lib/supabase'
 import { validateUUID, validateRating, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
-import { getDevUserId } from '@/src/core/lib/env'
+import { getCurrentUserId } from '@/src/core/auth/session'
 
 export type AttendanceStatus = 'interested' | 'going' | 'went'
 
@@ -23,7 +23,8 @@ export async function getOrCreateAttendance(
     const idErr = validateUUID(eventId, 'Evento')
     if (idErr) return null
 
-    const userId = getDevUserId()
+    const userId = await getCurrentUserId()
+    if (!userId) return null
 
     const { data: existing } = await supabase
         .from('attendance')
@@ -59,7 +60,8 @@ export async function setAttendanceStatus(
 
     if (!isValidStatus(status)) return { error: 'Estado de asistencia inválido.' }
 
-    const userId = getDevUserId()
+    const userId = await getCurrentUserId()
+    if (!userId) return { error: 'Usuario no autenticado' }
 
     const { data: existing } = await supabase
         .from('attendance')

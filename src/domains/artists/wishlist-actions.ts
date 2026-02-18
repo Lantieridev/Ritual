@@ -4,13 +4,14 @@ import { revalidatePath } from 'next/cache'
 import { supabase } from '@/src/core/lib/supabase'
 import { routes } from '@/src/core/lib/routes'
 import { validateUUID, sanitizeError } from '@/src/core/lib/validation'
-import { getDevUserId } from '@/src/core/lib/env'
+import { getCurrentUserId } from '@/src/core/auth/session'
 
 /**
  * Obtiene los IDs de artistas en la wishlist del usuario actual.
  */
 export async function getWishlistArtistIds(): Promise<string[]> {
-    const userId = getDevUserId()
+    const userId = await getCurrentUserId()
+    if (!userId) throw new Error('Usuario no autenticado')
     const { data } = await supabase
         .from('wishlist')
         .select('artist_id')
@@ -28,7 +29,8 @@ export async function toggleWishlist(
     const idErr = validateUUID(artistId, 'Artista')
     if (idErr) return { inWishlist: false, error: idErr }
 
-    const userId = getDevUserId()
+    const userId = await getCurrentUserId()
+    if (!userId) return { inWishlist: false, error: 'Usuario no autenticado' }
 
     // Verificar si ya existe
     const { data: existing } = await supabase

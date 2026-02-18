@@ -1,6 +1,6 @@
 import { supabase } from '@/src/core/lib/supabase'
 import type { EventWithRelations } from '@/src/core/types'
-import { getDevUserId } from '@/src/core/lib/env'
+import { getCurrentUserId } from '@/src/core/auth/session'
 
 const EVENTS_SELECT = `
   *,
@@ -61,11 +61,18 @@ export async function getEventsWithAttendance(): Promise<EventWithAttendance[]> 
     return []
   }
 
-  // Filtrar attendance al usuario actual
+  const userId = await getCurrentUserId()
   const events = (data ?? []) as EventWithAttendance[]
+
+  // Si no hay usuario, retornamos eventos sin attendance
+  if (!userId) {
+    return events.map(ev => ({ ...ev, attendance: [] }))
+  }
+
+  // RLS ya filtra attendance por user_id, así que solo devolvemos lo que llega de la DB.
   return events.map((ev) => ({
     ...ev,
-    attendance: (ev.attendance ?? []).filter((a) => a.user_id === getDevUserId()),
+    attendance: ev.attendance ?? [],
   }))
 }
 

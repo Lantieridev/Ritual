@@ -45,10 +45,7 @@ export function getSpotifyClientSecret(): string | undefined {
 
 // ─── Dev helpers ─────────────────────────────────────────────────────────────
 
-export function getDevUserId(): string {
-    // Hardcoded single-player UUID — replace with auth.uid() when auth is added.
-    return '00000000-0000-0000-0000-000000000001'
-}
+// Legacy dev helper removed. Use getCurrentUserId() from '@/src/core/auth/session'
 
 // ─── Startup validation ───────────────────────────────────────────────────────
 

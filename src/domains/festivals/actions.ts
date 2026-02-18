@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { supabase } from '@/src/core/lib/supabase'
-import { getDevUserId } from '@/src/core/lib/env'
+import { getCurrentUserId } from '@/src/core/auth/session'
 import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { routes } from '@/src/core/lib/routes'
 
@@ -78,7 +78,8 @@ export async function saveFestivalAttendance(
     const idErr = validateUUID(festivalId, 'Festival')
     if (idErr) return { error: idErr }
 
-    const userId = getDevUserId()
+    const userId = await getCurrentUserId()
+    if (!userId) return { error: 'Usuario no autenticado' }
 
     const { error } = await supabase
         .from('festival_attendance')

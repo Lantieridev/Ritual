@@ -29,7 +29,18 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
-    await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // ─── Route Protection ────────────────────────────────────────────────────────
+    const url = request.nextUrl.clone()
+    const protectedPaths = ['/profile', '/wishlist', '/stats', '/expenses']
+    const isProtected = protectedPaths.some((path) => url.pathname.startsWith(path))
+
+    if (isProtected && !user) {
+        url.pathname = '/login'
+        url.searchParams.set('next', request.nextUrl.pathname)
+        return NextResponse.redirect(url)
+    }
 
     return response
 }
