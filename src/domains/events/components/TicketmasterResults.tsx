@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { addEventFromBandsintown } from '@/src/domains/events/actions'
-import type { TicketmasterEvent } from '@/src/core/lib/ticketmaster'
+import { addExternalEvent } from '@/src/domains/events/actions'
 
 interface TicketmasterResultsProps {
     events: ReturnType<typeof import('@/src/core/lib/ticketmaster').normalizeTicketmasterEvent>[]
@@ -19,7 +18,7 @@ export function TicketmasterResults({ events }: TicketmasterResultsProps) {
     function handleAdd(ev: (typeof events)[0]) {
         setLoadingId(ev.id)
         startTransition(async () => {
-            await addEventFromBandsintown(
+            await addExternalEvent(
                 {
                     id: ev.id,
                     title: ev.title,

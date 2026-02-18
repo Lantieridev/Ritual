@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { addEventFromBandsintown } from '@/src/domains/events/actions'
+import { addExternalEvent } from '@/src/domains/events/actions'
 import type { Setlist } from '@/src/core/lib/setlistfm'
 import { parseSetlistDate } from '@/src/core/lib/setlistfm'
 
@@ -22,7 +22,7 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
         setLoadingId(setlist.id)
         startTransition(async () => {
             const isoDate = parseSetlistDate(setlist.eventDate)
-            await addEventFromBandsintown(
+            await addExternalEvent(
                 {
                     id: setlist.id,
                     title: `${setlist.artist.name} @ ${setlist.venue.name}`,

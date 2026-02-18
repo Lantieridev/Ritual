@@ -4,8 +4,7 @@ import { redirect } from 'next/navigation'
 import { supabase } from '@/src/core/lib/supabase'
 import { routes } from '@/src/core/lib/routes'
 import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
-import type { EventCreateInput, EventUpdateInput } from '@/src/core/types'
-import type { BandsintownEvent } from '@/src/core/lib/bandsintown'
+import type { EventCreateInput, EventUpdateInput, ExternalEvent } from '@/src/core/types'
 
 const MAX_NAME_LENGTH = 200
 const MAX_VENUE_NAME_LENGTH = 200
@@ -56,26 +55,26 @@ export async function createEvent(formData: EventCreateInput): Promise<{ error?:
 }
 
 /**
- * Crea en nuestra base un recital a partir de un evento de Bandsintown/Ticketmaster/Setlist.fm.
+ * Crea en nuestra base un recital a partir de un evento externo (Ticketmaster, Setlist.fm, etc.).
  * Busca o crea sede y artista para no duplicar.
  */
-export async function addEventFromBandsintown(
-  bitEvent: BandsintownEvent,
+export async function addExternalEvent(
+  event: ExternalEvent,
   artistNameForLineup?: string
 ): Promise<{ error?: string }> {
-  const venueName = sanitizeText(bitEvent.venue?.name, MAX_VENUE_NAME_LENGTH)
+  const venueName = sanitizeText(event.venue?.name, MAX_VENUE_NAME_LENGTH)
   if (!venueName) return { error: 'El evento no tiene sede.' }
 
-  const dateStr = bitEvent.datetime
+  const dateStr = event.datetime
   if (!dateStr) return { error: 'El evento no tiene fecha.' }
 
   const artistName =
     sanitizeText(artistNameForLineup, MAX_ARTIST_NAME_LENGTH) ||
-    sanitizeText(bitEvent.lineup?.[0], MAX_ARTIST_NAME_LENGTH) ||
-    sanitizeText(bitEvent.title, MAX_ARTIST_NAME_LENGTH) ||
+    sanitizeText(event.lineup?.[0], MAX_ARTIST_NAME_LENGTH) ||
+    sanitizeText(event.title, MAX_ARTIST_NAME_LENGTH) ||
     'Artista'
 
-  const eventName = sanitizeText(bitEvent.title, MAX_NAME_LENGTH) || `${artistName} @ ${venueName}`
+  const eventName = sanitizeText(event.title, MAX_NAME_LENGTH) || `${artistName} @ ${venueName}`
 
   let venueId: string | null = null
   const { data: existingVenues } = await supabase
@@ -90,8 +89,8 @@ export async function addEventFromBandsintown(
       .from('venues')
       .insert({
         name: venueName,
-        city: sanitizeText(bitEvent.venue.city, 100),
-        country: sanitizeText(bitEvent.venue.country, 100),
+        city: sanitizeText(event.venue.city, 100),
+        country: sanitizeText(event.venue.country, 100),
       })
       .select('id')
       .single()

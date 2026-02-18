@@ -118,3 +118,20 @@ export interface ExpenseUpdateInput {
   event_id?: string
   date?: string
 }
+
+/**
+ * Formato normalizado para eventos provenientes de APIs externas
+ * (Ticketmaster, Setlist.fm, etc.). Usado por addExternalEvent en actions.ts.
+ */
+export interface ExternalEvent {
+  id: string
+  title: string
+  datetime: string
+  venue: {
+    name: string
+    city?: string | null
+    country?: string | null
+  }
+  lineup?: string[]
+  url?: string
+}

@@ -36,7 +36,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://i.scdn.co https://lastfm.freetls.fastly.net",
+      "img-src 'self' data: blob: https://i.scdn.co https://lastfm.freetls.fastly.net https://s1.ticketm.net https://images.sk-static.com https://upload.wikimedia.org https://*.supabase.co",
       `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} https://accounts.spotify.com https://api.spotify.com`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
@@ -58,6 +58,14 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'i.scdn.co' },
       // Last.fm artist images
       { protocol: 'https', hostname: 'lastfm.freetls.fastly.net' },
+      // Ticketmaster event images
+      { protocol: 'https', hostname: 's1.ticketm.net' },
+      // Songkick / Setlist.fm static images
+      { protocol: 'https', hostname: 'images.sk-static.com' },
+      // Wikipedia / Wikimedia placeholders
+      { protocol: 'https', hostname: 'upload.wikimedia.org' },
+      // Supabase Storage (artist photos uploaded manually)
+      { protocol: 'https', hostname: '*.supabase.co' },
     ],
   },
 

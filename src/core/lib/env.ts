@@ -41,9 +41,7 @@ export function getSpotifyClientSecret(): string | undefined {
     return process.env.SPOTIFY_CLIENT_SECRET?.trim() || undefined
 }
 
-export function getBandsintownAppId(): string | undefined {
-    return process.env.BANDSINTOWN_APP_ID?.trim() || undefined
-}
+
 
 // ─── Dev helpers ─────────────────────────────────────────────────────────────
 
