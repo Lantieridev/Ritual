@@ -21,8 +21,8 @@ export async function updateSession(request: NextRequest) {
                     response = NextResponse.next({
                         request,
                     })
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        response.cookies.set(name, value, options)
+                    cookiesToSet.forEach(({ name, value }) =>
+                        response.cookies.set(name, value)
                     )
                 },
             },

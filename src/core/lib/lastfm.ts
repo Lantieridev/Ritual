@@ -185,7 +185,9 @@ export async function getArtistEvents(
             return { events: [] }
         }
 
-        const events: FutureEvent[] = rawEvents.map((ev: any) => {
+        type LastFmEvent = LastFmEventResponse['events']['event'][number]
+
+        const events: FutureEvent[] = rawEvents.map((ev: LastFmEvent) => {
             // Parse date. Last.fm format: "Thu, 07 Apr 2022 20:00:00" -> ISO
             // But sometimes it's just a date. JS Date() usually parses it fine.
             const date = new Date(ev.startDate)
@@ -194,8 +196,6 @@ export async function getArtistEvents(
             const venue = ev.venue
             const location = venue?.location
 
-            // Extract city. Sometimes empty.
-            const city = location?.city || location?.['geo:point'] ? undefined : undefined // What logic?
             // Helper to find valid city
             const validCity = location?.city || ''
             const validCountry = location?.country || ''

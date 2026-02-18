@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createFestival } from '@/src/domains/festivals/actions'
-import { routes } from '@/src/core/lib/routes'
 import { FormField } from '@/src/core/components/ui'
 
 export default function NuevoFestivalPage() {

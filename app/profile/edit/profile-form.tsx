@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState, useEffect } from 'react'
+import { useActionState, useState } from 'react'
 import { updateProfile, ProfileState } from '@/src/domains/auth/profile-actions'
 import { Button } from '@/src/core/components/ui/Button'
 import { Input } from '@/src/core/components/ui/Input'

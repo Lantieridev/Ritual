@@ -3,7 +3,6 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import { Profile } from '@/src/core/types'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 
 export async function getProfile(userId?: string): Promise<Profile | null> {
     const supabase = await createClient()
