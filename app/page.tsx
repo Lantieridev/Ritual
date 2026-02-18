@@ -29,6 +29,13 @@ export default async function HomePage({ searchParams }: PageProps) {
   const allEvents = await getEventsWithAttendance()
   const now = new Date()
 
+  // Próximo show con status 'going'
+  const nextShow = allEvents.find((ev) => {
+    const isFuture = new Date(ev.date) >= now
+    const status = ev.attendance?.[0]?.status
+    return isFuture && status === 'going'
+  })
+
   // Aplicar filtro
   const events = allEvents.filter((ev) => {
     const isPast = new Date(ev.date) < now
@@ -38,10 +45,8 @@ export default async function HomePage({ searchParams }: PageProps) {
     switch (filter) {
       case 'upcoming': return !isPast
       case 'past': return isPast
-      // "Me interesa" y "Voy" solo tienen sentido para shows futuros
       case 'interested': return !isPast && status === 'interested'
       case 'going': return !isPast && status === 'going'
-      // "Fui" solo para shows pasados con ese status
       case 'went': return status === 'went'
       default: return true
     }
@@ -56,6 +61,7 @@ export default async function HomePage({ searchParams }: PageProps) {
   }, {})
 
   const years = Object.keys(byYear).sort((a, b) => Number(b) - Number(a))
+  const currentYear = now.getFullYear()
 
   const FILTERS: { value: Filter; label: string }[] = [
     { value: 'all', label: 'Todos' },
@@ -71,13 +77,40 @@ export default async function HomePage({ searchParams }: PageProps) {
       <Hero />
 
       <section id="recitales" className="max-w-4xl mx-auto px-6 md:px-8 py-16">
+
+        {/* Banner: próximo show */}
+        {nextShow && filter === 'all' && (
+          <Link
+            href={routes.events.detail(nextShow.id)}
+            className="group flex items-center gap-4 mb-10 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.05] px-5 py-4 transition-colors"
+          >
+            <div className="shrink-0 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-lg">
+              🎟️
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-0.5">Próximo show</p>
+              <p className="font-semibold text-white truncate">
+                {nextShow.name || nextShow.lineups?.map((l) => l.artists.name).join(', ') || 'Recital'}
+              </p>
+              {nextShow.venues && (
+                <p className="text-xs text-zinc-500 truncate">
+                  {new Date(nextShow.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {' · '}
+                  {[nextShow.venues.name, nextShow.venues.city].filter(Boolean).join(', ')}
+                </p>
+              )}
+            </div>
+            <span className="text-zinc-600 group-hover:text-zinc-300 transition-colors shrink-0">→</span>
+          </Link>
+        )}
+
         {/* Header de sección */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <h2 className="text-xl font-bold tracking-tight text-white">
             Mis recitales
             {allEvents.length > 0 && (
               <span className="ml-2 text-sm font-normal text-zinc-600">
-                {allEvents.length} en total
+                {filter === 'all' ? allEvents.length : events.length} {filter === 'all' ? 'en total' : 'resultados'}
               </span>
             )}
           </h2>
@@ -93,6 +126,7 @@ export default async function HomePage({ searchParams }: PageProps) {
               <Link
                 key={value}
                 href={value === 'all' ? '/' : `/?filter=${value}`}
+                scroll={false}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${filter === value
                   ? 'bg-white text-neutral-950 font-semibold'
                   : 'border border-white/10 text-zinc-500 hover:text-zinc-300 hover:border-white/20'
@@ -119,17 +153,34 @@ export default async function HomePage({ searchParams }: PageProps) {
               <p className="text-sm text-zinc-600 max-w-xs">
                 {filter === 'all'
                   ? 'Buscá shows en Ticketmaster o Setlist.fm, o cargá uno a mano.'
-                  : 'Probá con otro filtro o agregá más recitales.'}
+                  : filter === 'went'
+                    ? 'Marcá shows como "Fui" en el detalle del evento.'
+                    : filter === 'going'
+                      ? 'Marcá shows futuros como "Voy a ir" para verlos acá.'
+                      : filter === 'interested'
+                        ? 'Marcá shows futuros como "Me interesa" para seguirlos.'
+                        : 'Probá con otro filtro o agregá más recitales.'}
               </p>
             </div>
-            <div className="flex flex-wrap gap-3 justify-center">
-              <LinkButton href={routes.events.search} variant="primary" className="px-5 py-2.5 text-sm">
-                Buscar shows
-              </LinkButton>
-              <LinkButton href={routes.events.new} variant="secondary" className="px-5 py-2.5 text-sm">
-                + Cargar a mano
-              </LinkButton>
-            </div>
+            {filter === 'all' && (
+              <div className="flex flex-wrap gap-3 justify-center">
+                <LinkButton href={routes.events.search} variant="primary" className="px-5 py-2.5 text-sm">
+                  Buscar shows
+                </LinkButton>
+                <LinkButton href={routes.events.new} variant="secondary" className="px-5 py-2.5 text-sm">
+                  + Cargar a mano
+                </LinkButton>
+              </div>
+            )}
+            {filter !== 'all' && (
+              <Link
+                href="/"
+                scroll={false}
+                className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-4"
+              >
+                Ver todos los recitales
+              </Link>
+            )}
           </div>
         )}
 
@@ -153,6 +204,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                 <ul className="divide-y divide-white/[0.04]">
                   {byYear[year].map((ev) => {
                     const dateObj = new Date(ev.date)
+                    const evYear = dateObj.getFullYear()
                     const isPast = dateObj < now
                     const userAttendance = ev.attendance?.[0]
                     const status = userAttendance?.status
@@ -176,6 +228,9 @@ export default async function HomePage({ searchParams }: PageProps) {
                             <p className="text-2xl font-bold text-white leading-none mt-0.5">
                               {dateObj.getDate()}
                             </p>
+                            {evYear !== currentYear && (
+                              <p className="text-[10px] text-zinc-700 mt-0.5">{evYear}</p>
+                            )}
                           </div>
 
                           {/* Info */}
