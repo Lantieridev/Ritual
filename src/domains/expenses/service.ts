@@ -54,12 +54,13 @@ export async function listExpensesForEvent(eventId: string, userId: string | nul
 /**
  * Aggregates total/by-category/by-year figures for the current user.
  *
- * Wrapped in React's `cache()` (perfil-mobile WU3, same criterion as
- * `listMyEvents` in coleccion-mobile's D-7 and `getStats` in
- * perfil-mobile WU3): `/profile` renders its desktop and mobile trees in
- * the same request, and the mobile grid's "Gastos" cell needs this same
- * year total — `cache()` dedupes those calls into one real query, without
- * crossing sessions between different requests.
+ * Wrapped in React's `cache()` as a precaution, not because anything needs
+ * it today: no current caller invokes it twice in one request (`/profile`
+ * asks for it once, in a top-level `Promise.all`). Same criterion as
+ * `listMyEvents` in coleccion-mobile's D-7, where two separate trees really
+ * did call it — here it only guards against a future component asking again
+ * within the same request. Memoization is per request, never across
+ * sessions.
  */
 export const summarizeExpenses = cache(async function summarizeExpenses(userId: string | null): Promise<ExpenseSummary> {
   return getExpensesSummary(userId)

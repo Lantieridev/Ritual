@@ -11,9 +11,9 @@ import type { StatsData } from '@/src/domains/stats/service'
 
 /*
  * Test de aprobación (perfil-mobile WU3): `getStats` va a envolverse en
- * `cache()` de React, mismo criterio que `listMyEvents` (D-7,
- * coleccion-mobile) — `/profile` va a renderizar el árbol de escritorio y el
- * mobile en la misma request, cada uno llamando a `getStats()` por su lado.
+ * `cache()` de React por precaución, mismo criterio que `listMyEvents` (D-7,
+ * coleccion-mobile) — aunque acá, a diferencia de ese caso, ningún llamador
+ * actual la pide dos veces en la misma request.
  * `cache()` sólo memoiza en el runtime real de Server Components; bajo
  * Vitest (sin la condición "react-server") es un passthrough sin memoria,
  * así que este test verifica la delegación correcta, no la memoización de

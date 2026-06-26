@@ -11,10 +11,10 @@ import type { ExpenseSummary } from '@/src/domains/expenses/service'
 
 /*
  * Test de aprobación (perfil-mobile WU3): `summarizeExpenses` va a
- * envolverse en `cache()` de React, mismo criterio que `listMyEvents` (D-7,
- * coleccion-mobile) y `getStats` (perfil-mobile WU3) — `/profile` va a
- * renderizar el árbol de escritorio y el mobile en la misma request, y el
- * mobile además necesita el total del año para la celda "Gastos" del grid.
+ * envolverse en `cache()` de React por precaución, mismo criterio que
+ * `listMyEvents` (D-7, coleccion-mobile) y `getStats` — aunque acá, a
+ * diferencia de ese caso, ningún llamador actual la pide dos veces en la
+ * misma request.
  * `cache()` sólo memoiza en el runtime real de Server Components; bajo
  * Vitest es un passthrough sin memoria, así que este test verifica la
  * delegación correcta (incluyendo el `userId` recibido), no la memoización

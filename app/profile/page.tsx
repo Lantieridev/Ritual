@@ -46,11 +46,9 @@ export default async function ProfilePage() {
     const displayName = profile?.full_name || user.email?.split('@')[0] || 'Sin nombre'
     const seal = monogram(profile?.full_name, user.email?.[0] ?? '?')
 
-    // Hub mobile "Vos" (perfil-mobile). getStats/summarizeExpenses ya están
-    // memoizados con cache() (WU3) — mismo criterio que listMyEvents en
-    // coleccion-mobile — así que agregar este árbol no duplica ninguna
-    // consulta si en el futuro otro componente de la misma request también
-    // los llama.
+    // Hub mobile "Vos" (perfil-mobile). Las dos consultas se piden una sola
+    // vez acá arriba y alimentan los dos árboles (escritorio y mobile), así
+    // que agregar el hub no suma ninguna consulta.
     const currentYear = new Date().getFullYear()
     const hub = buildProfileHub({
         fullName: profile?.full_name ?? null,
