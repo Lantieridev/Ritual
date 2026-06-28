@@ -5,4 +5,6 @@ export { ResetPasswordForm } from './ResetPasswordForm'
 export { ProfileForm } from './ProfileForm'
 export { SignOutButton } from './SignOutButton'
 export { OnboardingTour } from './OnboardingTour'
+export { ProfileHubHeader } from './ProfileHubHeader'
+export { ProfileHubGrid } from './ProfileHubGrid'
 

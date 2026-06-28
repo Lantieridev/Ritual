@@ -996,6 +996,57 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
     isBold: true,
     isLarge: true,
   },
+  // --- ProfileHubHeader.tsx (perfil-mobile — "Vos" hub header + sheet trigger) ---
+  {
+    id: 'PER-01',
+    component: 'ProfileHubHeader',
+    element: 'Eyebrow "Vos · desde {año}"',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'PER-02',
+    component: 'ProfileHubHeader',
+    element: 'Display name',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-bg',
+    fontSize: '38px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'PER-03',
+    component: 'ProfileHubHeader',
+    element: 'Stats line "{shows} shows · {N} artistas"',
+    textToken: '--color-ritual-gray-mid-2',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'PER-04',
+    component: 'ProfileHubHeader',
+    element: '"···" trigger',
+    textToken: '--color-ritual-gray-text',
+    bgToken: '--color-ritual-bg',
+    fontSize: '17px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'PER-07',
+    component: 'ProfileHubHeader',
+    element: 'Monogram fallback (no avatar_url)',
+    textToken: '--color-ritual-red-hover',
+    bgToken: '--color-ritual-surface',
+    fontSize: '36px',
+    isBold: true,
+    isLarge: true,
+  },
   {
     id: 'PER-08',
     component: 'ShortcutCell',
@@ -1063,6 +1114,7 @@ describe('Design Tokens & Color Contrast (WCAG AA)', () => {
     'BSH-02', 'BSH-06', // #78 — bottom sheet subtitle/hint, same prototype colors
     'BUS-01', 'BUS-03', 'BUS-06', 'BUS-07', 'BUS-08', 'BUS-10', // #78 — buscar-mobile: ritual-red/gray-mid-2 on bg, same prototype colors as the rest of this list
     'COL-01', 'COL-07', 'COL-08', 'COL-10', // #78 — coleccion-mobile: gray-mid-2/bg headline+list-venue, red/panel grid score, red/bg list year, same prototype colors as the rest of this list
+    'PER-01', 'PER-03', // #78 — perfil-mobile: eyebrow (red/bg 9px) and stats line (gray-mid-2/bg 9px), same 9px-label-on-bg prototype pattern as the rest of this list
   ])
 
   it('every non-exempt text pair outside the known design debt meets WCAG AA', () => {
