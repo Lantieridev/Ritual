@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { validateUUID, validateDate, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
@@ -50,10 +51,19 @@ export async function listExpensesForEvent(eventId: string, userId: string | nul
   return getExpensesForEvent(eventId, userId)
 }
 
-/** Aggregates total/by-category/by-year figures for the current user. */
-export async function summarizeExpenses(userId: string | null): Promise<ExpenseSummary> {
+/**
+ * Aggregates total/by-category/by-year figures for the current user.
+ *
+ * Wrapped in React's `cache()` (perfil-mobile WU3, same criterion as
+ * `listMyEvents` in coleccion-mobile's D-7 and `getStats` in
+ * perfil-mobile WU3): `/profile` renders its desktop and mobile trees in
+ * the same request, and the mobile grid's "Gastos" cell needs this same
+ * year total — `cache()` dedupes those calls into one real query, without
+ * crossing sessions between different requests.
+ */
+export const summarizeExpenses = cache(async function summarizeExpenses(userId: string | null): Promise<ExpenseSummary> {
   return getExpensesSummary(userId)
-}
+})
 
 /**
  * Event options for the expense form's "recital asociado" picker. Cross-domain

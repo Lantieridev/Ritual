@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { getPersonalStats } from './data'
 import type { StatsData } from './data'
 
@@ -16,7 +17,14 @@ export type { StatsData }
  * `expenses`, nunca se editan.
  */
 
-/** Cifras del historial del usuario actual: totales, rankings y series por año. */
-export async function getStats(): Promise<StatsData> {
+/**
+ * Cifras del historial del usuario actual: totales, rankings y series por
+ * año. Envuelto en `cache()` de React (perfil-mobile WU3, mismo criterio que
+ * `listMyEvents` en D-7 de coleccion-mobile): `/profile` renderiza el árbol
+ * de escritorio y el mobile en la misma request, cada uno llamando a
+ * `getStats()` por su lado — `cache()` dedupea esas dos llamadas en una sola
+ * consulta real, sin cruzar sesiones entre requests distintos.
+ */
+export const getStats = cache(async function getStats(): Promise<StatsData> {
     return getPersonalStats()
-}
+})
