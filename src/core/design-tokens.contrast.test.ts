@@ -974,6 +974,43 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
     isBold: false,
     isLarge: false,
   },
+
+  // --- ShortcutCell.tsx (perfil-mobile — "Vos" hub 2x2 grid) ---
+  {
+    id: 'PER-05',
+    component: 'ShortcutCell',
+    element: 'Cell value (default/bone tone)',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-bg',
+    fontSize: '30px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'PER-06',
+    component: 'ShortcutCell',
+    element: 'Cell value (tone="acento" — Gastos)',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-bg',
+    fontSize: '30px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'PER-08',
+    component: 'ShortcutCell',
+    element: 'Cell caption',
+    // Deuda tecnológica del diseño (Open Question, design perfil-mobile):
+    // el prototipo original asume --color-ritual-gray-text acá, pero el hex
+    // real de .dc.html:1204 es #CFCBC4 — ya existe como
+    // --color-ritual-gray-light-3 (mismo token que HHS-07/HHS-15), no un
+    // token nuevo.
+    textToken: '--color-ritual-gray-light-3',
+    bgToken: '--color-ritual-bg',
+    fontSize: '16px',
+    isBold: false,
+    isLarge: false,
+  },
 ]
 
 describe('Design Tokens & Color Contrast (WCAG AA)', () => {
