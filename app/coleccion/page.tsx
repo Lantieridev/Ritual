@@ -105,9 +105,6 @@ async function CollectionDiaryView({ vista }: { vista?: string }) {
         // Sin `action`: el CTA "Cargar un show" ya lo pone <MobileHeroAction/>
         // fijo abajo (llamado incondicionalmente por CollectionPage) — un
         // segundo botón acá sería el mismo talón dos veces en la pantalla.
-        // Sin `action`: el CTA "Cargar un show" ya lo pone <MobileHeroAction/>
-        // fijo abajo (llamado incondicionalmente por CollectionPage) — un
-        // segundo botón acá sería el mismo talón dos veces en la pantalla.
         return <EmptyState title="Todavía no cargaste ningún show." description="Los que ya viste también cuentan." />
     }
 
