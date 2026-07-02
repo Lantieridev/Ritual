@@ -5,10 +5,16 @@ import type { ReactElement, ReactNode } from 'react'
 import CollectionPage from '@/app/coleccion/page'
 import { listMyEvents } from '@/src/domains/events/service'
 import type { EventWithAttendance } from '@/src/domains/events/service'
+import { MobileActionProvider } from '@/src/core/components/layout/MobileAction'
+import { MobileTabBar } from '@/src/core/components/layout/MobileTabBar'
 
 vi.mock('@/src/domains/events/service', () => ({
   listMyEvents: vi.fn(),
 }))
+
+// MobileTabBar (JD-002: para probar que el CTA no se duplica) pide
+// usePathname — no existe fuera de Next, mismo mock que HomeHero.test.tsx.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => '/coleccion' }))
 
 function wentEvent(overrides: Partial<EventWithAttendance> & { id: string; date: string }): EventWithAttendance {
   return {
@@ -94,6 +100,16 @@ describe('CollectionPage — desktop regression (coleccion-mobile WU3)', () => {
     expect(typeNamesOf(desktop)).toContain('VenuesTab')
   })
 
+  // JD-001: la bajada de PageShell describe las 3 pestañas de escritorio —
+  // cambiarla para "unificar" el copy en las dos vistas rompía el requisito
+  // de la spec de que escritorio quede byte a byte igual (D-9 la deja como
+  // deuda de copy aceptada para v1, no como algo para resolver acá).
+  it('PageShell.description sigue siendo la bajada de escritorio, sin cambios (D-9)', async () => {
+    const element = await CollectionPage({ searchParams: Promise.resolve({}) })
+    const props = (element as ReactElement<{ description?: string }>).props
+    expect(props.description).toBe('Artistas, sedes y festivales — la forma de tu historia.')
+  })
+
   it('the mobile diary tree stays a sibling of the desktop tree, not nested inside it', async () => {
     const element = await CollectionPage({ searchParams: Promise.resolve({ vista: 'lista' }) })
     const desktop = findByTestId(element, 'coleccion-desktop')!
@@ -115,14 +131,33 @@ describe('CollectionPage — mobile diary screen (coleccion-mobile WU3)', () => 
     return within(screen.getByTestId('coleccion-mobile'))
   }
 
-  it('shows the honest empty-state copy and CTA when there are zero "went" events', async () => {
+  it('shows the honest empty-state copy when there are zero "went" events', async () => {
     vi.mocked(listMyEvents).mockResolvedValue([])
 
     const mobile = await renderMobile({})
 
     expect(mobile.getByText('Todavía no cargaste ningún show.')).toBeInTheDocument()
     expect(mobile.getByText('Los que ya viste también cuentan.')).toBeInTheDocument()
-    expect(mobile.getByRole('link', { name: 'Cargar un show' })).toHaveAttribute('href', '/events/nuevo')
+  })
+
+  // JD-002: EmptyState traía su propio botón "Cargar un show" además del que
+  // ya registra <MobileHeroAction/> en el talón fijo de abajo — el mismo
+  // talón aparecía dos veces en la pantalla. Se prueba con el talón real
+  // montado (MobileActionProvider + MobileTabBar), no aislado, porque
+  // MobileHeroAction no renderiza nada por sí solo (ver HomeHero.test.tsx).
+  it('registers exactly one "Cargar un show" CTA — the fixed one, not a second one inside the empty state', async () => {
+    vi.mocked(listMyEvents).mockResolvedValue([])
+
+    const element = await CollectionPage({ searchParams: Promise.resolve({}) })
+    const mobile = findByTestId(element, 'coleccion-mobile')!
+    render(
+      <MobileActionProvider>
+        {mobile}
+        <MobileTabBar />
+      </MobileActionProvider>
+    )
+
+    expect(screen.getAllByRole('link', { name: 'Cargar un show' })).toHaveLength(1)
   })
 
   it('renders no grid/list markup in the empty state (no invented rows)', async () => {

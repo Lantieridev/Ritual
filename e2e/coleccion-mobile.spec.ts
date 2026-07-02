@@ -31,7 +31,12 @@ test.describe('Colección — diario mobile (coleccion-mobile)', () => {
     const mobile = page.getByTestId('coleccion-mobile');
     await expect(mobile.getByText('Todavía no cargaste ningún show.')).toBeVisible();
     await expect(mobile.getByText('Los que ya viste también cuentan.')).toBeVisible();
-    await expect(mobile.getByRole('link', { name: 'Cargar un show' }).first()).toBeVisible();
+
+    // El CTA vive fijo sobre el talón de navegación (MobileHeroAction →
+    // MobileTabBar en app/layout.tsx), NO adentro de este vacío — así que se
+    // busca en la página entera, no acotado a `coleccion-mobile`. Si el
+    // vacío tuviera su propio botón acá, esto encontraría dos.
+    await expect(page.getByRole('link', { name: 'Cargar un show' })).toHaveCount(1);
   });
 
   test('?vista=lista carga sin error, incluso sin shows cargados', async ({ page }) => {

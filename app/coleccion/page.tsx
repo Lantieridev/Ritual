@@ -42,11 +42,16 @@ export default async function CollectionPage({ searchParams }: PageProps) {
     const mobileDiary = await CollectionDiaryView({ vista })
 
     return (
-        <PageShell title="Colección" description="Tu historia de shows, del primero al último.">
+        <PageShell title="Colección" description="Artistas, sedes y festivales — la forma de tu historia.">
             {/* Escritorio: 3 tabs (artistas/sedes/festivales) sin cambios de
                 este WU — mobile reemplaza todo esto por el diario de shows de
                 abajo. Mismo patrón hidden/md:block que buscar-mobile
-                (app/buscar/page.tsx). */}
+                (app/buscar/page.tsx). El texto de PageShell.description queda
+                intacto para las dos vistas — la spec pide que desktop no
+                cambie ni un byte, y viewport-scopearlo tocaría PageShell, un
+                componente compartido fuera del alcance aditivo de este
+                cambio (D-9). Que en mobile ya no haya pestañas es deuda de
+                copy aceptada para v1, no algo para resolver acá. */}
             <div className="hidden md:block" data-testid="coleccion-desktop">
                 <div className="flex border-b border-ritual-border-subtle mb-8">
                     {([
@@ -73,7 +78,10 @@ export default async function CollectionPage({ searchParams }: PageProps) {
 
             {/* Mobile: diario de shows vistos, sin tabs — reemplaza artistas/
                 sedes/festivales por una sola línea de tiempo (D-9: el título
-                "Colección" de PageShell no se duplica acá). */}
+                "Colección" de PageShell no se duplica acá). La bajada de
+                PageShell sigue hablando de las tres pestañas de escritorio,
+                que acá no existen — deuda de copy aceptada para v1 (D-9),
+                no una pantalla nueva de texto para no tocar PageShell. */}
             <div className="md:hidden" data-testid="coleccion-mobile">
                 {mobileDiary}
                 <MobileHeroAction label="Cargar un show" href={routes.events.new} />
@@ -94,13 +102,13 @@ async function CollectionDiaryView({ vista }: { vista?: string }) {
     const rows = buildCollectionDiary(myEvents)
 
     if (rows.length === 0) {
-        return (
-            <EmptyState
-                title="Todavía no cargaste ningún show."
-                description="Los que ya viste también cuentan."
-                action={{ label: 'Cargar un show', href: routes.events.new }}
-            />
-        )
+        // Sin `action`: el CTA "Cargar un show" ya lo pone <MobileHeroAction/>
+        // fijo abajo (llamado incondicionalmente por CollectionPage) — un
+        // segundo botón acá sería el mismo talón dos veces en la pantalla.
+        // Sin `action`: el CTA "Cargar un show" ya lo pone <MobileHeroAction/>
+        // fijo abajo (llamado incondicionalmente por CollectionPage) — un
+        // segundo botón acá sería el mismo talón dos veces en la pantalla.
+        return <EmptyState title="Todavía no cargaste ningún show." description="Los que ya viste también cuentan." />
     }
 
     const view = parseCollectionView(vista)
