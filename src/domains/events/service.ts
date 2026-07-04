@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { validateUUID, validateDate, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { findOrCreateByName } from '@/src/core/lib/find-or-create'
@@ -75,10 +76,18 @@ export async function listEventIdsForSitemap(): Promise<Array<{ id: string; date
   return getEventIdsForSitemap()
 }
 
-/** Eventos del usuario actual (attendance propia), para Home y Wrapped. */
-export async function listMyEvents(): Promise<EventWithAttendance[]> {
+/**
+ * Eventos del usuario actual (attendance propia), para Home, Wrapped y
+ * Colección. Envuelto en `cache()` de React (D-7, coleccion-mobile): dentro
+ * de la misma request de `/coleccion`, la vista de escritorio
+ * (ArtistsShelvesView) y la vista mobile (CollectionDiaryView) llaman a esta
+ * función cada una por su lado — `cache()` dedupea esas dos llamadas en una
+ * sola consulta real, sin cruzar sesiones entre requests distintos (mismo
+ * criterio que `getCurrentUserId`/`getEventWeatherCached`).
+ */
+export const listMyEvents = cache(async function listMyEvents(): Promise<EventWithAttendance[]> {
   return getMyEvents()
-}
+})
 
 /** Próximos shows del catálogo entero, del más cercano en adelante — Home sin sesión. */
 export async function listUpcomingEvents(limit?: number): Promise<EventWithRelations[]> {

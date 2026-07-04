@@ -8,10 +8,12 @@ import type { Artist } from '@/src/core/types'
 import { listMyEvents } from '@/src/domains/events/service'
 import { aggregateEventStats } from '@/src/domains/stats/aggregate'
 import { buildArtistShelves, buildCollectionTerritory, type CollectionArtist } from '@/src/domains/artists/collection-view'
+import { buildCollectionDiary, diaryHeadline, parseCollectionView } from '@/src/domains/events/collection-diary'
+import { CollectionDiaryHeader, CollectionDiaryGrid, CollectionDiaryList } from '@/src/domains/events/components'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
 import { LinkButton, EmptyState } from '@/src/core/components/ui'
-import { PageShell } from '@/src/core/components/layout'
+import { PageShell, MobileHeroAction } from '@/src/core/components/layout'
 import { searchSpotifyArtist, getBestSpotifyImage, isSpotifyConfigured } from '@/src/core/lib/spotify'
 
 export const metadata: Metadata = {
@@ -22,7 +24,7 @@ export const metadata: Metadata = {
 type Tab = 'artistas' | 'sedes' | 'festivales'
 
 interface PageProps {
-    searchParams: Promise<{ tab?: Tab }>
+    searchParams: Promise<{ tab?: Tab; vista?: string }>
 }
 
 async function withImage(artist: CollectionArtist) {
@@ -32,32 +34,82 @@ async function withImage(artist: CollectionArtist) {
 }
 
 export default async function CollectionPage({ searchParams }: PageProps) {
-    const { tab = 'artistas' } = await searchParams
+    const { tab = 'artistas', vista } = await searchParams
+    // Resuelto acá (no como `<CollectionDiaryView vista={vista} />` sin
+    // resolver) para que el árbol devuelto no lleve ningún Server Component
+    // async pendiente — mismo resultado final en Next.js, pero además
+    // renderizable directo por @testing-library bajo Vitest.
+    const mobileDiary = await CollectionDiaryView({ vista })
 
     return (
-        <PageShell title="Colección" description="Artistas, sedes y festivales — la forma de tu historia.">
-            <div className="flex border-b border-ritual-border-subtle mb-8">
-                {([
-                    ['artistas', 'Artistas'],
-                    ['sedes', 'Sedes'],
-                    ['festivales', 'Festivales'],
-                ] as const).map(([value, label]) => (
-                    <Link
-                        key={value}
-                        href={`${routes.collection}?tab=${value}`}
-                        aria-current={tab === value ? 'page' : undefined}
-                        className={`px-5 py-3 font-label text-[10px] tracking-[0.16em] uppercase border-b-2 -mb-px transition-colors ${tab === value ? 'border-ritual-red text-ritual-bone' : 'border-transparent text-ritual-gray-text hover:text-ritual-gray-text'
-                            }`}
-                    >
-                        {label}
-                    </Link>
-                ))}
+        <PageShell title="Colección" description="Tu historia de shows, del primero al último.">
+            {/* Escritorio: 3 tabs (artistas/sedes/festivales) sin cambios de
+                este WU — mobile reemplaza todo esto por el diario de shows de
+                abajo. Mismo patrón hidden/md:block que buscar-mobile
+                (app/buscar/page.tsx). */}
+            <div className="hidden md:block" data-testid="coleccion-desktop">
+                <div className="flex border-b border-ritual-border-subtle mb-8">
+                    {([
+                        ['artistas', 'Artistas'],
+                        ['sedes', 'Sedes'],
+                        ['festivales', 'Festivales'],
+                    ] as const).map(([value, label]) => (
+                        <Link
+                            key={value}
+                            href={`${routes.collection}?tab=${value}`}
+                            aria-current={tab === value ? 'page' : undefined}
+                            className={`px-5 py-3 font-label text-[10px] tracking-[0.16em] uppercase border-b-2 -mb-px transition-colors ${tab === value ? 'border-ritual-red text-ritual-bone' : 'border-transparent text-ritual-gray-text hover:text-ritual-gray-text'
+                                }`}
+                        >
+                            {label}
+                        </Link>
+                    ))}
+                </div>
+
+                {tab === 'artistas' && <ArtistsShelvesView />}
+                {tab === 'sedes' && <VenuesTab />}
+                {tab === 'festivales' && <FestivalsTab />}
             </div>
 
-            {tab === 'artistas' && <ArtistsShelvesView />}
-            {tab === 'sedes' && <VenuesTab />}
-            {tab === 'festivales' && <FestivalsTab />}
+            {/* Mobile: diario de shows vistos, sin tabs — reemplaza artistas/
+                sedes/festivales por una sola línea de tiempo (D-9: el título
+                "Colección" de PageShell no se duplica acá). */}
+            <div className="md:hidden" data-testid="coleccion-mobile">
+                {mobileDiary}
+                <MobileHeroAction label="Cargar un show" href={routes.events.new} />
+            </div>
         </PageShell>
+    )
+}
+
+/**
+ * Diario mobile de shows vistos (coleccion-mobile). `listMyEvents()` está
+ * memoizado con `cache()` de React (D-7, service.ts) así que compartir esta
+ * llamada con `ArtistsShelvesView` de arriba no duplica la consulta real
+ * dentro de la misma request, aunque los dos árboles siempre rendericen
+ * server-side (uno oculto por CSS, no condicionalmente).
+ */
+async function CollectionDiaryView({ vista }: { vista?: string }) {
+    const myEvents = await listMyEvents()
+    const rows = buildCollectionDiary(myEvents)
+
+    if (rows.length === 0) {
+        return (
+            <EmptyState
+                title="Todavía no cargaste ningún show."
+                description="Los que ya viste también cuentan."
+                action={{ label: 'Cargar un show', href: routes.events.new }}
+            />
+        )
+    }
+
+    const view = parseCollectionView(vista)
+
+    return (
+        <>
+            <CollectionDiaryHeader headline={diaryHeadline(rows)} view={view} />
+            {view === 'lista' ? <CollectionDiaryList rows={rows} /> : <CollectionDiaryGrid rows={rows} />}
+        </>
     )
 }
 
