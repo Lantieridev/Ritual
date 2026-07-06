@@ -862,6 +862,118 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
     isBold: false,
     isLarge: false,
   },
+
+  // --- CollectionDiaryHeader.tsx / CollectionDiaryGrid.tsx / CollectionDiaryList.tsx (coleccion-mobile) ---
+  {
+    id: 'COL-01',
+    component: 'CollectionDiaryHeader',
+    element: 'Headline "{N} shows · {year} → hoy"',
+    textToken: '--color-ritual-gray-mid-2',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'COL-02',
+    component: 'CollectionDiaryHeader',
+    element: 'Toggle link "Grilla"/"Lista" (active)',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'COL-03',
+    component: 'CollectionDiaryHeader',
+    element: 'Toggle link "Grilla"/"Lista" (inactive)',
+    textToken: '--color-ritual-gray-text',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'COL-04',
+    component: 'CollectionDiaryGrid',
+    element: 'Card year badge',
+    textToken: '--color-ritual-paper-2',
+    bgToken: '--color-ritual-panel',
+    fontSize: '8px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'COL-05',
+    component: 'CollectionDiaryGrid',
+    element: 'Card name',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-panel',
+    fontSize: '21px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'COL-06',
+    component: 'CollectionDiaryGrid',
+    element: 'Card venue',
+    textToken: '--color-ritual-gray-text',
+    bgToken: '--color-ritual-panel',
+    fontSize: '8px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'COL-07',
+    component: 'CollectionDiaryGrid',
+    element: 'Card score',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-panel',
+    fontSize: '15px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'COL-08',
+    component: 'CollectionDiaryList',
+    element: 'Row year',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-bg',
+    fontSize: '21px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'COL-09',
+    component: 'CollectionDiaryList',
+    element: 'Row name',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-bg',
+    fontSize: '21px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'COL-10',
+    component: 'CollectionDiaryList',
+    element: 'Row venue',
+    textToken: '--color-ritual-gray-mid-2',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'COL-11',
+    component: 'CollectionDiaryList',
+    element: 'Row score',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-bg',
+    fontSize: '18px',
+    isBold: false,
+    isLarge: false,
+  },
 ]
 
 describe('Design Tokens & Color Contrast (WCAG AA)', () => {
@@ -913,6 +1025,7 @@ describe('Design Tokens & Color Contrast (WCAG AA)', () => {
     'SGS-02', 'SGS-04', 'SGS-07', // #78 — home ranking strip note/badge/reason, same prototype colors
     'BSH-02', 'BSH-06', // #78 — bottom sheet subtitle/hint, same prototype colors
     'BUS-01', 'BUS-03', 'BUS-06', 'BUS-07', 'BUS-08', 'BUS-10', // #78 — buscar-mobile: ritual-red/gray-mid-2 on bg, same prototype colors as the rest of this list
+    'COL-01', 'COL-07', 'COL-08', 'COL-10', // #78 — coleccion-mobile: gray-mid-2/bg headline+list-venue, red/panel grid score, red/bg list year, same prototype colors as the rest of this list
   ])
 
   it('every non-exempt text pair outside the known design debt meets WCAG AA', () => {

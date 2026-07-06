@@ -6,5 +6,8 @@ export { DeleteEventAction } from './DeleteEventAction'
 export { EventWeather } from './EventWeather'
 export { AgendaView } from './AgendaView'
 export { EventChat } from './EventChat'
+export { CollectionDiaryHeader } from './CollectionDiaryHeader'
+export { CollectionDiaryGrid } from './CollectionDiaryGrid'
+export { CollectionDiaryList } from './CollectionDiaryList'
 
 
