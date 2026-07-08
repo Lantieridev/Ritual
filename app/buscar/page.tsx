@@ -117,7 +117,11 @@ export default async function BuscarPage({ searchParams }: PageProps) {
   // en blanco sin ningún mensaje, porque ninguna de sus tres ramas de
   // render contempla "archiveResults es null pero no por falta de query".
   // El fetch de acá alimenta las dos ramas (D-5 del design.md): un solo
-  // fetch, no dos.
+  // fetch, no dos. Costo aceptado a propósito: con `tab=cartelera` y un `q`
+  // de 2+ caracteres, este fetch corre igual aunque esa rama de escritorio
+  // no lo use — es más barato que un fetch condicional por breakpoint (que
+  // rompería "una sola consulta SSR" y reabriría el bug de arriba) o que
+  // detectar el breakpoint en el servidor.
   const archiveResults = query.length >= 2 ? await searchCatalog(query) : null
   const archiveTotal = archiveResults
     ? archiveResults.events.length + archiveResults.artists.length + archiveResults.venues.length + archiveResults.festivals.length
