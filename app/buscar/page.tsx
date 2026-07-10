@@ -37,7 +37,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
   const fmConfigured = isLastFmConfigured()
   const slConfigured = isSetlistFmConfigured()
 
-  let futureEvents: FutureEvent[] = []
+  const futureEvents: FutureEvent[] = []
   let fmError: string | undefined
 
   let slSetlists: Awaited<ReturnType<typeof getSetlistsByArtist>>['setlists'] = []

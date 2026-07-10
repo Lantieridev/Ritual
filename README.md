@@ -1,5 +1,11 @@
 # 🕯️ RITUAL
 
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)
+![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![CI](https://img.shields.io/github/actions/workflow/status/Lantieridev/Ritual/ci.yml?branch=main&style=for-the-badge&label=CI)
+
 **Plataforma de gestión de itinerarios, giras y memoria para recitales. Open Source.**
 
 > *"La procesión va por dentro... y en la app."*
@@ -29,15 +35,15 @@ Porque la música es cultura compartida. Queremos que RITUAL sea construido por 
 ¡Toda ayuda es bienvenida! Ya sea reportando bugs, proponiendo ideas o tirando código.
 
 1.  Revisá el [ROADMAP.md](./docs/ROADMAP.md) para ver qué falta hacer. Los issues marcados como "Good First Issue" o "Help Wanted" son ideales para empezar.
-2.  Leé nuestra [Guía de Contribución](./CONTRIBUTING.md) (WIP) para conocer los estándares de código.
+2.  Leé nuestra [Guía de Contribución](./CONTRIBUTING.md) para conocer los estándares de código.
 3.  Hacé un Fork y mandá tu Pull Request.
 
 ## 🛠 Stack Tecnológico
 
-- **Frontend**: [Next.js 15](https://nextjs.org/) (App Router) + TypeScript.
+- **Frontend**: [Next.js 16](https://nextjs.org/) (App Router) + TypeScript.
 - **Estilos**: [Tailwind CSS 4](https://tailwindcss.com/) + CSS Variables.
 - **Backend**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Storage).
-- **APIs Externas**: Last.fm, Spotify, Setlist.fm.
+- **APIs Externas**: Last.fm, Spotify, Setlist.fm, Ticketmaster.
 
 ## 🚀 Instalación Local
 
@@ -57,9 +63,18 @@ Queremos que sea fácil levantar el proyecto.
     ```
 
 3.  **Configurar variables de entorno:**
-    Copiá `.env.example` a `.env.local` y completá las credenciales (pedilas en Discord o usá tu propio proyecto Supabase gratuito).
+    Creá un `.env.local` en la raíz con estas variables (pedilas en Discord o usá tu propio proyecto Supabase gratuito):
     ```bash
-    cp .env.example .env.local
+    NEXT_PUBLIC_SUPABASE_URL=
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=
+    NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+    # Opcionales — las features que los usan degradan sin romperse si falta la key
+    LASTFM_API_KEY=
+    SETLISTFM_API_KEY=
+    SPOTIFY_CLIENT_ID=
+    SPOTIFY_CLIENT_SECRET=
+    TICKETMASTER_API_KEY=
     ```
 
 4.  **Correr el entorno de desarrollo:**

@@ -5,7 +5,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
 
-export async function login(prevState: any, formData: FormData) {
+type AuthActionState = { error: string } | { success: string } | null
+
+export async function login(prevState: AuthActionState, formData: FormData) {
     const supabase = await createClient()
 
     const email = formData.get('email') as string
@@ -24,7 +26,7 @@ export async function login(prevState: any, formData: FormData) {
     redirect(routes.home)
 }
 
-export async function signup(prevState: any, formData: FormData) {
+export async function signup(prevState: AuthActionState, formData: FormData) {
     const supabase = await createClient()
 
     const email = formData.get('email') as string

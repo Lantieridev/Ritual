@@ -38,9 +38,9 @@ export async function getVenueById(id: string): Promise<VenueWithEvents | null> 
   if (error || !data) return null
 
   // Ordenar eventos por fecha descendente
-  const venue = data as any
+  const venue = data as unknown as VenueWithEvents
   venue.events = (venue.events ?? []).sort(
-    (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   )
-  return venue as VenueWithEvents
+  return venue
 }

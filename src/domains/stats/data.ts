@@ -26,6 +26,23 @@ export interface StatsData {
     }>
 }
 
+type RawAttendance = {
+    status: string | null
+    user_id: string
+    memories: Array<{ rating: number | null }>
+}
+
+type RawEvent = {
+    id: string
+    name: string | null
+    date: string
+    venues: { name: string; city: string | null; country: string | null } | null
+    lineups: Array<{ artists: { name: string } | null }>
+    attendance: RawAttendance[]
+}
+
+type EventWithMyAttendance = RawEvent & { myAttendance: RawAttendance | null }
+
 /**
  * Calcula todas las estadísticas personales del usuario.
  * Combina eventos, attendance y memories en una sola query eficiente.
@@ -50,24 +67,25 @@ export async function getPersonalStats(): Promise<StatsData> {
         return emptyStats()
     }
 
+    const rawEvents = events as unknown as RawEvent[]
     const userId = await getCurrentUserId()
     const now = new Date()
 
     // Filtrar attendance del usuario actual (RLS ya filtra, tomamos el primero si existe)
-    const eventsWithMyAttendance = events.map((ev: any) => ({
+    const eventsWithMyAttendance: EventWithMyAttendance[] = rawEvents.map((ev) => ({
         ...ev,
         myAttendance: userId ? (ev.attendance?.[0] ?? null) : null,
     }))
 
-    const totalShows = events.length
-    const showsAttended = eventsWithMyAttendance.filter((e: any) => e.myAttendance?.status === 'went').length
-    const showsGoing = eventsWithMyAttendance.filter((e: any) => e.myAttendance?.status === 'going').length
-    const showsInterested = eventsWithMyAttendance.filter((e: any) => e.myAttendance?.status === 'interested').length
+    const totalShows = rawEvents.length
+    const showsAttended = eventsWithMyAttendance.filter((e) => e.myAttendance?.status === 'went').length
+    const showsGoing = eventsWithMyAttendance.filter((e) => e.myAttendance?.status === 'going').length
+    const showsInterested = eventsWithMyAttendance.filter((e) => e.myAttendance?.status === 'interested').length
 
     // Artistas únicos
     const artistSet = new Set<string>()
     const artistCount: Record<string, number> = {}
-    for (const ev of events as any[]) {
+    for (const ev of rawEvents) {
         for (const l of ev.lineups ?? []) {
             const name = l.artists?.name
             if (name) {
@@ -81,7 +99,7 @@ export async function getPersonalStats(): Promise<StatsData> {
     const venueMap: Record<string, { name: string; city: string | null; count: number }> = {}
     const citySet = new Set<string>()
     const countrySet = new Set<string>()
-    for (const ev of events as any[]) {
+    for (const ev of rawEvents) {
         const v = ev.venues
         if (v?.name) {
             if (!venueMap[v.name]) venueMap[v.name] = { name: v.name, city: v.city ?? null, count: 0 }
@@ -93,14 +111,14 @@ export async function getPersonalStats(): Promise<StatsData> {
 
     // Shows por año
     const showsByYear: Record<string, number> = {}
-    for (const ev of events as any[]) {
+    for (const ev of rawEvents) {
         const year = new Date(ev.date).getFullYear().toString()
         showsByYear[year] = (showsByYear[year] ?? 0) + 1
     }
 
     // Rating promedio
     const ratings: number[] = []
-    for (const ev of eventsWithMyAttendance as any[]) {
+    for (const ev of eventsWithMyAttendance) {
         const r = ev.myAttendance?.memories?.[0]?.rating
         if (r) ratings.push(r)
     }
@@ -121,9 +139,9 @@ export async function getPersonalStats(): Promise<StatsData> {
 
     // Actividad reciente (últimos 10 shows pasados)
     const recentActivity = eventsWithMyAttendance
-        .filter((e: any) => new Date(e.date) < now)
+        .filter((e) => new Date(e.date) < now)
         .slice(0, 10)
-        .map((e: any) => ({
+        .map((e) => ({
             id: e.id,
             name: e.name,
             date: e.date,

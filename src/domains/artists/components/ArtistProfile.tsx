@@ -12,7 +12,7 @@ interface ArtistProfileProps {
     artist: ArtistWithEvents
     bio: string
     tags: string[]
-    similarArtists: any[] // Last.fm similar artist structure is loose, any is okay for now or define custom interface
+    similarArtists: { name: string }[] // Last.fm returns more fields, but only `name` is used here
     upcomingEvents: FutureEvent[] // External (Last.fm)
     internalUpcoming: ArtistWithEvents['events']
     internalPast: ArtistWithEvents['events']

@@ -7,7 +7,7 @@ import path from 'path'
 const envPath = path.resolve(process.cwd(), '.env.local')
 const envContent = fs.readFileSync(envPath, 'utf-8')
 const envVars = envContent.split('\n').reduce((acc, line) => {
-    let [key, ...valueParts] = line.split('=')
+    const [key, ...valueParts] = line.split('=')
     if (key && valueParts.length > 0) {
         let value = valueParts.join('=').trim()
         // Strip quotes if they exist
@@ -27,9 +27,9 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-async function checkTable(tableName: string, isPublic: boolean) {
+async function checkTable(tableName: string) {
     console.log(`Checking table: ${tableName}...`)
-    const { data, error } = await supabase.from(tableName).select('id').limit(1)
+    const { error } = await supabase.from(tableName).select('id').limit(1)
 
     if (error) {
         if (error.code === '42P01') {
@@ -68,21 +68,21 @@ async function main() {
     console.log(`URL: ${supabaseUrl}`)
 
     const tables = [
-        { name: 'events', public: true },
-        { name: 'venues', public: true },
-        { name: 'artists', public: true },
-        { name: 'expenses', public: false },
-        { name: 'attendance', public: false },
-        { name: 'wishlist', public: false },
-        { name: 'memories', public: false },
-        { name: 'festival_attendance', public: false },
-        { name: 'event_photos', public: true }
+        'events',
+        'venues',
+        'artists',
+        'expenses',
+        'attendance',
+        'wishlist',
+        'memories',
+        'festival_attendance',
+        'event_photos',
     ]
 
     let allGood = true
 
-    for (const t of tables) {
-        const ok = await checkTable(t.name, t.public)
+    for (const tableName of tables) {
+        const ok = await checkTable(tableName)
         if (!ok) allGood = false
     }
 

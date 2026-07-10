@@ -41,13 +41,16 @@ export async function getArtistById(id: string): Promise<ArtistWithEvents | null
 
   if (error || !data) return null
 
-  const artist = data as any
+  type RawEvent = ArtistWithEvents['events'][number]
+  type RawArtist = Artist & { lineups: Array<{ events: RawEvent | null }> }
+
+  const artist = data as unknown as RawArtist
 
   // Aplanar eventos del lineup
   const events = (artist.lineups ?? [])
-    .map((l: any) => l.events)
-    .filter(Boolean)
-    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .map((l) => l.events)
+    .filter((e): e is RawEvent => e !== null)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   return {
     id: artist.id,

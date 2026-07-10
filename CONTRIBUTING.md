@@ -28,7 +28,7 @@ Adoptamos una estructura basada en **Dominios** dentro de `src/domains`. Cada do
 - `types.ts`: Tipos específicos (si no están en `core/types`).
 
 ### Stack
-- **Next.js 15**: Usamos App Router.
+- **Next.js 16**: Usamos App Router.
 - **Supabase**: Base de datos y Auth. Respetamos RLS (Row Level Security).
 - **Tailwind**: Para estilos. Evitamos CSS modules salvo excepciones.
 
