@@ -3,8 +3,8 @@ import { createClient } from '@/src/core/lib/supabase/server'
 import { SignOutButton } from './sign-out-button'
 import { getProfile } from '@/src/domains/auth/profile-actions'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/src/core/components/ui/Button'
-// import Image from 'next/image' // Use img for now to avoid domain config issues with Supabase Storage
 
 export const metadata = {
     title: 'Mi Perfil | RITUAL',
@@ -38,10 +38,12 @@ export default async function ProfilePage() {
                     <div className="shrink-0">
                         <div className="w-32 h-32 rounded-full overflow-hidden bg-neutral-900 border border-white/10 relative">
                             {profile?.avatar_url ? (
-                                <img
+                                <Image
                                     src={profile.avatar_url}
                                     alt={profile.full_name || 'Avatar'}
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    className="object-cover"
+                                    sizes="128px"
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-4xl text-zinc-700 font-bold select-none">
