@@ -12,7 +12,7 @@ interface ArtistProfileProps {
     artist: ArtistWithEvents
     bio: string
     similarArtists: { name: string }[] // Last.fm returns more fields, but only `name` is used here
-    upcomingEvents: FutureEvent[] // External (Last.fm)
+    upcomingEvents: FutureEvent[] // External (Ticketmaster)
     internalUpcoming: ArtistWithEvents['events']
     internalPast: ArtistWithEvents['events']
     stats: {
@@ -96,7 +96,7 @@ export function ArtistProfile({
                     {upcomingEvents.length > 0 && (
                         <section>
                             <h3 className="text-xs uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2">
-                                Gira (Last.fm)
+                                Gira (Ticketmaster)
                                 <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[9px] text-zinc-400">EXTERNO</span>
                             </h3>
                             <ExternalShowList events={upcomingEvents} />

@@ -13,8 +13,8 @@ interface FutureEventsResultsProps {
 }
 
 /**
- * Lista de eventos futuros (Last.fm).
- * Reutilizable en Buscar y Wishlist.
+ * Lista de eventos futuros (Ticketmaster).
+ * Reutilizable en Buscar, Wishlist y la ficha de artista.
  */
 export function FutureEventsResults({ events, searchQuery, compact }: FutureEventsResultsProps) {
     const router = useRouter()
