@@ -38,10 +38,13 @@ export async function findOrCreateByName(
     if (created) return { id: created.id }
 
     // La fila ya existía (el insert fue ignorado por el conflicto) — buscarla.
+    // Se usa name_key (no ilike sobre name) para que el match sea exactamente
+    // el mismo que usó el constraint único: ilike trata % y _ como wildcards,
+    // lo que podría matchear de más si el nombre los contuviera literalmente.
     const { data: existing, error: selectError } = await supabase
         .from(table)
         .select('id')
-        .ilike('name', name)
+        .eq('name_key', name.toLowerCase())
         .limit(1)
         .single()
 

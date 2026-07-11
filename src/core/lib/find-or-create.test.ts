@@ -14,7 +14,7 @@ function makeSelectBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
   const chain = () => builder
   builder.select = vi.fn(chain)
-  builder.ilike = vi.fn(chain)
+  builder.eq = vi.fn(chain)
   builder.limit = vi.fn(chain)
   builder.single = vi.fn(() => Promise.resolve(result))
   return builder
@@ -59,7 +59,7 @@ describe('findOrCreateByName', () => {
 
       const result = await findOrCreateByName(supabase as never, 'venues', 'niceto club')
 
-      expect(selectBuilder.ilike).toHaveBeenCalledWith('name', 'niceto club')
+      expect(selectBuilder.eq).toHaveBeenCalledWith('name_key', 'niceto club')
       expect(result).toEqual({ id: 'venue-existing' })
     }
   )

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/src/core/lib/supabase/server'
+import { sanitizeAuthError } from '@/src/core/lib/validation'
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
             return NextResponse.redirect(`${origin}${next}`)
         }
         console.error('Auth Code Exchange Error:', error)
-        return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`)
+        return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(sanitizeAuthError(error))}`)
     }
 
     return NextResponse.redirect(`${origin}/login?error=No+code+verifier`)

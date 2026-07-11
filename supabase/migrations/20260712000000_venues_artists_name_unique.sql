@@ -12,7 +12,8 @@
 --
 -- Defensive merge first, in case duplicate names already exist: for each
 -- group of same-name (case-insensitive) rows, keep the oldest and repoint
--- every foreign key at the duplicates before deleting them.
+-- every foreign key at the duplicates before deleting them (events.venue_id,
+-- festivals.venue_id, tours.artist_id, lineups.artist_id, wishlist.artist_id).
 
 alter table public.venues add column if not exists name_key text generated always as (lower(name)) stored;
 alter table public.artists add column if not exists name_key text generated always as (lower(name)) stored;
@@ -50,6 +51,16 @@ where v.id = d.id and d.id <> d.canonical_id;
 alter table public.venues add constraint venues_name_key_unique unique (name_key);
 
 -- ── artists ─────────────────────────────────────────────────────────────
+with duped_artists as (
+  select id,
+         first_value(id) over (partition by name_key order by created_at, id) as canonical_id
+  from public.artists
+)
+update public.tours t
+set artist_id = d.canonical_id
+from duped_artists d
+where t.artist_id = d.id and d.id <> d.canonical_id;
+
 with duped_artists as (
   select id,
          first_value(id) over (partition by name_key order by created_at, id) as canonical_id
