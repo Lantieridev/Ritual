@@ -39,7 +39,10 @@ export async function getOrCreateAttendance(
 
     const { data: created, error } = await supabase
         .from('attendance')
-        .insert({ event_id: eventId, user_id: userId, status: 'interested' })
+        .upsert(
+            { event_id: eventId, user_id: userId, status: 'interested' },
+            { onConflict: 'event_id,user_id', ignoreDuplicates: false }
+        )
         .select('id, status')
         .single()
 
@@ -67,25 +70,13 @@ export async function setAttendanceStatus(
 
     const supabase = await createClient()
 
-    const { data: existing } = await supabase
+    const { error } = await supabase
         .from('attendance')
-        .select('id')
-        .eq('event_id', eventId)
-        .eq('user_id', userId)
-        .single()
-
-    if (existing) {
-        const { error } = await supabase
-            .from('attendance')
-            .update({ status })
-            .eq('id', existing.id)
-        if (error) return { error: sanitizeError(error) }
-    } else {
-        const { error } = await supabase
-            .from('attendance')
-            .insert({ event_id: eventId, user_id: userId, status })
-        if (error) return { error: sanitizeError(error) }
-    }
+        .upsert(
+            { event_id: eventId, user_id: userId, status },
+            { onConflict: 'event_id,user_id' }
+        )
+    if (error) return { error: sanitizeError(error) }
 
     return {}
 }
@@ -119,29 +110,18 @@ export async function saveMemory(
 
     const supabase = await createClient()
 
-    const { data: existing } = await supabase
-        .from('memories')
-        .select('id')
-        .eq('attendance_id', attendance.id)
-        .single()
-
     const payload: { rating?: number; review?: string | null; notes?: string | null } = {}
     if (data.rating !== undefined) payload.rating = data.rating
     if (review !== undefined) payload.review = review
     if (notes !== undefined) payload.notes = notes
 
-    if (existing) {
-        const { error } = await supabase
-            .from('memories')
-            .update(payload)
-            .eq('id', existing.id)
-        if (error) return { error: sanitizeError(error) }
-    } else {
-        const { error } = await supabase
-            .from('memories')
-            .insert({ attendance_id: attendance.id, ...payload })
-        if (error) return { error: sanitizeError(error) }
-    }
+    const { error } = await supabase
+        .from('memories')
+        .upsert(
+            { attendance_id: attendance.id, ...payload },
+            { onConflict: 'attendance_id' }
+        )
+    if (error) return { error: sanitizeError(error) }
 
     return {}
 }
