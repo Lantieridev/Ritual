@@ -25,6 +25,15 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
+    useEffect(() => {
+        if (!isOpen) return
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === 'Escape') setIsOpen(false)
+        }
+        document.addEventListener('keydown', handleKeyDown)
+        return () => document.removeEventListener('keydown', handleKeyDown)
+    }, [isOpen])
+
     const menuItems = [
         { label: 'Mi Perfil', href: routes.profile, border: true },
         { label: 'Wishlist', href: routes.wishlist },
@@ -36,7 +45,10 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
     return (
         <div className="relative" ref={menuRef}>
             <button
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
+                aria-haspopup="menu"
+                aria-expanded={isOpen}
                 className="flex items-center gap-2 px-2 py-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
             >
                 <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shadow-inner">
@@ -53,7 +65,7 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-neutral-900 shadow-2xl py-1 z-50 origin-top-right animate-in fade-in zoom-in-95 duration-200">
+                <div role="menu" className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-neutral-900 shadow-2xl py-1 z-50 origin-top-right animate-in fade-in zoom-in-95 duration-200">
                     <div className="px-4 py-3 border-b border-white/5 mb-1">
                         <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Conectado como</p>
                         <p className="text-sm text-white truncate font-medium">{user.email}</p>
@@ -63,6 +75,7 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
                         <div key={item.href}>
                             <Link
                                 href={item.href}
+                                role="menuitem"
                                 onClick={() => setIsOpen(false)}
                                 className="block px-4 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors"
                             >
@@ -75,6 +88,8 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
 
                     <div className="pt-1 mt-1 border-t border-white/5 bg-neutral-950/30 rounded-b-xl">
                         <button
+                            type="button"
+                            role="menuitem"
                             onClick={() => signout()}
                             className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 hover:text-red-300 transition-colors"
                         >
