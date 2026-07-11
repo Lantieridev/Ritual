@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 
 export const metadata: Metadata = {
     title: 'Buscar | RITUAL',
@@ -15,6 +15,7 @@ interface SearchPageProps {
 
 async function globalSearch(query: string) {
     const q = `%${query}%`
+    const supabase = await createClient()
 
     const [eventsRes, artistsRes, venuesRes] = await Promise.all([
         supabase

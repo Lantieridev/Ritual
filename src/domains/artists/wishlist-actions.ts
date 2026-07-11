@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
 import { validateUUID, sanitizeError } from '@/src/core/lib/validation'
 import { getCurrentUserId } from '@/src/core/auth/session'
@@ -13,6 +13,7 @@ export async function getWishlistArtistIds(): Promise<string[]> {
     const userId = await getCurrentUserId()
     // console.log('[Wishlist] getWishlistArtistIds user:', userId)
     if (!userId) return [] // Don't throw, just return empty for safety in UI
+    const supabase = await createClient()
     const { data, error } = await supabase
         .from('wishlist')
         .select('artist_id')
@@ -40,6 +41,8 @@ export async function toggleWishlist(
     console.log('[Wishlist] User ID:', userId)
 
     if (!userId) return { inWishlist: false, error: 'Inicia sesión para guardar artistas.' }
+
+    const supabase = await createClient()
 
     // Verificar si ya existe
     const { data: existing, error: selectError } = await supabase

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
 import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import {
     getLastFmArtistInfo,
     getArtistEvents,
@@ -47,6 +47,7 @@ export default async function WishlistPage() {
     }
 
     // Fetch artist details from DB
+    const supabase = await createClient()
     const { data: artists } = await supabase
         .from('artists')
         .select('id, name, genre')

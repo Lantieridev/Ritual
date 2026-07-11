@@ -1,4 +1,4 @@
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import type { EventWithRelations } from '@/src/core/types'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
@@ -34,6 +34,7 @@ export interface EventWithAttendance extends EventWithRelations {
 }
 
 export async function getEvents(): Promise<EventWithRelations[]> {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('events')
     .select(EVENTS_SELECT)
@@ -51,6 +52,7 @@ export async function getEvents(): Promise<EventWithRelations[]> {
  * Permite filtrar y mostrar badges de estado en el home.
  */
 export async function getEventsWithAttendance(): Promise<EventWithAttendance[]> {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('events')
     .select(EVENTS_WITH_ATTENDANCE_SELECT)
@@ -79,6 +81,7 @@ export async function getEventsWithAttendance(): Promise<EventWithAttendance[]> 
 export async function getEventById(
   id: string
 ): Promise<EventWithRelations | null> {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('events')
     .select(EVENTS_SELECT)

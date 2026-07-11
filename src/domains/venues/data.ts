@@ -1,4 +1,4 @@
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import type { Venue } from '@/src/core/types'
 
 export interface VenueWithEvents extends Venue {
@@ -11,6 +11,7 @@ export interface VenueWithEvents extends Venue {
 }
 
 export async function getVenues(): Promise<Venue[]> {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('venues')
     .select('id, name, city, country, address, lat, lng')
@@ -23,6 +24,7 @@ export async function getVenues(): Promise<Venue[]> {
 }
 
 export async function getVenueById(id: string): Promise<VenueWithEvents | null> {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('venues')
     .select(`

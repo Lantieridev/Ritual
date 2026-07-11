@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
 import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import type { EventCreateInput, EventUpdateInput, FutureEvent } from '@/src/core/types'
@@ -25,6 +25,7 @@ export async function createEvent(formData: EventCreateInput): Promise<{ error?:
 
   const name = sanitizeText(formData.name, MAX_NAME_LENGTH)!
 
+  const supabase = await createClient()
   const { data: newEvent, error } = await supabase
     .from('events')
     .insert({
@@ -75,6 +76,8 @@ export async function addExternalEvent(
     'Artista'
 
   const eventName = sanitizeText(event.title, MAX_NAME_LENGTH) || `${artistName} @ ${venueName}`
+
+  const supabase = await createClient()
 
   let venueId: string | null = null
   const { data: existingVenues } = await supabase
@@ -151,6 +154,7 @@ export async function updateEvent(
   const idErr = validateUUID(id, 'Evento')
   if (idErr) return { error: idErr }
 
+  const supabase = await createClient()
   const payload: { name?: string | null; date?: string; venue_id?: string | null } = {}
 
   if (formData.name !== undefined) {
@@ -200,6 +204,7 @@ export async function deleteEvent(id: string): Promise<{ error?: string }> {
   const idErr = validateUUID(id, 'Evento')
   if (idErr) return { error: idErr }
 
+  const supabase = await createClient()
   const { error: lineupsError } = await supabase.from('lineups').delete().eq('event_id', id)
   if (lineupsError) {
     console.error('Error eliminando lineups:', lineupsError)

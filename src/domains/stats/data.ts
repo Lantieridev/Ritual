@@ -1,4 +1,4 @@
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 export interface StatsData {
@@ -49,6 +49,7 @@ type EventWithMyAttendance = RawEvent & { myAttendance: RawAttendance | null }
  */
 export async function getPersonalStats(): Promise<StatsData> {
     // Traer todos los eventos con venue, lineup, attendance y memories
+    const supabase = await createClient()
     const { data: events, error } = await supabase
         .from('events')
         .select(`

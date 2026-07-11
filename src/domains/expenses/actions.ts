@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
 import { getCurrentUserId } from '@/src/core/lib/auth'
 import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
@@ -44,6 +44,7 @@ export async function createExpense(formData: ExpenseCreateInput): Promise<{ err
     if (eventIdErr) return { error: eventIdErr }
   }
 
+  const supabase = await createClient()
   const { error } = await supabase.from('expenses').insert({
     user_id: r.userId,
     amount,
@@ -88,6 +89,7 @@ export async function updateExpense(
 
   if (Object.keys(payload).length === 0) return {}
 
+  const supabase = await createClient()
   const { error } = await supabase
     .from('expenses')
     .update(payload)
@@ -107,6 +109,7 @@ export async function deleteExpense(id: string): Promise<{ error?: string }> {
   const idErr = validateUUID(id, 'Gasto')
   if (idErr) return { error: idErr }
 
+  const supabase = await createClient()
   const { error } = await supabase
     .from('expenses')
     .delete()

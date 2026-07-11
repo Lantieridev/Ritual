@@ -1,4 +1,4 @@
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { AttendanceStatus } from './attendance-actions'
 
@@ -23,6 +23,7 @@ export async function getAttendanceForEvent(
     const userId = await getCurrentUserId()
     if (!userId) return null
 
+    const supabase = await createClient()
     const { data, error } = await supabase
         .from('attendance')
         .select(`

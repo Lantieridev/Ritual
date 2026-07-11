@@ -1,5 +1,5 @@
 import 'server-only'
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 export interface Festival {
@@ -37,6 +37,7 @@ export async function getFestivals(): Promise<Festival[]> {
     const userId = await getCurrentUserId()
     if (!userId) return []
 
+    const supabase = await createClient()
     const { data, error } = await supabase
         .from('festivals')
         .select(`
@@ -65,6 +66,7 @@ export async function getFestivals(): Promise<Festival[]> {
 export async function getFestivalById(id: string): Promise<Festival | null> {
     const userId = await getCurrentUserId()
     if (!userId) return null
+    const supabase = await createClient()
     const { data, error } = await supabase
         .from('festivals')
         .select(`

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { routes } from '@/src/core/lib/routes'
@@ -31,6 +31,7 @@ export async function createFestival(
     if (!name) return { error: 'El nombre del festival es obligatorio.' }
     if (!data.start_date) return { error: 'La fecha de inicio es obligatoria.' }
 
+    const supabase = await createClient()
     const { data: newFestival, error } = await supabase
         .from('festivals')
         .insert({
@@ -59,6 +60,7 @@ export async function deleteFestival(id: string): Promise<{ error?: string }> {
     const idErr = validateUUID(id, 'Festival')
     if (idErr) return { error: idErr }
 
+    const supabase = await createClient()
     const { error } = await supabase.from('festivals').delete().eq('id', id)
     if (error) {
         console.error('Error eliminando festival:', error)
@@ -81,6 +83,7 @@ export async function saveFestivalAttendance(
     const userId = await getCurrentUserId()
     if (!userId) return { error: 'Usuario no autenticado' }
 
+    const supabase = await createClient()
     const { error } = await supabase
         .from('festival_attendance')
         .upsert(
@@ -113,6 +116,7 @@ export async function linkEventToFestival(
     const evErr = validateUUID(eventId, 'Evento')
     if (evErr) return { error: evErr }
 
+    const supabase = await createClient()
     const { error } = await supabase
         .from('festival_events')
         .insert({

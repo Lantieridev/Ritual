@@ -1,4 +1,4 @@
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import type { Expense } from '@/src/core/types'
 
 export interface ExpenseSummary {
@@ -14,6 +14,7 @@ export interface ExpenseSummary {
  */
 export async function getExpenses(userId: string | null): Promise<Expense[]> {
   if (!userId) return []
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('expenses')
     .select('id, user_id, amount, category, note, event_id, date, created_at')
@@ -32,6 +33,7 @@ export async function getExpenseById(
   userId: string | null
 ): Promise<Expense | null> {
   if (!userId) return null
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('expenses')
     .select('id, user_id, amount, category, note, event_id, date, created_at')
@@ -49,6 +51,7 @@ export async function getExpensesSummary(userId: string | null): Promise<Expense
   const empty: ExpenseSummary = { total: 0, byCategory: {}, byYear: {}, count: 0 }
   if (!userId) return empty
 
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('expenses')
     .select('amount, category, date')

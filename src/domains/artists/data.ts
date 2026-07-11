@@ -1,4 +1,4 @@
-import { supabase } from '@/src/core/lib/supabase'
+import { createClient } from '@/src/core/lib/supabase/server'
 import type { Artist } from '@/src/core/types'
 
 export interface ArtistWithEvents extends Artist {
@@ -12,6 +12,7 @@ export interface ArtistWithEvents extends Artist {
 }
 
 export async function getArtists(): Promise<Artist[]> {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('artists')
     .select('id, name, genre, image_url, spotify_id')
@@ -24,6 +25,7 @@ export async function getArtists(): Promise<Artist[]> {
 }
 
 export async function getArtistById(id: string): Promise<ArtistWithEvents | null> {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('artists')
     .select(`
