@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "supabase:db-pull": "npx supabase db pull",
     "supabase:db-push": "npx supabase db push",
     "supabase:gen-types": "npx supabase gen types typescript -o src/lib/database.types.ts"
@@ -29,6 +31,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }
