@@ -6,6 +6,7 @@ import {
   validateRating,
   validateDate,
   sanitizeError,
+  sanitizeAuthError,
 } from '@/src/core/lib/validation'
 
 describe('isValidUUID', () => {
@@ -120,5 +121,47 @@ describe('sanitizeError', () => {
   it('surfaces the raw message in development for debugging', () => {
     vi.stubEnv('NODE_ENV', 'development')
     expect(sanitizeError({ message: 'some obscure pg error' })).toBe('some obscure pg error')
+  })
+})
+
+describe('sanitizeAuthError', () => {
+  const originalEnv = process.env.NODE_ENV
+
+  afterEach(() => {
+    vi.stubEnv('NODE_ENV', originalEnv ?? 'test')
+  })
+
+  it('returns a generic message for a null/undefined error', () => {
+    expect(sanitizeAuthError(null)).toBe('Ocurrió un error inesperado.')
+    expect(sanitizeAuthError(undefined)).toBe('Ocurrió un error inesperado.')
+  })
+
+  it('maps known Supabase Auth error messages to friendly Spanish text', () => {
+    expect(sanitizeAuthError({ message: 'Invalid login credentials' }))
+      .toBe('Email o contraseña incorrectos.')
+    expect(sanitizeAuthError({ message: 'Email not confirmed' }))
+      .toBe('Confirmá tu email antes de iniciar sesión.')
+    expect(sanitizeAuthError({ message: 'Password should be at least 6 characters' }))
+      .toBe('La contraseña debe tener al menos 6 caracteres.')
+    expect(sanitizeAuthError({ message: 'Unable to validate email address: invalid format' }))
+      .toBe('El email no es válido.')
+    expect(sanitizeAuthError({ message: 'Email rate limit exceeded' }))
+      .toBe('Demasiados intentos. Probá de nuevo en unos minutos.')
+  })
+
+  it('is case-insensitive when matching known messages', () => {
+    expect(sanitizeAuthError({ message: 'INVALID LOGIN CREDENTIALS' }))
+      .toBe('Email o contraseña incorrectos.')
+  })
+
+  it('never leaks a raw, unrecognized Supabase Auth message in production', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    expect(sanitizeAuthError({ message: 'relation "auth.users" does not exist' }))
+      .toBe('Ocurrió un error inesperado. Intentá de nuevo.')
+  })
+
+  it('surfaces the raw message in development for debugging', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    expect(sanitizeAuthError({ message: 'some obscure auth error' })).toBe('some obscure auth error')
   })
 })

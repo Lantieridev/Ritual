@@ -84,3 +84,38 @@ export function sanitizeError(error: { message?: string } | null | undefined): s
     if (process.env.NODE_ENV === 'development') return msg
     return 'Ocurrió un error inesperado. Intentá de nuevo.'
 }
+
+/**
+ * Sanitizes a Supabase Auth error before returning it to the client.
+ * Separate from sanitizeError because Auth error messages are a different
+ * vocabulary than Postgres errors (and some, like "Invalid login credentials",
+ * are already intentionally generic — Supabase itself doesn't distinguish
+ * "wrong password" from "no such user" to avoid leaking which emails are
+ * registered). Only maps a known allowlist of safe, actionable messages;
+ * anything unrecognized falls back to a generic message instead of leaking
+ * the raw Supabase Auth error text.
+ */
+export function sanitizeAuthError(error: { message?: string } | null | undefined): string {
+    if (!error?.message) return 'Ocurrió un error inesperado.'
+
+    const msg = error.message.toLowerCase()
+
+    if (msg.includes('invalid login credentials')) {
+        return 'Email o contraseña incorrectos.'
+    }
+    if (msg.includes('email not confirmed')) {
+        return 'Confirmá tu email antes de iniciar sesión.'
+    }
+    if (msg.includes('password should be at least') || msg.includes('password is too short')) {
+        return 'La contraseña debe tener al menos 6 caracteres.'
+    }
+    if (msg.includes('unable to validate email address') || msg.includes('invalid email')) {
+        return 'El email no es válido.'
+    }
+    if (msg.includes('rate limit') || msg.includes('too many requests')) {
+        return 'Demasiados intentos. Probá de nuevo en unos minutos.'
+    }
+
+    if (process.env.NODE_ENV === 'development') return error.message
+    return 'Ocurrió un error inesperado. Intentá de nuevo.'
+}

@@ -4,8 +4,11 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
+import { sanitizeAuthError } from '@/src/core/lib/validation'
 
 type AuthActionState = { error: string } | { success: string } | null
+
+const SIGNUP_SUCCESS_MESSAGE = 'Revisá tu email para confirmar la cuenta.'
 
 export async function login(prevState: AuthActionState, formData: FormData) {
     const supabase = await createClient()
@@ -19,7 +22,7 @@ export async function login(prevState: AuthActionState, formData: FormData) {
     })
 
     if (error) {
-        return { error: error.message }
+        return { error: sanitizeAuthError(error) }
     }
 
     revalidatePath('/', 'layout')
@@ -41,13 +44,17 @@ export async function signup(prevState: AuthActionState, formData: FormData) {
     })
 
     if (error) {
-        return { error: error.message }
+        // Never reveal whether an email is already registered — return the
+        // exact same success response either way, so a caller can't enumerate
+        // accounts by probing different emails.
+        const msg = error.message.toLowerCase()
+        if (msg.includes('already registered') || msg.includes('already exists')) {
+            return { success: SIGNUP_SUCCESS_MESSAGE }
+        }
+        return { error: sanitizeAuthError(error) }
     }
 
-    // Check if email confirmation is required (depends on project settings)
-    // For local dev, it might auto-confirm if email confirmations off.
-
-    return { success: 'Check email to confirm account' }
+    return { success: SIGNUP_SUCCESS_MESSAGE }
 }
 
 export async function signout() {
@@ -56,4 +63,3 @@ export async function signout() {
     revalidatePath('/', 'layout')
     redirect('/login')
 }
-
