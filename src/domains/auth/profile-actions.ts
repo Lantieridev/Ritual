@@ -3,6 +3,15 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import { Profile } from '@/src/core/types'
 import { revalidatePath } from 'next/cache'
+import { sanitizeText } from '@/src/core/lib/validation'
+
+const MAX_FULL_NAME = 200
+const MAX_USERNAME = 50
+const MAX_WEBSITE = 300
+const MAX_LOCATION = 100
+const MAX_BIO = 500
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
+const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export async function getProfile(userId?: string): Promise<Profile | null> {
     const supabase = await createClient()
@@ -43,17 +52,24 @@ export async function updateProfile(prevState: ProfileState, formData: FormData)
 
     if (!user) return { error: 'No estás autenticado.' }
 
-    const full_name = formData.get('full_name') as string
-    const username = formData.get('username') as string
-    const bio = formData.get('bio') as string
-    const website = formData.get('website') as string
-    const location = formData.get('location') as string
+    const full_name = sanitizeText(formData.get('full_name') as string, MAX_FULL_NAME)
+    const username = sanitizeText(formData.get('username') as string, MAX_USERNAME)
+    const bio = sanitizeText(formData.get('bio') as string, MAX_BIO)
+    const website = sanitizeText(formData.get('website') as string, MAX_WEBSITE)
+    const location = sanitizeText(formData.get('location') as string, MAX_LOCATION)
 
     // Avatar handling
     const avatarFile = formData.get('avatar') as File
     let avatar_url = formData.get('current_avatar_url') as string
 
     if (avatarFile && avatarFile.size > 0) {
+        if (avatarFile.size > MAX_AVATAR_SIZE_BYTES) {
+            return { error: 'La imagen no puede superar 5MB.' }
+        }
+        if (!ALLOWED_AVATAR_TYPES.includes(avatarFile.type)) {
+            return { error: 'Formato no soportado. Usá JPG, PNG, WebP o GIF.' }
+        }
+
         // 1. Upload file
         const fileExt = avatarFile.name.split('.').pop()
         const fileName = `${user.id}-${Math.random()}.${fileExt}`
