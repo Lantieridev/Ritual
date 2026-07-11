@@ -83,13 +83,39 @@ Queremos que sea fácil levantar el proyecto.
     ```
     Abrir [http://localhost:3000](http://localhost:3000).
 
+## 🧭 Arquitectura
+
+```mermaid
+flowchart TB
+    Browser["Browser\n(Client Components)"]
+
+    subgraph NextApp["Next.js App Router"]
+        Middleware["middleware.ts\n(auth guard + cookie refresh)"]
+        Routes["app/\n(rutas y páginas)"]
+        Domains["src/domains/\nartists · events · expenses\nfestivals · venues · auth · stats"]
+        Core["src/core/\nUI base · auth · tipos · lib"]
+    end
+
+    Supabase[("Supabase\nPostgreSQL + Auth + Storage")]
+    External["APIs externas\nLast.fm · Spotify\nSetlist.fm · Ticketmaster"]
+
+    Browser -->|request| Middleware
+    Middleware -->|user autenticado?| Routes
+    Routes --> Domains
+    Domains --> Core
+    Core -->|server.ts / client.ts| Supabase
+    Domains -.->|opcional, degrada sin key| External
+```
+
+Decisiones de arquitectura documentadas en [`docs/adr/`](./docs/adr/README.md) — por qué `core/` vs `domains/`, por qué el cliente de Supabase está partido en tres, y por qué las API keys externas son opcionales.
+
 ## 📂 Estructura del Proyecto
 
 - `app/`: Rutas y páginas (Next.js App Router).
 - `src/core/`: Componentes base (UI), librerías (Supabase, API clients) y tipos globales.
 - `src/domains/`: Lógica de negocio dividida por dominio (Artists, Events, Auth, Venues).
 - `supabase/`: Migraciones y configuración de base de datos.
-- `docs/`: Documentación del proyecto.
+- `docs/`: Documentación del proyecto (incluye [`adr/`](./docs/adr/README.md), decisiones de arquitectura).
 
 ## 📜 Licencia
 
