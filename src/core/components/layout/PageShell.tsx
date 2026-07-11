@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 
 export interface PageShellProps {
   backHref?: string
@@ -17,6 +18,8 @@ const TITLE_CLASS = 'text-4xl font-bold text-white tracking-tighter'
  * El pt-20 compensa la altura del Navbar sticky (h-16).
  */
 export function PageShell({
+  backHref,
+  backLabel,
   title,
   description,
   action,
@@ -25,7 +28,16 @@ export function PageShell({
   return (
     <main className="min-h-screen bg-neutral-950 text-white pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-6 md:px-8">
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-8 pt-8">
+        {backHref ? (
+          <Link
+            href={backHref}
+            className="inline-block text-sm text-zinc-500 hover:text-zinc-300 transition-colors pt-8"
+          >
+            {backLabel ?? '← Volver'}
+          </Link>
+        ) : null}
+
+        <div className={`flex flex-wrap items-start justify-between gap-4 mb-8 ${backHref ? 'pt-4' : 'pt-8'}`}>
           <div>
             <h1 className={description ? `${TITLE_CLASS} mb-2` : `${TITLE_CLASS}`}>
               {title}
