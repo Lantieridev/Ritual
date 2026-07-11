@@ -186,7 +186,6 @@ export async function getArtistEvents(
 
         const rawEvents = data.events?.event
         if (!rawEvents || !Array.isArray(rawEvents)) {
-            // console.log('[LastFM] No events found (empty array or invalid format).')
             return { events: [] }
         }
 
