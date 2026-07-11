@@ -7,10 +7,10 @@ import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
 import { createClient } from '@/src/core/lib/supabase/server'
 import {
     getLastFmArtistInfo,
-    getArtistEvents,
     isLastFmConfigured,
     getBestLastFmImage,
 } from '@/src/core/lib/lastfm'
+import { isTicketmasterConfigured, searchTicketmasterEvents } from '@/src/core/lib/ticketmaster'
 import { EmptyState } from '@/src/core/components/ui/EmptyState'
 import {
     searchSpotifyArtist,
@@ -54,18 +54,18 @@ export default async function WishlistPage() {
         .in('id', artistIds)
         .order('name')
 
-    // Fetch Spotify images and Last.fm shows for each artist in parallel
+    // Fetch Spotify images, Last.fm bio data, and Ticketmaster shows for each artist in parallel
     const enriched = await Promise.all(
         (artists ?? []).map(async (artist) => {
-            const [spotifyResult, lastfmResult, lastfmEventsResult] = await Promise.allSettled([
+            const [spotifyResult, lastfmResult, tmEventsResult] = await Promise.allSettled([
                 isSpotifyConfigured()
                     ? searchSpotifyArtist(artist.name)
                     : Promise.resolve({ artist: null }),
                 isLastFmConfigured()
                     ? getLastFmArtistInfo(artist.name)
                     : Promise.resolve({ artist: null }),
-                isLastFmConfigured()
-                    ? getArtistEvents(artist.name)
+                isTicketmasterConfigured()
+                    ? searchTicketmasterEvents({ keyword: artist.name })
                     : Promise.resolve({ events: [] }),
             ])
 
@@ -74,8 +74,8 @@ export default async function WishlistPage() {
             const lastfmArtist =
                 lastfmResult.status === 'fulfilled' ? lastfmResult.value.artist : null
             const upcomingEvents: FutureEvent[] =
-                lastfmEventsResult.status === 'fulfilled'
-                    ? lastfmEventsResult.value.events.slice(0, 3)
+                tmEventsResult.status === 'fulfilled'
+                    ? tmEventsResult.value.events.slice(0, 3)
                     : []
 
             const image = spotifyArtist
