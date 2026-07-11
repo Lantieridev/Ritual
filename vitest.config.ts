@@ -4,7 +4,10 @@ import path from 'path'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['**/*.test.ts'],
+    // .tsx test files opt into jsdom individually via a
+    // `// @vitest-environment jsdom` docblock at the top of the file.
+    setupFiles: ['./vitest.setup.ts'],
+    include: ['**/*.test.{ts,tsx}'],
   },
   resolve: {
     alias: {

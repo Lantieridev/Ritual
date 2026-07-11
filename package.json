@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "supabase:db-pull": "npx supabase db pull",
     "supabase:db-push": "npx supabase db push",
     "supabase:gen-types": "npx supabase gen types typescript -o src/lib/database.types.ts"
@@ -25,11 +26,16 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jsdom": "^25.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
