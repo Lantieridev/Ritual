@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
 import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
+import { findOrCreateByName } from '@/src/core/lib/find-or-create'
 import type { EventCreateInput, EventUpdateInput, FutureEvent } from '@/src/core/types'
 
 const MAX_NAME_LENGTH = 200
@@ -79,58 +80,21 @@ export async function addExternalEvent(
 
   const supabase = await createClient()
 
-  let venueId: string | null = null
-  const { data: existingVenues } = await supabase
-    .from('venues')
-    .select('id')
-    .ilike('name', venueName)
-    .limit(1)
-  if (existingVenues?.[0]) {
-    venueId = existingVenues[0].id
-  } else {
-    const { data: newVenue, error: venueErr } = await supabase
-      .from('venues')
-      .insert({
-        name: venueName,
-        city: sanitizeText(event.venue.city, 100),
-        country: sanitizeText(event.venue.country, 100),
-      })
-      .select('id')
-      .single()
-    if (venueErr || !newVenue) {
-      console.error('Error creando sede:', venueErr)
-      return { error: sanitizeError(venueErr) }
-    }
-    venueId = newVenue.id
-  }
+  const venue = await findOrCreateByName(supabase, 'venues', venueName, {
+    city: sanitizeText(event.venue.city, 100),
+    country: sanitizeText(event.venue.country, 100),
+  })
+  if ('error' in venue) return { error: venue.error }
 
-  let artistId: string | null = null
-  const { data: existingArtists } = await supabase
-    .from('artists')
-    .select('id')
-    .ilike('name', artistName)
-    .limit(1)
-  if (existingArtists?.[0]) {
-    artistId = existingArtists[0].id
-  } else {
-    const { data: newArtist, error: artistErr } = await supabase
-      .from('artists')
-      .insert({ name: artistName })
-      .select('id')
-      .single()
-    if (artistErr || !newArtist) {
-      console.error('Error creando artista:', artistErr)
-      return { error: sanitizeError(artistErr) }
-    }
-    artistId = newArtist.id
-  }
+  const artist = await findOrCreateByName(supabase, 'artists', artistName)
+  if ('error' in artist) return { error: artist.error }
 
   const { data: newEvent, error: eventErr } = await supabase
     .from('events')
     .insert({
       name: eventName,
       date: dateStr,
-      venue_id: venueId,
+      venue_id: venue.id,
     })
     .select('id')
     .single()
@@ -140,7 +104,7 @@ export async function addExternalEvent(
     return { error: sanitizeError(eventErr) }
   }
 
-  await supabase.from('lineups').insert({ event_id: newEvent.id, artist_id: artistId })
+  await supabase.from('lineups').insert({ event_id: newEvent.id, artist_id: artist.id })
   // Return the new event ID — the client component handles navigation.
   // DO NOT call redirect() here: it throws NEXT_REDIRECT which useTransition
   // silently swallows, making the button appear to do nothing.
