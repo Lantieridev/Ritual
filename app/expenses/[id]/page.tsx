@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { getCurrentUserId } from '@/src/core/lib/auth'
+import { getCurrentUserId } from '@/src/core/auth/session'
 import { getExpenseById } from '@/src/domains/expenses/data'
 import { deleteExpense } from '@/src/domains/expenses/actions'
 import { routes } from '@/src/core/lib/routes'

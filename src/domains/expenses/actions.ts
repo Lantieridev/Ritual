@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
-import { getCurrentUserId } from '@/src/core/lib/auth'
+import { getCurrentUserId } from '@/src/core/auth/session'
 import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import type { ExpenseCreateInput, ExpenseUpdateInput } from '@/src/core/types'
 

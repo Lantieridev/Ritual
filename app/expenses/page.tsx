@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getCurrentUserId } from '@/src/core/lib/auth'
+import { getCurrentUserId } from '@/src/core/auth/session'
 import { getExpenses, getExpensesSummary } from '@/src/domains/expenses/data'
 import { routes } from '@/src/core/lib/routes'
 import { Card, LinkButton } from '@/src/core/components/ui'

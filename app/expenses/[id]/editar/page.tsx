@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getCurrentUserId } from '@/src/core/lib/auth'
+import { getCurrentUserId } from '@/src/core/auth/session'
 import { getExpenseById } from '@/src/domains/expenses/data'
 import { getEvents } from '@/src/domains/events/data'
 import { updateExpense } from '@/src/domains/expenses/actions'
