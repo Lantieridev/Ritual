@@ -78,15 +78,18 @@ export async function getPersonalStats(): Promise<StatsData> {
         myAttendance: userId ? (ev.attendance?.[0] ?? null) : null,
     }))
 
-    const totalShows = rawEvents.length
-    const showsAttended = eventsWithMyAttendance.filter((e) => e.myAttendance?.status === 'went').length
-    const showsGoing = eventsWithMyAttendance.filter((e) => e.myAttendance?.status === 'going').length
-    const showsInterested = eventsWithMyAttendance.filter((e) => e.myAttendance?.status === 'interested').length
+    // Solo cuentan para las stats personales los eventos donde tengo attendance registrada
+    const userEvents = eventsWithMyAttendance.filter((e) => e.myAttendance !== null)
 
-    // Artistas únicos
+    const totalShows = userEvents.length
+    const showsAttended = userEvents.filter((e) => e.myAttendance?.status === 'went').length
+    const showsGoing = userEvents.filter((e) => e.myAttendance?.status === 'going').length
+    const showsInterested = userEvents.filter((e) => e.myAttendance?.status === 'interested').length
+
+    // Artistas únicos (de mis shows)
     const artistSet = new Set<string>()
     const artistCount: Record<string, number> = {}
-    for (const ev of rawEvents) {
+    for (const ev of userEvents) {
         for (const l of ev.lineups ?? []) {
             const name = l.artists?.name
             if (name) {
@@ -96,11 +99,11 @@ export async function getPersonalStats(): Promise<StatsData> {
         }
     }
 
-    // Venues únicos
+    // Venues únicos (de mis shows)
     const venueMap: Record<string, { name: string; city: string | null; count: number }> = {}
     const citySet = new Set<string>()
     const countrySet = new Set<string>()
-    for (const ev of rawEvents) {
+    for (const ev of userEvents) {
         const v = ev.venues
         if (v?.name) {
             if (!venueMap[v.name]) venueMap[v.name] = { name: v.name, city: v.city ?? null, count: 0 }
@@ -110,16 +113,16 @@ export async function getPersonalStats(): Promise<StatsData> {
         }
     }
 
-    // Shows por año
+    // Shows por año (de mis shows)
     const showsByYear: Record<string, number> = {}
-    for (const ev of rawEvents) {
+    for (const ev of userEvents) {
         const year = new Date(ev.date).getFullYear().toString()
         showsByYear[year] = (showsByYear[year] ?? 0) + 1
     }
 
     // Rating promedio
     const ratings: number[] = []
-    for (const ev of eventsWithMyAttendance) {
+    for (const ev of userEvents) {
         const r = ev.myAttendance?.memories?.[0]?.rating
         if (r) ratings.push(r)
     }
@@ -139,7 +142,7 @@ export async function getPersonalStats(): Promise<StatsData> {
         .slice(0, 5)
 
     // Actividad reciente (últimos 10 shows pasados)
-    const recentActivity = eventsWithMyAttendance
+    const recentActivity = userEvents
         .filter((e) => new Date(e.date) < now)
         .slice(0, 10)
         .map((e) => ({
