@@ -59,7 +59,7 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
                         <p className="text-sm text-white truncate font-medium">{user.email}</p>
                     </div>
 
-                    {menuItems.map((item, idx) => (
+                    {menuItems.map((item) => (
                         <div key={item.href}>
                             <Link
                                 href={item.href}

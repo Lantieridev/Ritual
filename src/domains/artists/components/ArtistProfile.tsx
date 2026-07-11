@@ -11,7 +11,6 @@ import Image from 'next/image'
 interface ArtistProfileProps {
     artist: ArtistWithEvents
     bio: string
-    tags: string[]
     similarArtists: { name: string }[] // Last.fm returns more fields, but only `name` is used here
     upcomingEvents: FutureEvent[] // External (Last.fm)
     internalUpcoming: ArtistWithEvents['events']
@@ -25,7 +24,6 @@ interface ArtistProfileProps {
 export function ArtistProfile({
     artist,
     bio,
-    tags,
     similarArtists,
     upcomingEvents,
     internalUpcoming,

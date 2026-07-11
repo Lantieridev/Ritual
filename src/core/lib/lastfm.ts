@@ -151,8 +151,6 @@ export async function getArtistEvents(
         return { events: [], error: 'LASTFM_API_KEY no configurado.' }
     }
 
-    console.log('[LastFM] Fetching events for:', artistName)
-
     const params = new URLSearchParams({
         method: 'artist.getevents',
         artist: artistName.trim(),
@@ -166,8 +164,6 @@ export async function getArtistEvents(
         const res = await fetch(`${BASE}/?${params}`, {
             next: { revalidate: 3600 },
         })
-
-        console.log('[LastFM] Response Status:', res.status)
 
         if (res.status === 404) {
             // Artist not found likely

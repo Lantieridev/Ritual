@@ -4,18 +4,13 @@ import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
 import { LinkButton } from '@/src/core/components/ui'
 import { SearchEventsForm } from '@/src/domains/events/components/SearchEventsForm'
-import { FutureEventsResults } from '@/src/domains/events/components/FutureEventsResults'
 import { SetlistResults } from '@/src/domains/events/components/SetlistResults'
-import {
-  isLastFmConfigured,
-  getArtistEvents,
-} from '@/src/core/lib/lastfm'
+import { isLastFmConfigured } from '@/src/core/lib/lastfm'
 import {
   isSetlistFmConfigured,
   getSetlistsByArtist,
 } from '@/src/core/lib/setlistfm'
 import { EmptyState } from '@/src/core/components/ui/EmptyState'
-import { FutureEvent } from '@/src/core/types'
 
 export const metadata: Metadata = {
   title: 'Buscar recitales | RITUAL',
@@ -37,21 +32,10 @@ export default async function BuscarPage({ searchParams }: PageProps) {
   const fmConfigured = isLastFmConfigured()
   const slConfigured = isSetlistFmConfigured()
 
-  const futureEvents: FutureEvent[] = []
   let fmError: string | undefined
 
   let slSetlists: Awaited<ReturnType<typeof getSetlistsByArtist>>['setlists'] = []
   let slError: string | undefined
-
-  /*
-  if (hasQuery && source === 'future' && fmConfigured) {
-    if (params.artist?.trim()) {
-      const result = await getArtistEvents(params.artist.trim())
-      futureEvents = result.events
-      fmError = result.error
-    }
-  }
-  */
 
   if (hasQuery && source === 'past' && slConfigured && params.artist?.trim()) {
     const result = await getSetlistsByArtist(params.artist.trim())
@@ -90,25 +74,6 @@ export default async function BuscarPage({ searchParams }: PageProps) {
 
       {/* Tabs: Futuros / Pasados */}
       <div className="flex gap-1 border-b border-white/[0.06] mb-6">
-        {/*
-        <a
-          href={`/buscar?${new URLSearchParams({ ...(params.artist ? { artist: params.artist } : {}), source: 'future' }).toString()}`}
-          className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${source === 'future'
-            ? 'border-white text-white'
-            : 'border-transparent text-zinc-500 hover:text-zinc-300'
-            }`}
-        >
-          Shows futuros
-          {fmConfigured && (
-            <span className="ml-2 text-[10px] uppercase tracking-widest text-zinc-600">
-              Last.fm
-            </span>
-          )}
-          {!fmConfigured && (
-            <span className="ml-2 text-[10px] text-zinc-700">no disponible</span>
-          )}
-        </a>
-        */}
         <a
           href={`/buscar?${new URLSearchParams({ ...(params.artist ? { artist: params.artist } : {}), source: 'past' }).toString()}`}
           className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${source === 'past'
@@ -156,11 +121,6 @@ export default async function BuscarPage({ searchParams }: PageProps) {
       {/* Resultados */}
       {hasQuery && !fmError && !slError && (
         <>
-          {/*
-          {source === 'future' && fmConfigured && (
-            <FutureEventsResults events={futureEvents} searchQuery={params.artist} />
-          )}
-          */}
           {source === 'past' && slConfigured && params.artist?.trim() && (
             <SetlistResults setlists={slSetlists} />
           )}
@@ -168,17 +128,6 @@ export default async function BuscarPage({ searchParams }: PageProps) {
       )}
 
       {/* Empty States */}
-      {/*
-      {!hasQuery && source === 'future' && fmConfigured && (
-        <EmptyState
-          title="Buscá tu música"
-          description="Escribí el nombre de un artista para buscar shows futuros vía Last.fm."
-          icon={<span className="text-4xl grayscale">🔍</span>}
-          className="border-dashed mt-8"
-        />
-      )}
-      */}
-
       {!hasQuery && source === 'past' && slConfigured && (
         <EmptyState
           title="Historial de shows"

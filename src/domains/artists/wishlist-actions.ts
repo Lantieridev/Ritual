@@ -11,7 +11,6 @@ import { getCurrentUserId } from '@/src/core/auth/session'
  */
 export async function getWishlistArtistIds(): Promise<string[]> {
     const userId = await getCurrentUserId()
-    // console.log('[Wishlist] getWishlistArtistIds user:', userId)
     if (!userId) return [] // Don't throw, just return empty for safety in UI
     const supabase = await createClient()
     const { data, error } = await supabase
@@ -29,8 +28,6 @@ export async function getWishlistArtistIds(): Promise<string[]> {
 export async function toggleWishlist(
     artistId: string
 ): Promise<{ inWishlist: boolean; error?: string }> {
-    console.log('[Wishlist] Toggling artist:', artistId)
-
     const idErr = validateUUID(artistId, 'Artista')
     if (idErr) {
         console.error('[Wishlist] Invalid ID:', artistId, idErr)
@@ -38,8 +35,6 @@ export async function toggleWishlist(
     }
 
     const userId = await getCurrentUserId()
-    console.log('[Wishlist] User ID:', userId)
-
     if (!userId) return { inWishlist: false, error: 'Inicia sesión para guardar artistas.' }
 
     const supabase = await createClient()
@@ -59,7 +54,6 @@ export async function toggleWishlist(
 
     if (existing) {
         // Quitar de wishlist
-        console.log('[Wishlist] Removing...')
         const { error } = await supabase
             .from('wishlist')
             .delete()
@@ -73,7 +67,6 @@ export async function toggleWishlist(
         return { inWishlist: false }
     } else {
         // Agregar a wishlist
-        console.log('[Wishlist] Adding...')
         const { error } = await supabase
             .from('wishlist')
             .insert({ user_id: userId, artist_id: artistId })

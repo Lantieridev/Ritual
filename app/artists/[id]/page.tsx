@@ -170,7 +170,6 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
                 <ArtistProfile
                     artist={artist}
                     bio={bio}
-                    tags={tags}
                     similarArtists={similarArtists}
                     upcomingEvents={upcomingFromLastFm}
                     internalUpcoming={internalUpcoming}
