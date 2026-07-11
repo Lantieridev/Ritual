@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { uploadEventPhoto, deleteEventPhoto } from '@/src/domains/events/photo-actions'
 import type { EventPhoto } from '@/src/domains/events/photo-actions'
@@ -18,6 +18,23 @@ export function PhotoGallery({ eventId, initialPhotos }: PhotoGalleryProps) {
     const [lightbox, setLightbox] = useState<EventPhoto | null>(null)
     const [isPending, startTransition] = useTransition()
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const closeButtonRef = useRef<HTMLButtonElement>(null)
+    const lastTriggerRef = useRef<HTMLElement | null>(null)
+
+    useEffect(() => {
+        if (!lightbox) return
+
+        closeButtonRef.current?.focus()
+
+        function handleKeyDown(e: KeyboardEvent) {
+            if (e.key === 'Escape') setLightbox(null)
+        }
+        document.addEventListener('keydown', handleKeyDown)
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown)
+            lastTriggerRef.current?.focus()
+        }
+    }, [lightbox])
 
     async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
@@ -62,20 +79,31 @@ export function PhotoGallery({ eventId, initialPhotos }: PhotoGalleryProps) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {photos.map((photo) => (
                         <div key={photo.id} className="group relative aspect-square rounded-lg overflow-hidden bg-neutral-900">
-                            <Image
-                                src={photo.url}
-                                alt={photo.caption ?? 'Foto del show'}
-                                fill
-                                className="object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                                sizes="(max-width: 640px) 50vw, 33vw"
-                                onClick={() => setLightbox(photo)}
-                            />
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    lastTriggerRef.current = e.currentTarget
+                                    setLightbox(photo)
+                                }}
+                                aria-label={photo.caption ? `Ver foto ampliada: ${photo.caption}` : 'Ver foto ampliada'}
+                                className="absolute inset-0 w-full h-full"
+                            >
+                                <Image
+                                    src={photo.url}
+                                    alt={photo.caption ?? 'Foto del show'}
+                                    fill
+                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                    sizes="(max-width: 640px) 50vw, 33vw"
+                                />
+                            </button>
                             {/* Overlay con botón eliminar */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-end justify-end p-2 opacity-0 group-hover:opacity-100">
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 pointer-events-none">
                                 <button
+                                    type="button"
                                     onClick={(e) => { e.stopPropagation(); handleDelete(photo) }}
                                     disabled={deletingId === photo.id || isPending}
-                                    className="text-xs bg-red-600/90 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors disabled:opacity-50"
+                                    aria-label="Eliminar foto"
+                                    className="pointer-events-auto text-xs bg-red-600/90 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors disabled:opacity-50"
                                 >
                                     {deletingId === photo.id ? '…' : '✕'}
                                 </button>
@@ -110,6 +138,9 @@ export function PhotoGallery({ eventId, initialPhotos }: PhotoGalleryProps) {
             {/* Lightbox */}
             {lightbox && (
                 <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={lightbox.caption ?? 'Foto del show'}
                     className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
                     onClick={() => setLightbox(null)}
                 >
@@ -125,7 +156,10 @@ export function PhotoGallery({ eventId, initialPhotos }: PhotoGalleryProps) {
                             <p className="text-center text-sm text-zinc-400 mt-3">{lightbox.caption}</p>
                         )}
                         <button
+                            ref={closeButtonRef}
+                            type="button"
                             onClick={() => setLightbox(null)}
+                            aria-label="Cerrar"
                             className="absolute -top-3 -right-3 w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full text-white text-sm flex items-center justify-center transition-colors"
                         >
                             ✕
