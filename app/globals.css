@@ -80,6 +80,16 @@
    */
   --color-ritual-mobile-sep: #33333A;
 
+  /*
+   * Bottom sheet (.dc.html líneas ~896-903): el velo y el separador de filas
+   * son valores propios del prototipo. El separador NO es
+   * --color-ritual-border (#1E1E22): son colores distintos, y acá se
+   * declaran aparte en vez de aproximar uno al otro. El velo es el primer
+   * token de overlay del proyecto — PhotoGallery hardcodea bg-black/90.
+   */
+  --color-ritual-mobile-sheet-veil: rgba(6, 6, 8, 0.72);
+  --color-ritual-mobile-sheet-divider: #1D1D22;
+
   --shadow-ritual-low: 0 14px 28px -18px rgba(0, 0, 0, 0.9);
   --shadow-ritual-high: 0 34px 70px -30px rgba(0, 0, 0, 0.95);
 
@@ -152,6 +162,8 @@ html[data-mobile-banda] {
   --color-ritual-mobile-ghost-label: var(--color-ritual-mobile-ghost-label);
   --color-ritual-mobile-blank: var(--color-ritual-mobile-blank);
   --color-ritual-mobile-sep: var(--color-ritual-mobile-sep);
+  --color-ritual-mobile-sheet-veil: var(--color-ritual-mobile-sheet-veil);
+  --color-ritual-mobile-sheet-divider: var(--color-ritual-mobile-sheet-divider);
 
   --shadow-ritual-low: var(--shadow-ritual-low);
   --shadow-ritual-high: var(--shadow-ritual-high);
@@ -401,6 +413,36 @@ html {
 
 @media (prefers-reduced-motion: reduce) {
   .ritual-rise {
+    animation: none;
+  }
+}
+
+/*
+ * Entrada del bottom sheet (.dc.html `mUp`/`.sheet`, líneas ~24,28) — el
+ * panel sube desde abajo y el velo hace fade in. Usa --ease-ritual, la misma
+ * curva del prototipo, así que no se introduce un nuevo easing.
+ */
+@keyframes ritual-sheet-up {
+  from { transform: translateY(101%); }
+  to { transform: translateY(0); }
+}
+
+.ritual-sheet-up {
+  animation: ritual-sheet-up .4s var(--ease-ritual) both;
+}
+
+@keyframes ritual-sheet-veil {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ritual-sheet-veil {
+  animation: ritual-sheet-veil .4s var(--ease-ritual) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ritual-sheet-up,
+  .ritual-sheet-veil {
     animation: none;
   }
 }

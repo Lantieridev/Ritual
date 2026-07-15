@@ -698,6 +698,68 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
     isBold: false,
     isLarge: false,
   },
+
+  // --- BottomSheet.tsx / BottomSheetItem.tsx ---
+  {
+    id: 'BSH-01',
+    component: 'BottomSheet',
+    element: 'Sheet title',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-mobile-nav-bg',
+    fontSize: '30px',
+    isBold: false,
+    isLarge: true,
+  },
+  {
+    id: 'BSH-02',
+    component: 'BottomSheet',
+    element: 'Sheet subtitle',
+    textToken: '--color-ritual-gray-mid-2',
+    bgToken: '--color-ritual-mobile-nav-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'BSH-03',
+    component: 'BottomSheetItem',
+    element: 'Row label (default/bone)',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-mobile-nav-bg',
+    fontSize: '23px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'BSH-04',
+    component: 'BottomSheetItem',
+    element: 'Row label (tone="acento")',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-mobile-nav-bg',
+    fontSize: '23px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'BSH-05',
+    component: 'BottomSheetItem',
+    element: 'Row label (tone="apagado")',
+    textToken: '--color-ritual-gray-text',
+    bgToken: '--color-ritual-mobile-nav-bg',
+    fontSize: '23px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'BSH-06',
+    component: 'BottomSheetItem',
+    element: 'Row hint',
+    textToken: '--color-ritual-gray-mid-2',
+    bgToken: '--color-ritual-mobile-nav-bg',
+    fontSize: '12px',
+    isBold: false,
+    isLarge: false,
+  },
 ]
 
 describe('Design Tokens & Color Contrast (WCAG AA)', () => {
@@ -712,12 +774,42 @@ describe('Design Tokens & Color Contrast (WCAG AA)', () => {
     expect(TOKENS['--color-ritual-mobile-sep']).toBe('#33333A')
   })
 
+  it('declares the bottom sheet divider token, distinct from --color-ritual-border', () => {
+    expect(TOKENS['--color-ritual-mobile-sheet-divider']).toBe('#1D1D22')
+    expect(TOKENS['--color-ritual-mobile-sheet-divider']).not.toBe(TOKENS['--color-ritual-border'])
+  })
+
+  it('declares the bottom sheet veil token as an rgba() overlay', () => {
+    // parseGlobalsCssTokens() only matches 6-digit hex, so the rgba() veil is
+    // read straight from the raw CSS text instead of via TOKENS.
+    const cssPath = path.resolve(process.cwd(), 'app/globals.css')
+    const css = fs.readFileSync(cssPath, 'utf-8')
+    const veilMatch = css.match(/--color-ritual-mobile-sheet-veil:\s*(rgba\([^)]+\))/)
+    expect(veilMatch, 'Missing --color-ritual-mobile-sheet-veil in app/globals.css').not.toBeNull()
+    expect(veilMatch![1].replace(/\s/g, '')).toBe('rgba(6,6,8,0.72)')
+  })
+
+  it('declares .ritual-sheet-up and .ritual-sheet-veil with a prefers-reduced-motion override', () => {
+    const cssPath = path.resolve(process.cwd(), 'app/globals.css')
+    const css = fs.readFileSync(cssPath, 'utf-8')
+
+    expect(css).toMatch(/\.ritual-sheet-up\s*\{/)
+    expect(css).toMatch(/\.ritual-sheet-veil\s*\{/)
+
+    const reducedMotionBlocks = css.match(/@media \(prefers-reduced-motion: reduce\)\s*\{(?:[^{}]|\{[^{}]*\})*\}/g) ?? []
+    const coversBoth = reducedMotionBlocks.some(
+      (block) => block.includes('.ritual-sheet-up') && block.includes('.ritual-sheet-veil')
+    )
+    expect(coversBoth, 'Both motion classes must be disabled in the same prefers-reduced-motion block').toBe(true)
+  })
+
   // Pares que salen tal cual del prototipo aprobado y no llegan a AA (#78). No
   // se cuentan acá: los cubre el bloque de deuda de diseño (`it.fails`) de abajo.
   const DESIGN_DEBT_PAIR_IDS = new Set([
     'HHS-05', 'MAS-02', 'HHS-09', 'HHS-11', 'HHS-24', 'HHS-26', 'HHS-27', 'HHS-28', 'MTB-05', 'MTB-07',
     'HHT-04', 'HHT-06', 'HHT-08', // #78
     'SGS-02', 'SGS-04', 'SGS-07', // #78 — home ranking strip note/badge/reason, same prototype colors
+    'BSH-02', 'BSH-06', // #78 — bottom sheet subtitle/hint, same prototype colors
   ])
 
   it('every non-exempt text pair outside the known design debt meets WCAG AA', () => {
