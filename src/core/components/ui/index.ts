@@ -1,6 +1,8 @@
 export { Card } from './Card'
 export { Button } from './Button'
 export { LinkButton } from './LinkButton'
+export { BottomSheet } from './BottomSheet'
+export { BottomSheetItem, type BottomSheetItemTone } from './BottomSheetItem'
 export { ConfirmDeleteButton } from './ConfirmDeleteButton'
 export { Combobox, type ComboboxOption } from './Combobox'
 export { FormField, inputClass } from './FormField'
