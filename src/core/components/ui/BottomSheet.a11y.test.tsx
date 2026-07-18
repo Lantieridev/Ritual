@@ -86,6 +86,17 @@ describe('BottomSheet', () => {
     expect(titleEl).toHaveTextContent('Opciones')
   })
 
+  it('aria-describedby apunta al subtítulo cuando hay uno, y no se declara cuando no hay', () => {
+    const { rerender } = render(<TwoItemSheet open onClose={vi.fn()} />)
+
+    const describedBy = screen.getByRole('dialog').getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(describedBy!)).toHaveTextContent('Elegí una')
+
+    rerender(<EmptySheet open onClose={vi.fn()} />)
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-describedby')
+  })
+
   describe('vías de cierre', () => {
     it('Escape llama a onClose una vez', () => {
       const onClose = vi.fn()
@@ -140,11 +151,16 @@ describe('BottomSheet', () => {
       expect(dialog).toHaveFocus()
     })
 
-    it('Tab desde el último foco enfocable vuelve al primero', async () => {
+    // El handle ("Cerrar") es un <button> que aparece antes que el
+    // contenido en el DOM, así que participa del ciclo del trap como su
+    // primer nodo — si sólo el contenido formara el límite, un Tab que ya
+    // dio la vuelta una vez lo dejaría inalcanzable por teclado el resto de
+    // esa apertura (ver #78-adyacente, hallazgo de revisión).
+    it('Tab desde el último foco enfocable vuelve al handle', async () => {
       const user = userEvent.setup()
       render(<TwoItemSheet open onClose={vi.fn()} />)
 
-      const first = screen.getByRole('button', { name: 'Uno' })
+      const handle = screen.getByRole('button', { name: 'Cerrar' })
       const last = screen.getByRole('button', { name: 'Dos' })
 
       await user.click(last)
@@ -152,22 +168,35 @@ describe('BottomSheet', () => {
 
       await user.tab()
 
-      expect(first).toHaveFocus()
+      expect(handle).toHaveFocus()
     })
 
-    it('Shift+Tab desde el primer foco enfocable va al último', async () => {
+    it('Shift+Tab desde el handle va al último foco enfocable', async () => {
       const user = userEvent.setup()
       render(<TwoItemSheet open onClose={vi.fn()} />)
 
-      const first = screen.getByRole('button', { name: 'Uno' })
+      const handle = screen.getByRole('button', { name: 'Cerrar' })
       const last = screen.getByRole('button', { name: 'Dos' })
 
-      await user.click(first)
-      expect(first).toHaveFocus()
+      await user.click(handle)
+      expect(handle).toHaveFocus()
 
       await user.tab({ shift: true })
 
       expect(last).toHaveFocus()
+    })
+
+    it('Tab justo al abrir (foco en el panel) va al handle, el primer foco enfocable', async () => {
+      const user = userEvent.setup()
+      render(<TwoItemHarness />)
+
+      await user.click(screen.getByRole('button', { name: 'Abrir' }))
+      expect(screen.getByRole('dialog')).toHaveFocus()
+
+      const handle = screen.getByRole('button', { name: 'Cerrar' })
+      await user.tab()
+
+      expect(handle).toHaveFocus()
     })
 
     it('Shift+Tab justo al abrir (foco en el panel) va al último foco enfocable', async () => {
@@ -183,16 +212,46 @@ describe('BottomSheet', () => {
       expect(last).toHaveFocus()
     })
 
-    it('un sheet sin elementos enfocables mantiene el foco en el panel al presionar Tab', async () => {
+    it('el Tab natural entre el handle y el primer ítem del contenido no lo interrumpe el trap', async () => {
+      const user = userEvent.setup()
+      render(<TwoItemSheet open onClose={vi.fn()} />)
+
+      const handle = screen.getByRole('button', { name: 'Cerrar' })
+      const uno = screen.getByRole('button', { name: 'Uno' })
+
+      await user.click(handle)
+      await user.tab()
+      expect(uno).toHaveFocus()
+
+      await user.tab({ shift: true })
+      expect(handle).toHaveFocus()
+    })
+
+    it('un sheet sin nada enfocable en el contenido igual permite llegar al handle con Tab', async () => {
       const user = userEvent.setup()
       render(<EmptySheet open onClose={vi.fn()} />)
 
       const dialog = screen.getByRole('dialog')
+      const handle = screen.getByRole('button', { name: 'Cerrar' })
       expect(dialog).toHaveFocus()
 
       await user.tab()
 
-      expect(dialog).toHaveFocus()
+      expect(handle).toHaveFocus()
+    })
+
+    it('un ítem enfocable único (el handle solo) cicla sobre sí mismo con Tab y Shift+Tab', async () => {
+      const user = userEvent.setup()
+      render(<EmptySheet open onClose={vi.fn()} />)
+
+      const handle = screen.getByRole('button', { name: 'Cerrar' })
+
+      await user.click(handle)
+      await user.tab()
+      expect(handle).toHaveFocus()
+
+      await user.tab({ shift: true })
+      expect(handle).toHaveFocus()
     })
   })
 

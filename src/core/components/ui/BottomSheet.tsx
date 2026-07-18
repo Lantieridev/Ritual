@@ -71,15 +71,16 @@ export function BottomSheet({ open, onClose, title, subtitle, children, classNam
 
     function handlePanelKeyDown(e: ReactKeyboardEvent<HTMLDivElement>) {
         if (e.key !== 'Tab') return
-        const content = contentRef.current
-        if (!content) return
-
-        // Sólo el contenido (título/subtítulo/children) participa del ciclo
-        // de Tab — el handle de arrastre queda fuera del límite del wrap a
-        // propósito: sigue siendo alcanzable por el orden nativo del
-        // navegador (es un <button> normal), pero no es un límite del trap.
-        const nodes = Array.from(content.querySelectorAll<HTMLElement>(FOCUSABLE))
         const panel = panelRef.current
+        if (!panel) return
+
+        // El handle de cerrar participa del ciclo de Tab junto con el
+        // contenido — queda primero en el orden del DOM, así que Tab desde
+        // el panel llega naturalmente a él. Si sólo el contenido formara el
+        // límite del trap, un Tab que ya dio la vuelta una vez deja al
+        // handle inalcanzable por teclado por el resto de esa apertura
+        // (Shift+Tab desde el primer ítem saltaría directo al último).
+        const nodes = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE))
         if (nodes.length === 0) {
             e.preventDefault()
             panel?.focus()
@@ -101,6 +102,9 @@ export function BottomSheet({ open, onClose, title, subtitle, children, classNam
 
     return (
         <>
+            {/* Velo y panel son hermanos, no anidados (sin portal) — un click
+                en el panel nunca puede burbujear hasta el onClick del velo,
+                así que no hace falta stopPropagation acá. */}
             <div
                 onClick={onClose}
                 className="ritual-sheet-veil fixed inset-0 z-[88] bg-ritual-mobile-sheet-veil"
@@ -113,7 +117,6 @@ export function BottomSheet({ open, onClose, title, subtitle, children, classNam
                 aria-describedby={subtitle ? subtitleId : undefined}
                 tabIndex={-1}
                 onKeyDown={handlePanelKeyDown}
-                onClick={(e) => e.stopPropagation()}
                 className={`ritual-sheet-up fixed inset-x-0 bottom-0 z-[90] flex max-h-[88%] flex-col border-t-2 border-ritual-red bg-ritual-mobile-nav-bg ${className}`}
             >
                 <button
@@ -124,7 +127,7 @@ export function BottomSheet({ open, onClose, title, subtitle, children, classNam
                 >
                     <span aria-hidden="true" className="h-[3px] w-[44px] bg-ritual-gray-muted" />
                 </button>
-                <div ref={contentRef} className="scr overflow-y-auto px-5 pb-[26px]">
+                <div ref={contentRef} className="overflow-y-auto px-5 pb-[26px]">
                     <h2 id={titleId} className="font-display text-[30px] uppercase leading-[0.92] text-ritual-bone">
                         {title}
                     </h2>
