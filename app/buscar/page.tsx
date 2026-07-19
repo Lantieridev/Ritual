@@ -11,6 +11,7 @@ import { isTicketmasterConfigured, searchTicketmasterEvents } from '@/src/core/l
 import { searchCachedExternalEvents } from '@/src/core/lib/external-sources/cache'
 import { isSetlistFmConfigured, getSetlistsByArtist } from '@/src/core/lib/setlistfm'
 import { searchCatalog } from '@/src/domains/search/service'
+import { festivalMetaLine } from '@/src/domains/search/festivalMeta'
 import { formatDate } from '@/src/core/lib/utils'
 import { EmptyState } from '@/src/core/components/ui/EmptyState'
 import { createClient } from '@/src/core/lib/supabase/server'
@@ -95,7 +96,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
   const query = params.q?.trim() ?? ''
   const archiveResults = tab === 'archivo' && query.length >= 2 ? await searchCatalog(query) : null
   const archiveTotal = archiveResults
-    ? archiveResults.events.length + archiveResults.artists.length + archiveResults.venues.length
+    ? archiveResults.events.length + archiveResults.artists.length + archiveResults.venues.length + archiveResults.festivals.length
     : 0
 
   return (
@@ -258,6 +259,26 @@ export default async function BuscarPage({ searchParams }: PageProps) {
                         </Link>
                       </li>
                     ))}
+                  </ul>
+                </section>
+              )}
+              {archiveResults.festivals.length > 0 && (
+                <section>
+                  <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text mb-3">
+                    Festivales ({archiveResults.festivals.length})
+                  </p>
+                  <ul className="divide-y divide-ritual-border-subtle">
+                    {archiveResults.festivals.map((festival) => {
+                      const meta = festivalMetaLine(festival.edition, festival.city)
+                      return (
+                        <li key={festival.id}>
+                          <Link href={routes.festivals.detail(festival.id)} className="flex items-center justify-between gap-4 py-3">
+                            <span className="font-dense font-extrabold text-ritual-bone truncate">{festival.name}</span>
+                            {meta && <span className="font-label text-xs text-ritual-gray-text whitespace-nowrap">{meta}</span>}
+                          </Link>
+                        </li>
+                      )
+                    })}
                   </ul>
                 </section>
               )}

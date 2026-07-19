@@ -8,13 +8,15 @@ export interface CatalogSearchResults {
     events: Array<{ id: string; name: string | null; date: string }>
     artists: Array<{ id: string; name: string; genre: string | null }>
     venues: Array<{ id: string; name: string; city: string | null; country: string | null }>
+    festivals: Array<{ id: string; name: string; edition: string | null; city: string | null; start_date: string | null }>
 }
 
-const EMPTY: CatalogSearchResults = { events: [], artists: [], venues: [] }
+const EMPTY: CatalogSearchResults = { events: [], artists: [], venues: [], festivals: [] }
 
 /**
- * Búsqueda por nombre sobre las tres tablas del catálogo, para la pestaña
- * "en tu archivo" de /buscar.
+ * Búsqueda por nombre sobre las cuatro tablas del catálogo (events, artists,
+ * venues, festivals), para la pestaña "en tu archivo" de /buscar y para la
+ * pantalla mobile unificada.
  *
  * Vivía como una función suelta dentro de `app/buscar/page.tsx`, con su propio
  * `createClient()` — la única ruta del proyecto que salteaba la capa de
@@ -30,7 +32,7 @@ export async function searchCatalog(query: string): Promise<CatalogSearchResults
     const pattern = `%${escapeLikeWildcards(term)}%`
     const supabase = await createClient()
 
-    const [eventsRes, artistsRes, venuesRes] = await Promise.all([
+    const [eventsRes, artistsRes, venuesRes, festivalsRes] = await Promise.all([
         supabase
             .from('events')
             .select('id, name, date')
@@ -47,9 +49,14 @@ export async function searchCatalog(query: string): Promise<CatalogSearchResults
             .select('id, name, city, country')
             .ilike('name', pattern)
             .limit(MAX_RESULTS_PER_TYPE),
+        supabase
+            .from('festivals')
+            .select('id, name, edition, city, start_date')
+            .ilike('name', pattern)
+            .limit(MAX_RESULTS_PER_TYPE),
     ])
 
-    for (const res of [eventsRes, artistsRes, venuesRes]) {
+    for (const res of [eventsRes, artistsRes, venuesRes, festivalsRes]) {
         if (res.error) console.error('Error en la búsqueda del catálogo:', res.error)
     }
 
@@ -57,5 +64,6 @@ export async function searchCatalog(query: string): Promise<CatalogSearchResults
         events: eventsRes.data ?? [],
         artists: artistsRes.data ?? [],
         venues: venuesRes.data ?? [],
+        festivals: festivalsRes.data ?? [],
     }
 }
