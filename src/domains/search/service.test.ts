@@ -1,12 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockCreateClient = vi.fn()
+const mockFindRankingContext = vi.fn()
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
-import { searchCatalog } from '@/src/domains/search/service'
+vi.mock('@/src/domains/taste/service', () => ({
+  findRankingContext: (userId: string) => mockFindRankingContext(userId),
+}))
+
+import { searchCatalog, searchNearby } from '@/src/domains/search/service'
+import { haversineKm } from '@/src/core/lib/geo'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -83,5 +89,101 @@ describe('searchCatalog', () => {
 
     expect(result).toEqual({ events: [], artists: [], venues: [], festivals: [] })
     expect(supabase.from).not.toHaveBeenCalled()
+  })
+})
+
+function makeVenuesQueryBuilder(result: { data: unknown; error: unknown }) {
+  const builder: Record<string, unknown> = {}
+  const chain = () => builder
+  builder.select = vi.fn(chain)
+  builder.not = vi.fn(chain)
+  builder.gte = vi.fn(chain)
+  builder.lte = vi.fn(chain)
+  builder.ilike = vi.fn(chain)
+  builder.limit = vi.fn(() => Promise.resolve(result))
+  return builder
+}
+
+const CORDOBA = { lat: -31.4, lng: -64.2 }
+
+describe('searchNearby', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns {status: "no-session"} when there is no active session, without reading taste data', async () => {
+    const supabase = { auth: { getUser: vi.fn(async () => ({ data: { user: null } })) }, from: vi.fn() }
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await searchNearby('obras')
+
+    expect(result).toEqual({ status: 'no-session' })
+    expect(mockFindRankingContext).not.toHaveBeenCalled()
+    expect(supabase.from).not.toHaveBeenCalled()
+  })
+
+  it('returns {status: "no-city"} when the signed-in user has no city coordinates', async () => {
+    const supabase = { auth: { getUser: vi.fn(async () => ({ data: { user: { id: 'u1' } } })) }, from: vi.fn() }
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+    mockFindRankingContext.mockResolvedValue({ declaredGenreKeys: [], cityCoords: null })
+
+    const result = await searchNearby()
+
+    expect(result).toEqual({ status: 'no-city' })
+    expect(supabase.from).not.toHaveBeenCalled()
+  })
+
+  it('orders venues by ascending real distance and never queries artists or festivals', async () => {
+    const near = { id: 'v-near', name: 'Club Cercano', city: 'Córdoba', lat: -31.41, lng: -64.21 }
+    const far = { id: 'v-far', name: 'Club Lejano', city: 'Córdoba', lat: -31.9, lng: -64.9 }
+    const venuesBuilder = makeVenuesQueryBuilder({ data: [far, near], error: null })
+    const supabase = {
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: 'u1' } } })) },
+      from: vi.fn((table: string) => {
+        if (table === 'venues') return venuesBuilder
+        throw new Error(`unexpected table: ${table}`)
+      }),
+    }
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+    mockFindRankingContext.mockResolvedValue({ declaredGenreKeys: [], cityCoords: CORDOBA })
+
+    const result = await searchNearby()
+
+    expect(supabase.from).toHaveBeenCalledWith('venues')
+    expect(supabase.from).not.toHaveBeenCalledWith('artists')
+    expect(supabase.from).not.toHaveBeenCalledWith('festivals')
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') throw new Error('expected ok')
+    expect(result.venues.map((v) => v.id)).toEqual(['v-near', 'v-far'])
+    expect(result.venues[0].distanceKm).toBeCloseTo(haversineKm(CORDOBA, { lat: near.lat, lng: near.lng }), 5)
+    expect(venuesBuilder.ilike).not.toHaveBeenCalled()
+  })
+
+  it('applies an ilike filter and the ±1.5° bbox when a query is present, capped at 8', async () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({
+      id: `v${i}`,
+      name: `Venue ${i}`,
+      city: 'Córdoba',
+      lat: CORDOBA.lat + i * 0.01,
+      lng: CORDOBA.lng,
+    }))
+    const venuesBuilder = makeVenuesQueryBuilder({ data: rows, error: null })
+    const supabase = {
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: 'u1' } } })) },
+      from: vi.fn(() => venuesBuilder),
+    }
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+    mockFindRankingContext.mockResolvedValue({ declaredGenreKeys: [], cityCoords: CORDOBA })
+
+    const result = await searchNearby('club')
+
+    expect(venuesBuilder.ilike).toHaveBeenCalledWith('name', '%club%')
+    expect(venuesBuilder.gte).toHaveBeenCalledWith('lat', CORDOBA.lat - 1.5)
+    expect(venuesBuilder.lte).toHaveBeenCalledWith('lat', CORDOBA.lat + 1.5)
+    expect(venuesBuilder.gte).toHaveBeenCalledWith('lng', CORDOBA.lng - 1.5)
+    expect(venuesBuilder.lte).toHaveBeenCalledWith('lng', CORDOBA.lng + 1.5)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') throw new Error('expected ok')
+    expect(result.venues).toHaveLength(8)
   })
 })
