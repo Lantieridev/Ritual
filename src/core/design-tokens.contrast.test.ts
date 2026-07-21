@@ -699,6 +699,108 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
     isLarge: false,
   },
 
+  // --- SearchField.tsx / SearchFilters.tsx / SearchRowList.tsx / NearbyNotice.tsx (buscar-mobile) ---
+  {
+    id: 'BUS-01',
+    component: 'SearchField',
+    element: '"/" mark before the input',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-bg',
+    fontSize: '14px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'BUS-02',
+    component: 'SearchField',
+    element: 'Typed query value',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-bg',
+    fontSize: '19px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'BUS-03',
+    component: 'SearchFilters',
+    element: 'Chip active (bg red, text panel)',
+    textToken: '--color-ritual-panel',
+    bgToken: '--color-ritual-red',
+    fontSize: '16px',
+    isBold: true,
+    isLarge: false,
+  },
+  {
+    id: 'BUS-04',
+    component: 'SearchFilters',
+    element: 'Chip inactive',
+    textToken: '--color-ritual-gray-text',
+    bgToken: '--color-ritual-bg',
+    fontSize: '16px',
+    isBold: true,
+    isLarge: false,
+  },
+  {
+    id: 'BUS-05',
+    component: 'SearchRowList',
+    element: 'Row title',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-bg',
+    fontSize: '22px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'BUS-06',
+    component: 'SearchRowList',
+    element: 'Row meta line',
+    textToken: '--color-ritual-gray-mid-2',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'BUS-07',
+    component: 'SearchRowList',
+    element: 'Row type/distance tag',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'BUS-08',
+    component: 'NearbyNotice',
+    element: 'Kicker',
+    textToken: '--color-ritual-gray-mid-2',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'BUS-09',
+    component: 'NearbyNotice',
+    element: 'Body text',
+    textToken: '--color-ritual-gray-text',
+    bgToken: '--color-ritual-bg',
+    fontSize: '14px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'BUS-10',
+    component: 'NearbyNotice',
+    element: 'Link ("Entrar" / "Ir al perfil")',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-bg',
+    fontSize: '10px',
+    isBold: false,
+    isLarge: false,
+  },
+
   // --- BottomSheet.tsx / BottomSheetItem.tsx ---
   {
     id: 'BSH-01',
@@ -810,6 +912,7 @@ describe('Design Tokens & Color Contrast (WCAG AA)', () => {
     'HHT-04', 'HHT-06', 'HHT-08', // #78
     'SGS-02', 'SGS-04', 'SGS-07', // #78 — home ranking strip note/badge/reason, same prototype colors
     'BSH-02', 'BSH-06', // #78 — bottom sheet subtitle/hint, same prototype colors
+    'BUS-01', 'BUS-03', 'BUS-06', 'BUS-07', 'BUS-08', 'BUS-10', // #78 — buscar-mobile: ritual-red/gray-mid-2 on bg, same prototype colors as the rest of this list
   ])
 
   it('every non-exempt text pair outside the known design debt meets WCAG AA', () => {
