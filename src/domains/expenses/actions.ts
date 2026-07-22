@@ -4,8 +4,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
 import { getCurrentUserId } from '@/src/core/auth/session'
-import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
-import type { ExpenseCreateInput, ExpenseUpdateInput } from '@/src/core/types'
+import { validateUUID, validateDate, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
+import type { ActionResult, ExpenseCreateInput, ExpenseUpdateInput } from '@/src/core/types'
 
 const MAX_NOTE_LENGTH = 500
 const MAX_CATEGORY_LENGTH = 100
@@ -27,7 +27,7 @@ function validateAmount(amount: number): string | null {
   return null
 }
 
-export async function createExpense(formData: ExpenseCreateInput): Promise<{ error?: string }> {
+export async function createExpense(formData: ExpenseCreateInput): Promise<ActionResult> {
   const r = await requireUserId()
   if ('error' in r) return r
 
@@ -37,6 +37,9 @@ export async function createExpense(formData: ExpenseCreateInput): Promise<{ err
 
   const category = sanitizeText(formData.category, MAX_CATEGORY_LENGTH)
   if (!category) return { error: 'La categoría es obligatoria.' }
+
+  const dateErr = validateDate(formData.date)
+  if (dateErr) return { error: dateErr }
 
   // Validate optional event_id if provided
   if (formData.event_id) {
@@ -63,7 +66,7 @@ export async function createExpense(formData: ExpenseCreateInput): Promise<{ err
 export async function updateExpense(
   id: string,
   formData: ExpenseUpdateInput
-): Promise<{ error?: string }> {
+): Promise<ActionResult> {
   const r = await requireUserId()
   if ('error' in r) return r
 
@@ -78,6 +81,11 @@ export async function updateExpense(
   if (formData.event_id) {
     const eventIdErr = validateUUID(formData.event_id, 'Evento')
     if (eventIdErr) return { error: eventIdErr }
+  }
+
+  if (formData.date !== undefined) {
+    const dateErr = validateDate(formData.date)
+    if (dateErr) return { error: dateErr }
   }
 
   const payload: Record<string, unknown> = {}
@@ -102,7 +110,7 @@ export async function updateExpense(
   redirect(routes.expenses.detail(id))
 }
 
-export async function deleteExpense(id: string): Promise<{ error?: string }> {
+export async function deleteExpense(id: string): Promise<ActionResult> {
   const r = await requireUserId()
   if ('error' in r) return r
 

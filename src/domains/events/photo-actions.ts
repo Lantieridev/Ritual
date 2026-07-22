@@ -5,6 +5,7 @@ import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
 import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { getCurrentUserId } from '@/src/core/auth/session'
+import type { ActionResult } from '@/src/core/types'
 
 const MAX_CAPTION_LENGTH = 200
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
@@ -49,7 +50,7 @@ export async function getEventPhotos(eventId: string): Promise<EventPhoto[]> {
  */
 export async function uploadEventPhoto(
     formData: FormData
-): Promise<{ error?: string; photo?: EventPhoto }> {
+): Promise<ActionResult<{ photo?: EventPhoto }>> {
     const eventId = formData.get('eventId') as string
     const file = formData.get('file') as File | null
     const caption = formData.get('caption') as string | null
@@ -96,6 +97,7 @@ export async function uploadEventPhoto(
         .from('event_photos')
         .insert({
             event_id: eventId,
+            user_id: userId,
             storage_path: storagePath,
             caption: sanitizeText(caption, MAX_CAPTION_LENGTH),
         })
@@ -125,7 +127,7 @@ export async function uploadEventPhoto(
 export async function deleteEventPhoto(
     photoId: string,
     eventId: string
-): Promise<{ error?: string }> {
+): Promise<ActionResult> {
     const idErr = validateUUID(photoId, 'Foto')
     if (idErr) return { error: idErr }
     const eventIdErr = validateUUID(eventId, 'Evento')
@@ -138,11 +140,12 @@ export async function deleteEventPhoto(
 
     const { data: photo, error: fetchErr } = await supabase
         .from('event_photos')
-        .select('storage_path')
+        .select('storage_path, user_id')
         .eq('id', photoId)
         .single()
 
     if (fetchErr || !photo) return { error: 'Foto no encontrada o no tienes permiso.' }
+    if (photo.user_id !== userId) return { error: 'Foto no encontrada o no tienes permiso.' }
 
     // Eliminar de Storage
     const { error: storageErr } = await supabase.storage
@@ -159,6 +162,7 @@ export async function deleteEventPhoto(
         .from('event_photos')
         .delete()
         .eq('id', photoId)
+        .eq('user_id', userId)
 
     if (dbErr) {
         console.error('Error eliminando foto de DB:', dbErr)

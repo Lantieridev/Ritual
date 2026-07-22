@@ -5,6 +5,7 @@ import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
 import { validateUUID, sanitizeError } from '@/src/core/lib/validation'
 import { getCurrentUserId } from '@/src/core/auth/session'
+import type { ActionResult } from '@/src/core/types'
 
 /**
  * Obtiene los IDs de artistas en la wishlist del usuario actual.
@@ -27,7 +28,7 @@ export async function getWishlistArtistIds(): Promise<string[]> {
 
 export async function toggleWishlist(
     artistId: string
-): Promise<{ inWishlist: boolean; error?: string }> {
+): Promise<ActionResult<{ inWishlist: boolean }>> {
     const idErr = validateUUID(artistId, 'Artista')
     if (idErr) {
         console.error('[Wishlist] Invalid ID:', artistId, idErr)

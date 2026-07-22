@@ -3,6 +3,13 @@
  * Alineados con el esquema en Supabase: events, lineups, attendance, expenses (personales).
  */
 
+/**
+ * Forma de retorno estándar para Server Actions: `error` opcional en fallo,
+ * más los campos de éxito que necesite cada action (ej. `ActionResult<{ eventId: string }>`).
+ * Reemplaza los ~6 tipos de retorno distintos que había hand-rolled en cada actions.ts.
+ */
+export type ActionResult<TData extends object = object> = { error?: string } & TData
+
 /** Artista. Participa en eventos a través de la tabla lineups (muchos a muchos). */
 export interface Artist {
   id: string
@@ -49,17 +56,14 @@ export interface LineupRow {
 }
 
 /**
- * Evento base (tabla central events).
- * Puede ser suelto, parte de una gira (tour_id) o de una edición de festival (festival_edition_id).
+ * Evento base (tabla central events). Puede ser suelto o parte de un
+ * festival — ver `festivals` + `festival_events` (tabla puente).
  */
 export interface Event {
   id: string
   name: string | null
   date: string
   venue_id: string | null
-  tour_id?: string | null
-  festival_edition_id?: string | null
-  is_child_event?: boolean
   status?: string
   created_at?: string
 }

@@ -47,6 +47,14 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
 describe('createFestival', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await createFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' } as never)
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('rejects a missing name or start date', async () => {
@@ -85,6 +93,14 @@ describe('createFestival', () => {
 describe('deleteFestival', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await deleteFestival(VALID_FESTIVAL_ID)
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('rejects an invalid id', async () => {
@@ -113,6 +129,16 @@ describe('saveFestivalAttendance', () => {
   it('rejects an invalid festival id', async () => {
     const result = await saveFestivalAttendance('not-a-uuid', 'going')
     expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects a rating outside 1-5, without touching the client', async () => {
+    const zero = await saveFestivalAttendance(VALID_FESTIVAL_ID, 'went', 0)
+    expect(zero.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+
+    const six = await saveFestivalAttendance(VALID_FESTIVAL_ID, 'went', 6)
+    expect(six.error).toBeTruthy()
     expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
@@ -154,6 +180,14 @@ describe('saveFestivalAttendance', () => {
 describe('linkEventToFestival', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await linkEventToFestival(VALID_FESTIVAL_ID, VALID_EVENT_ID)
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('rejects invalid festival or event ids', async () => {

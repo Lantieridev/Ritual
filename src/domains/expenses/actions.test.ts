@@ -64,6 +64,16 @@ describe('createExpense', () => {
     expect(result.error).toBeTruthy()
   })
 
+  it('rejects a missing or unparseable date', async () => {
+    const missing = await createExpense({ amount: 100, category: 'Entrada', date: '' } as never)
+    expect(missing.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+
+    const bad = await createExpense({ amount: 100, category: 'Entrada', date: 'not-a-date' } as never)
+    expect(bad.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
   it('rejects an invalid event_id when provided', async () => {
     const result = await createExpense({
       amount: 100,
@@ -130,6 +140,12 @@ describe('updateExpense', () => {
   it('rejects an invalid amount when provided', async () => {
     const result = await updateExpense(VALID_EXPENSE_ID, { amount: -1 })
     expect(result.error).toBeTruthy()
+  })
+
+  it('rejects an unparseable date when provided, without touching the client', async () => {
+    const result = await updateExpense(VALID_EXPENSE_ID, { date: 'not-a-date' })
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('no-ops without touching the client when nothing was actually provided', async () => {

@@ -4,14 +4,18 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
 import { sanitizeText, sanitizeError } from '@/src/core/lib/validation'
-import type { VenueCreateInput } from '@/src/core/types'
+import { getCurrentUserId } from '@/src/core/auth/session'
+import type { ActionResult, VenueCreateInput } from '@/src/core/types'
 
 const MAX_NAME = 200
 const MAX_CITY = 100
 const MAX_ADDRESS = 300
 const MAX_COUNTRY = 100
 
-export async function createVenue(formData: VenueCreateInput): Promise<{ error?: string }> {
+export async function createVenue(formData: VenueCreateInput): Promise<ActionResult> {
+  const userId = await getCurrentUserId()
+  if (!userId) return { error: 'Usuario no autenticado' }
+
   const name = sanitizeText(formData.name, MAX_NAME)
   if (!name) return { error: 'El nombre de la sede es obligatorio.' }
   const supabase = await createClient()

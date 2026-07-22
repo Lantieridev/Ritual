@@ -3,24 +3,31 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
-import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
+import { validateUUID, validateDate, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { findOrCreateByName } from '@/src/core/lib/find-or-create'
-import type { EventCreateInput, EventUpdateInput, FutureEvent } from '@/src/core/types'
+import { getCurrentUserId } from '@/src/core/auth/session'
+import type { ActionResult, EventCreateInput, EventUpdateInput, FutureEvent } from '@/src/core/types'
 
 const MAX_NAME_LENGTH = 200
 const MAX_VENUE_NAME_LENGTH = 200
 const MAX_ARTIST_NAME_LENGTH = 200
+const MAX_LOCATION_LENGTH = 100
 
 function validateCreate(data: EventCreateInput): string | null {
   const name = sanitizeText(data.name, MAX_NAME_LENGTH)
   if (!name) return 'El nombre del recital es obligatorio.'
-  if (!data.date) return 'La fecha es obligatoria.'
+  const dateErr = validateDate(data.date)
+  if (dateErr) return dateErr
   if (!data.venue_id) return 'Debes elegir una sede.'
-  if (data.venue_id && validateUUID(data.venue_id, 'Sede')) return validateUUID(data.venue_id, 'Sede')
+  const venueIdErr = validateUUID(data.venue_id, 'Sede')
+  if (venueIdErr) return venueIdErr
   return null
 }
 
-export async function createEvent(formData: EventCreateInput): Promise<{ error?: string }> {
+export async function createEvent(formData: EventCreateInput): Promise<ActionResult> {
+  const userId = await getCurrentUserId()
+  if (!userId) return { error: 'Usuario no autenticado' }
+
   const err = validateCreate(formData)
   if (err) return { error: err }
 
@@ -50,7 +57,14 @@ export async function createEvent(formData: EventCreateInput): Promise<{ error?:
     const { error: lineupsError } = await supabase.from('lineups').insert(
       formData.artist_ids.map((artist_id) => ({ event_id: newEvent.id, artist_id }))
     )
-    if (lineupsError) console.error('Error creando lineups:', lineupsError)
+    if (lineupsError) {
+      console.error('Error creando lineups:', lineupsError)
+      // El recital ya se guardó — no reportamos éxito silencioso de algo que
+      // quedó a medio hacer. El usuario tiene que enterarse y completarlo.
+      return {
+        error: 'El recital se guardó, pero no se pudieron guardar los artistas del lineup. Editalo para agregarlos.',
+      }
+    }
   }
 
   redirect(routes.home)
@@ -63,7 +77,10 @@ export async function createEvent(formData: EventCreateInput): Promise<{ error?:
 export async function addExternalEvent(
   event: FutureEvent,
   artistNameForLineup?: string
-): Promise<{ error?: string; eventId?: string }> {
+): Promise<ActionResult<{ eventId?: string }>> {
+  const userId = await getCurrentUserId()
+  if (!userId) return { error: 'Usuario no autenticado' }
+
   const venueName = sanitizeText(event.venue?.name, MAX_VENUE_NAME_LENGTH)
   if (!venueName) return { error: 'El evento no tiene sede.' }
 
@@ -81,8 +98,8 @@ export async function addExternalEvent(
   const supabase = await createClient()
 
   const venue = await findOrCreateByName(supabase, 'venues', venueName, {
-    city: sanitizeText(event.venue.city, 100),
-    country: sanitizeText(event.venue.country, 100),
+    city: sanitizeText(event.venue.city, MAX_LOCATION_LENGTH),
+    country: sanitizeText(event.venue.country, MAX_LOCATION_LENGTH),
   })
   if ('error' in venue) return { error: venue.error }
 
@@ -104,7 +121,20 @@ export async function addExternalEvent(
     return { error: sanitizeError(eventErr) }
   }
 
-  await supabase.from('lineups').insert({ event_id: newEvent.id, artist_id: artist.id })
+  const { error: lineupErr } = await supabase
+    .from('lineups')
+    .insert({ event_id: newEvent.id, artist_id: artist.id })
+
+  if (lineupErr) {
+    console.error('Error creando lineup:', lineupErr)
+    // El recital ya se guardó — no reportamos éxito silencioso de algo que
+    // quedó a medio hacer. El usuario tiene que enterarse y completarlo.
+    return {
+      error: 'El recital se guardó, pero no se pudo guardar el artista del lineup. Editalo para agregarlo.',
+      eventId: newEvent.id,
+    }
+  }
+
   // Return the new event ID — the client component handles navigation.
   // DO NOT call redirect() here: it throws NEXT_REDIRECT which useTransition
   // silently swallows, making the button appear to do nothing.
@@ -114,9 +144,23 @@ export async function addExternalEvent(
 export async function updateEvent(
   id: string,
   formData: EventUpdateInput
-): Promise<{ error?: string }> {
+): Promise<ActionResult> {
+  const userId = await getCurrentUserId()
+  if (!userId) return { error: 'Usuario no autenticado' }
+
   const idErr = validateUUID(id, 'Evento')
   if (idErr) return { error: idErr }
+
+  // Validar todo antes de tocar la DB — evita instanciar un cliente para
+  // una request que ya sabemos que va a fallar.
+  if (formData.date !== undefined) {
+    const dateErr = validateDate(formData.date)
+    if (dateErr) return { error: dateErr }
+  }
+  if (formData.venue_id) {
+    const venueErr = validateUUID(formData.venue_id, 'Sede')
+    if (venueErr) return { error: venueErr }
+  }
 
   const supabase = await createClient()
   const payload: { name?: string | null; date?: string; venue_id?: string | null } = {}
@@ -124,12 +168,10 @@ export async function updateEvent(
   if (formData.name !== undefined) {
     payload.name = sanitizeText(formData.name, MAX_NAME_LENGTH)
   }
-  if (formData.date !== undefined) payload.date = formData.date
+  if (formData.date !== undefined) {
+    payload.date = formData.date
+  }
   if (formData.venue_id !== undefined) {
-    if (formData.venue_id) {
-      const venueErr = validateUUID(formData.venue_id, 'Sede')
-      if (venueErr) return { error: venueErr }
-    }
     payload.venue_id = formData.venue_id || null
   }
 
@@ -164,7 +206,10 @@ export async function updateEvent(
   redirect(routes.events.detail(id))
 }
 
-export async function deleteEvent(id: string): Promise<{ error?: string }> {
+export async function deleteEvent(id: string): Promise<ActionResult> {
+  const userId = await getCurrentUserId()
+  if (!userId) return { error: 'Usuario no autenticado' }
+
   const idErr = validateUUID(id, 'Evento')
   if (idErr) return { error: idErr }
 

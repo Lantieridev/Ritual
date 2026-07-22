@@ -8,6 +8,10 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
+vi.mock('@/src/core/auth/session', () => ({
+  getCurrentUserId: vi.fn(),
+}))
+
 vi.mock('next/navigation', () => ({
   redirect: (...args: unknown[]) => mockRedirect(...args),
 }))
@@ -17,6 +21,7 @@ vi.mock('@/src/core/lib/find-or-create', () => ({
 }))
 
 import { createEvent, addExternalEvent, updateEvent, deleteEvent } from '@/src/domains/events/actions'
+import { getCurrentUserId } from '@/src/core/auth/session'
 import type { FutureEvent } from '@/src/core/types'
 
 const VALID_VENUE_ID = '11111111-1111-1111-1111-111111111111'
@@ -39,6 +44,14 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
 describe('createEvent', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await createEvent({ name: 'Show', date: '2024-01-01', venue_id: VALID_VENUE_ID } as never)
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('rejects a missing name, date, or venue', async () => {
@@ -89,11 +102,42 @@ describe('createEvent', () => {
     ])
     expect(mockRedirect).toHaveBeenCalledWith('/')
   })
+
+  // Regression test for R3-003: the event used to redirect as if everything
+  // succeeded even when the lineup insert silently failed, losing the
+  // artist link with no indication anything went wrong.
+  it('returns an error and does not redirect when the lineup insert fails', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    const lineupsBuilder = makeQueryBuilder({ data: null, error: { message: 'boom' } })
+    const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await createEvent({
+      name: 'Show',
+      date: '2024-01-01',
+      venue_id: VALID_VENUE_ID,
+      artist_ids: [VALID_ARTIST_ID],
+    } as never)
+
+    expect(result.error).toBeTruthy()
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unparseable date', async () => {
+    const result = await createEvent({
+      name: 'Show',
+      date: 'not-a-date',
+      venue_id: VALID_VENUE_ID,
+    } as never)
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
 })
 
 describe('addExternalEvent', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
   })
 
   const baseEvent: FutureEvent = {
@@ -102,6 +146,13 @@ describe('addExternalEvent', () => {
     venue: { name: 'Niceto Club', city: 'CABA', country: 'AR' },
     lineup: ['Bandalos Chinos'],
   } as FutureEvent
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await addExternalEvent(baseEvent)
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
 
   it('rejects an event with no venue', async () => {
     const result = await addExternalEvent({ ...baseEvent, venue: null } as never)
@@ -156,6 +207,25 @@ describe('addExternalEvent', () => {
     }
   )
 
+  // Regression test for R3-003: the caller used to get back `{ eventId }`
+  // with no `error` even when the lineup insert failed, so the UI navigated
+  // straight to the new event as if the artist link had been saved.
+  it('returns an error alongside the event id when the lineup insert fails', async () => {
+    mockFindOrCreateByName
+      .mockResolvedValueOnce({ id: VALID_VENUE_ID })
+      .mockResolvedValueOnce({ id: VALID_ARTIST_ID })
+
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    const lineupsBuilder = makeQueryBuilder({ data: null, error: { message: 'boom' } })
+    const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await addExternalEvent(baseEvent)
+
+    expect(result.error).toBeTruthy()
+    expect(result.eventId).toBe(VALID_EVENT_ID)
+  })
+
   it('stops and returns the error when the venue cannot be found or created', async () => {
     mockFindOrCreateByName.mockResolvedValueOnce({ error: 'boom' })
 
@@ -188,6 +258,20 @@ describe('addExternalEvent', () => {
 describe('updateEvent', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await updateEvent(VALID_EVENT_ID, {})
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects a truthy but unparseable date, without touching the client', async () => {
+    const result = await updateEvent(VALID_EVENT_ID, { date: 'not-a-date' })
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('rejects an invalid event id', async () => {
@@ -226,6 +310,14 @@ describe('updateEvent', () => {
 describe('deleteEvent', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await deleteEvent(VALID_EVENT_ID)
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('rejects an invalid event id', async () => {

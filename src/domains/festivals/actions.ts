@@ -4,8 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { getCurrentUserId } from '@/src/core/auth/session'
-import { validateUUID, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
+import { validateUUID, validateRating, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { routes } from '@/src/core/lib/routes'
+import type { ActionResult } from '@/src/core/types'
 
 const MAX_NAME = 200
 const MAX_EDITION = 100
@@ -26,7 +27,10 @@ export interface FestivalCreateInput {
 
 export async function createFestival(
     data: FestivalCreateInput
-): Promise<{ error?: string }> {
+): Promise<ActionResult> {
+    const userId = await getCurrentUserId()
+    if (!userId) return { error: 'Usuario no autenticado' }
+
     const name = sanitizeText(data.name, MAX_NAME)
     if (!name) return { error: 'El nombre del festival es obligatorio.' }
     if (!data.start_date) return { error: 'La fecha de inicio es obligatoria.' }
@@ -56,7 +60,10 @@ export async function createFestival(
     redirect(routes.festivals.detail(newFestival.id))
 }
 
-export async function deleteFestival(id: string): Promise<{ error?: string }> {
+export async function deleteFestival(id: string): Promise<ActionResult> {
+    const userId = await getCurrentUserId()
+    if (!userId) return { error: 'Usuario no autenticado' }
+
     const idErr = validateUUID(id, 'Festival')
     if (idErr) return { error: idErr }
 
@@ -76,9 +83,12 @@ export async function saveFestivalAttendance(
     status: 'interested' | 'going' | 'went',
     rating?: number,
     review?: string
-): Promise<{ error?: string }> {
+): Promise<ActionResult> {
     const idErr = validateUUID(festivalId, 'Festival')
     if (idErr) return { error: idErr }
+
+    const ratingErr = validateRating(rating)
+    if (ratingErr) return { error: ratingErr }
 
     const userId = await getCurrentUserId()
     if (!userId) return { error: 'Usuario no autenticado' }
@@ -110,7 +120,10 @@ export async function linkEventToFestival(
     festivalId: string,
     eventId: string,
     dayLabel?: string
-): Promise<{ error?: string }> {
+): Promise<ActionResult> {
+    const userId = await getCurrentUserId()
+    if (!userId) return { error: 'Usuario no autenticado' }
+
     const festErr = validateUUID(festivalId, 'Festival')
     if (festErr) return { error: festErr }
     const evErr = validateUUID(eventId, 'Evento')

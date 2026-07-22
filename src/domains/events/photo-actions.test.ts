@@ -190,7 +190,7 @@ describe('deleteEventPhoto', () => {
   })
 
   it('removes the storage object then the DB row', async () => {
-    const dbBuilder = makeQueryBuilder({ data: { storage_path: 'a/b.jpg' }, error: null })
+    const dbBuilder = makeQueryBuilder({ data: { storage_path: 'a/b.jpg', user_id: 'user-1' }, error: null })
     const storage = makeStorageMock()
     mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => dbBuilder), storage }))
 
@@ -199,6 +199,15 @@ describe('deleteEventPhoto', () => {
     expect(storage.removeMock).toHaveBeenCalledWith(['a/b.jpg'])
     expect(dbBuilder.delete).toHaveBeenCalled()
     expect(result).toEqual({})
+  })
+
+  it('returns an error when the photo belongs to a different user', async () => {
+    const dbBuilder = makeQueryBuilder({ data: { storage_path: 'a/b.jpg', user_id: 'someone-else' }, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => dbBuilder), storage: makeStorageMock() }))
+
+    const result = await deleteEventPhoto(VALID_PHOTO_ID, VALID_EVENT_ID)
+
+    expect(result.error).toBeTruthy()
   })
 
   it('returns an error when the photo is not found or not owned by the user', async () => {

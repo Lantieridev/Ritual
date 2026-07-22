@@ -7,11 +7,16 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
+vi.mock('@/src/core/auth/session', () => ({
+  getCurrentUserId: vi.fn(),
+}))
+
 vi.mock('next/navigation', () => ({
   redirect: (...args: unknown[]) => mockRedirect(...args),
 }))
 
 import { createArtist } from '@/src/domains/artists/actions'
+import { getCurrentUserId } from '@/src/core/auth/session'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -22,6 +27,14 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
 describe('createArtist', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await createArtist({ name: 'Bandalos Chinos' } as never)
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('rejects a missing or whitespace-only name without touching the database', async () => {
