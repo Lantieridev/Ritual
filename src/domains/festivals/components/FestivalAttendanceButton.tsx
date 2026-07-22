@@ -17,13 +17,20 @@ const OPTIONS: { value: 'interested' | 'going' | 'went'; label: string; emoji: s
 export function FestivalAttendanceButton({ festivalId, initialStatus }: FestivalAttendanceButtonProps) {
     const [status, setStatus] = useState<'interested' | 'going' | 'went' | undefined>(initialStatus)
     const [open, setOpen] = useState(false)
+    const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
 
     function handleSelect(value: 'interested' | 'going' | 'went') {
+        const previous = status
         setStatus(value)
         setOpen(false)
+        setError(null)
         startTransition(async () => {
-            await saveFestivalAttendance(festivalId, value)
+            const result = await saveFestivalAttendance(festivalId, value)
+            if (result.error) {
+                setStatus(previous)
+                setError(result.error)
+            }
         })
     }
 
@@ -87,6 +94,12 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
                         ))}
                     </div>
                 </>
+            )}
+
+            {error && (
+                <p role="alert" className="absolute right-0 top-full mt-1 w-56 text-xs text-red-400">
+                    {error}
+                </p>
             )}
         </div>
     )

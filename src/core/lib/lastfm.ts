@@ -6,6 +6,7 @@
  */
 import 'server-only'
 import { getLastFmApiKey } from '@/src/core/lib/env'
+import { fetchWithTimeout, isTimeoutError } from '@/src/core/lib/http'
 
 const BASE = 'https://ws.audioscrobbler.com/2.0'
 
@@ -60,7 +61,7 @@ export async function getLastFmArtistInfo(
     })
 
     try {
-        const res = await fetch(`${BASE}/?${params}`, {
+        const res = await fetchWithTimeout(`${BASE}/?${params}`, {
             next: { revalidate: 3600 }, // 1 hora — datos de artistas cambian poco
         })
         if (!res.ok) {
@@ -74,6 +75,9 @@ export async function getLastFmArtistInfo(
         return { artist: data.artist as LastFmArtist }
     } catch (e) {
         console.error('Last.fm artist info:', e)
+        if (isTimeoutError(e)) {
+            return { artist: null, error: 'Last.fm tardó demasiado en responder. Probá de nuevo.' }
+        }
         return { artist: null, error: 'Error al conectar con Last.fm.' }
     }
 }
@@ -81,10 +85,10 @@ export async function getLastFmArtistInfo(
 /**
  * Extrae la imagen más grande disponible de un artista de Last.fm.
  */
-export function getBestLastFmImage(images: LastFmImage[]): string | null {
+export function getBestLastFmImage(images: LastFmImage[] | null | undefined): string | null {
     const priority = ['extralarge', 'mega', 'large', 'medium', 'small']
     for (const size of priority) {
-        const img = images.find((i) => i.size === size && i['#text'])
+        const img = images?.find((i) => i.size === size && i['#text'])
         if (img) return img['#text']
     }
     return null

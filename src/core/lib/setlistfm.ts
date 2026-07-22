@@ -10,6 +10,7 @@
  * 2. Las variables de entorno sin NEXT_PUBLIC_ nunca se incluyen en el bundle del cliente.
  */
 import { getSetlistFmApiKey } from '@/src/core/lib/env'
+import { fetchWithTimeout, isTimeoutError } from '@/src/core/lib/http'
 
 const BASE = 'https://api.setlist.fm/rest/1.0'
 
@@ -80,7 +81,7 @@ export async function getSetlistsByArtist(
     })
 
     try {
-        const res = await fetch(`${BASE}/search/setlists?${params}`, {
+        const res = await fetchWithTimeout(`${BASE}/search/setlists?${params}`, {
             headers: {
                 'x-api-key': apiKey,
                 Accept: 'application/json',
@@ -103,6 +104,9 @@ export async function getSetlistsByArtist(
         }
     } catch (e) {
         console.error('Setlist.fm artist setlists:', e)
+        if (isTimeoutError(e)) {
+            return { setlists: [], total: 0, error: 'Setlist.fm tardó demasiado en responder. Probá de nuevo.' }
+        }
         return { setlists: [], total: 0, error: 'Error al conectar con Setlist.fm.' }
     }
 }

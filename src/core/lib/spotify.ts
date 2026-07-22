@@ -7,6 +7,7 @@
  */
 import 'server-only'
 import { getSpotifyClientId, getSpotifyClientSecret } from '@/src/core/lib/env'
+import { fetchWithTimeout, isTimeoutError } from '@/src/core/lib/http'
 
 const TOKEN_URL = 'https://accounts.spotify.com/api/token'
 const BASE = 'https://api.spotify.com/v1'
@@ -43,7 +44,7 @@ async function getAccessToken(): Promise<string | null> {
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 
     try {
-        const res = await fetch(TOKEN_URL, {
+        const res = await fetchWithTimeout(TOKEN_URL, {
             method: 'POST',
             headers: {
                 Authorization: `Basic ${credentials}`,
@@ -85,7 +86,7 @@ export async function searchSpotifyArtist(
     })
 
     try {
-        const res = await fetch(`${BASE}/search?${params}`, {
+        const res = await fetchWithTimeout(`${BASE}/search?${params}`, {
             headers: { Authorization: `Bearer ${token}` },
             next: { revalidate: 3600 },
         })
@@ -97,6 +98,9 @@ export async function searchSpotifyArtist(
         return { artist: artists[0] ?? null }
     } catch (e) {
         console.error('Spotify search artist:', e)
+        if (isTimeoutError(e)) {
+            return { artist: null, error: 'Spotify tardó demasiado en responder. Probá de nuevo.' }
+        }
         return { artist: null, error: 'Error al conectar con Spotify.' }
     }
 }

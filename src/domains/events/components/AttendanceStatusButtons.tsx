@@ -28,6 +28,7 @@ const FUTURE_OPTIONS: { value: AttendanceStatus; label: string; emoji: string }[
 export function AttendanceStatusButtons({ eventId, currentStatus, isPast }: StatusButtonProps) {
     const [activeStatus, setActiveStatus] = useState<AttendanceStatus | null>(currentStatus)
     const [loadingStatus, setLoadingStatus] = useState<AttendanceStatus | null>(null)
+    const [error, setError] = useState<string | null>(null)
     const [, startTransition] = useTransition()
 
     const options = isPast ? PAST_OPTIONS : FUTURE_OPTIONS
@@ -36,9 +37,14 @@ export function AttendanceStatusButtons({ eventId, currentStatus, isPast }: Stat
         if (loadingStatus) return
         // Toggle: si ya está activo, deseleccionar (no tiene sentido en este contexto, pero por si acaso)
         setLoadingStatus(status)
+        setError(null)
         startTransition(async () => {
             const result = await setAttendanceStatus(eventId, status)
-            if (!result.error) setActiveStatus(status)
+            if (result.error) {
+                setError(result.error)
+            } else {
+                setActiveStatus(status)
+            }
             setLoadingStatus(null)
         })
     }
@@ -64,6 +70,12 @@ export function AttendanceStatusButtons({ eventId, currentStatus, isPast }: Stat
                     </button>
                 )
             })}
+
+            {error && (
+                <p role="alert" className="text-xs text-red-400 self-center">
+                    {error}
+                </p>
+            )}
 
             {/* Si el status guardado no coincide con las opciones disponibles, mostrar aviso */}
             {activeStatus && !options.find((o) => o.value === activeStatus) && (

@@ -6,6 +6,7 @@
  */
 import 'server-only'
 import { getTicketmasterApiKey } from '@/src/core/lib/env'
+import { fetchWithRetry, isTimeoutError } from '@/src/core/lib/http'
 import { FutureEvent } from '@/src/core/types'
 
 const BASE = 'https://app.ticketmaster.com/discovery/v2'
@@ -85,7 +86,7 @@ export async function searchTicketmasterEvents(
     if (city) params.set('city', city)
 
     try {
-        const res = await fetch(`${BASE}/events.json?${params}`, {
+        const res = await fetchWithRetry(`${BASE}/events.json?${params}`, {
             next: { revalidate: 1800 },
         })
 
@@ -132,6 +133,9 @@ export async function searchTicketmasterEvents(
         return { events, total: data.page.totalElements }
     } catch (e) {
         console.error('Ticketmaster search events:', e)
+        if (isTimeoutError(e)) {
+            return { events: [], total: 0, error: 'Ticketmaster tardó demasiado en responder. Probá de nuevo.' }
+        }
         return { events: [], total: 0, error: 'Error al conectar con Ticketmaster.' }
     }
 }
