@@ -5,13 +5,51 @@
   --foreground: #ededed;
 }
 
+/*
+ * Tokens semánticos (Fase 3, R2-003): nombran la paleta que la app ya usa
+ * de hecho — relevada contando clases reales en app/ + src/, no inventada.
+ * Antes de esto había 8 variantes de border-white/opacidad, 7 de
+ * text-zinc-* y 6 de bg-white/opacidad haciendo el mismo trabajo (borde
+ * sutil / texto secundario / superficie de card) sin ningún nombre común.
+ *
+ * Definidos y listos para adoptar, pero NO migrados todavía en los 38
+ * archivos que usan las clases ad-hoc — ese cambio toca visualmente cada
+ * pantalla de la app y se hace en la Fase 5 (rediseño visual), con
+ * screenshots reales para verificar que nada se rompió. Ver plan de
+ * implementación en el vault.
+ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Superficies, de más al fondo a más elevada. */
+  --color-surface-0: #0a0a0a;       /* neutral-950 — fondo de página */
+  --color-surface-1: rgb(255 255 255 / 0.03); /* card en reposo */
+  --color-surface-2: rgb(255 255 255 / 0.06); /* card hover / elevada */
+
+  /* Bordes, de más sutil a más marcado. */
+  --color-border-subtle: rgb(255 255 255 / 0.08);
+  --color-border-default: rgb(255 255 255 / 0.15);
+  --color-border-strong: rgb(255 255 255 / 0.3);
+
+  /* Texto, de más prominente a más apagado. */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: var(--color-zinc-400);
+  --color-text-muted: var(--color-zinc-500);
+  --color-text-faint: var(--color-zinc-700);
 }
 
+/*
+ * `--font-sans` above lives in an `inline` theme block, so Tailwind resolves
+ * and inlines it directly into every utility that uses it (e.g. `font-sans`)
+ * at build time — it's never emitted as a real, referenceable `:root`
+ * variable (confirmed: `var(--font-sans)` here resolved to nothing at
+ * runtime). This system-font stack is a genuine fallback for the brief
+ * window before Tailwind's own `font-sans` utility (applied explicitly on
+ * each page's root element) takes over, not leftover boilerplate.
+ */
 body {
   background: var(--background);
   color: var(--foreground);
