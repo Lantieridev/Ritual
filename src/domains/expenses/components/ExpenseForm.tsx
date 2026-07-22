@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
+import { formatDate } from '@/src/core/lib/utils'
 import type { ExpenseCreateInput, ExpenseUpdateInput, Expense } from '@/src/core/types'
 import type { EventWithRelations } from '@/src/core/types'
 
@@ -89,7 +90,7 @@ export function ExpenseForm({ events, createExpense, expense, updateExpense }: E
           <option value="">Ninguno</option>
           {events.map((e) => (
             <option key={e.id} value={e.id}>
-              {e.name ?? 'Recital'} – {new Date(e.date).toLocaleDateString('es-AR')}
+              {e.name ?? 'Recital'} – {formatDate(e.date)}
             </option>
           ))}
         </select>

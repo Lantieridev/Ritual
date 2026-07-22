@@ -2,8 +2,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getFestivals } from '@/src/domains/festivals/data'
 import { routes } from '@/src/core/lib/routes'
+import { isPastEvent } from '@/src/core/lib/dates'
+import { formatDate } from '@/src/core/lib/utils'
 import { PageShell } from '@/src/core/components/layout'
-import { LinkButton } from '@/src/core/components/ui'
+import { LinkButton, StarRating } from '@/src/core/components/ui'
 
 export const metadata: Metadata = {
     title: 'Festivales | RITUAL',
@@ -18,10 +20,9 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 
 export default async function FestivalsPage() {
     const festivals = await getFestivals()
-    const now = new Date()
 
-    const upcoming = festivals.filter((f) => new Date(f.start_date) >= now)
-    const past = festivals.filter((f) => new Date(f.start_date) < now)
+    const upcoming = festivals.filter((f) => !isPastEvent(f.start_date))
+    const past = festivals.filter((f) => isPastEvent(f.start_date))
 
     return (
         <PageShell
@@ -97,7 +98,7 @@ function FestivalList({ festivals }: { festivals: Awaited<ReturnType<typeof getF
                             {/* Fecha */}
                             <div className="w-14 shrink-0 text-center pt-0.5">
                                 <p className="text-xs font-bold text-zinc-500 uppercase">
-                                    {start.toLocaleDateString('es-AR', { month: 'short' })}
+                                    {formatDate(start, { month: 'short' })}
                                 </p>
                                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
                                     {start.getDate()}
@@ -126,7 +127,7 @@ function FestivalList({ festivals }: { festivals: Awaited<ReturnType<typeof getF
                                 <div className="flex gap-4 mt-1.5">
                                     {end && (
                                         <p className="text-xs text-zinc-600">
-                                            Hasta el {end.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                            Hasta el {formatDate(end, { day: 'numeric', month: 'short' })}
                                         </p>
                                     )}
                                     {festival.festival_events?.length > 0 && (
@@ -136,11 +137,7 @@ function FestivalList({ festivals }: { festivals: Awaited<ReturnType<typeof getF
                                         </p>
                                     )}
                                     {attendance?.rating && (
-                                        <div className="flex gap-0.5">
-                                            {[1, 2, 3, 4, 5].map((s) => (
-                                                <span key={s} className={`text-xs ${s <= attendance.rating! ? 'text-white' : 'text-zinc-700'}`}>★</span>
-                                            ))}
-                                        </div>
+                                        <StarRating value={attendance.rating} size="xs" />
                                     )}
                                 </div>
                             </div>

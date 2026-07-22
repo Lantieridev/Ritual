@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Card } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
+import { formatDate } from '@/src/core/lib/utils'
 import type { EventWithRelations } from '@/src/core/types'
 
 interface EventCardProps {
@@ -18,11 +19,7 @@ export function EventCard({ event }: EventCardProps) {
         <div className="flex flex-col gap-4">
           <div>
             <p className="text-sm text-zinc-400 font-medium uppercase tracking-widest">
-              {new Date(event.date).toLocaleDateString('es-AR', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })}
+              {formatDate(event.date, { day: 'numeric', month: 'short', year: 'numeric' })}
             </p>
             <h2 className="text-2xl font-bold text-white mt-1 group-hover:text-zinc-200 transition-colors">
               {event.name || 'Recital'}

@@ -6,6 +6,7 @@ import { ArtistWithEvents } from '@/src/domains/artists/data'
 import { FutureEvent } from '@/src/core/types'
 import Link from 'next/link'
 import { routes } from '@/src/core/lib/routes'
+import { formatDate } from '@/src/core/lib/utils'
 import Image from 'next/image'
 
 interface ArtistProfileProps {
@@ -176,7 +177,7 @@ function ShowList({ events }: { events: ArtistWithEvents['events'] }) {
                         >
                             <div className="w-10 shrink-0 text-center">
                                 <p className="text-[10px] font-bold text-zinc-600 uppercase">
-                                    {dateObj.toLocaleDateString('es-AR', { month: 'short' })}
+                                    {formatDate(dateObj, { month: 'short' })}
                                 </p>
                                 <p className="text-lg font-bold text-white leading-none mt-0.5">
                                     {dateObj.getDate()}
@@ -208,7 +209,7 @@ function ExternalShowList({ events }: { events: FutureEvent[] }) {
                         <div className="flex items-center gap-5 py-3 -mx-2 px-2 text-zinc-400">
                             <div className="w-10 shrink-0 text-center opacity-70">
                                 <p className="text-[10px] font-bold uppercase">
-                                    {dateObj.toLocaleDateString('es-AR', { month: 'short' })}
+                                    {formatDate(dateObj, { month: 'short' })}
                                 </p>
                                 <p className="text-lg font-bold leading-none mt-0.5">
                                     {dateObj.getDate()}

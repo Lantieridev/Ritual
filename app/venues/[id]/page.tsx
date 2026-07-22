@@ -3,6 +3,8 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getVenueById } from '@/src/domains/venues/data'
 import { routes } from '@/src/core/lib/routes'
+import { isPastEvent } from '@/src/core/lib/dates'
+import { formatDate } from '@/src/core/lib/utils'
 
 interface VenueDetailPageProps {
     params: Promise<{ id: string }>
@@ -24,9 +26,8 @@ export default async function VenueDetailPage({ params }: VenueDetailPageProps) 
 
     if (!venue) notFound()
 
-    const now = new Date()
-    const pastEvents = venue.events.filter((e) => new Date(e.date) < now)
-    const upcomingEvents = venue.events.filter((e) => new Date(e.date) >= now)
+    const pastEvents = venue.events.filter((e) => isPastEvent(e.date))
+    const upcomingEvents = venue.events.filter((e) => !isPastEvent(e.date))
 
     return (
         <main className="min-h-screen bg-neutral-950 text-white font-sans">
@@ -110,7 +111,7 @@ function EventList({ events }: { events: Array<{ id: string; name: string | null
                             {/* Fecha */}
                             <div className="w-12 shrink-0 text-center">
                                 <p className="text-[10px] font-bold text-zinc-600 uppercase">
-                                    {dateObj.toLocaleDateString('es-AR', { month: 'short' })}
+                                    {formatDate(dateObj, { month: 'short' })}
                                 </p>
                                 <p className="text-xl font-bold text-white leading-none mt-0.5">
                                     {dateObj.getDate()}

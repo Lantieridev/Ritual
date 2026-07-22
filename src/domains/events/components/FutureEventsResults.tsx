@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addExternalEvent } from '@/src/domains/events/actions'
 import { routes } from '@/src/core/lib/routes'
+import { formatDate } from '@/src/core/lib/utils'
 import { FutureEvent } from '@/src/core/types'
 
 interface FutureEventsResultsProps {
@@ -73,7 +74,7 @@ export function FutureEventsResults({ events, searchQuery, compact }: FutureEven
                 const isAdded = addedIds.has(ev.id)
                 const error = errors[ev.id]
                 const date = new Date(ev.datetime)
-                const dateLabel = date.toLocaleDateString('es-AR', {
+                const dateLabel = formatDate(date, {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',

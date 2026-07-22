@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addExternalEvent } from '@/src/domains/events/actions'
 import { routes } from '@/src/core/lib/routes'
+import { formatDate } from '@/src/core/lib/utils'
 import type { Setlist } from '@/src/core/lib/setlistfm'
 import { parseSetlistDate } from '@/src/core/lib/setlistfm'
 
@@ -75,7 +76,7 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
                 const isExpanded = expandedId === setlist.id
                 const error = errors[setlist.id]
                 const isoDate = parseSetlistDate(setlist.eventDate)
-                const dateLabel = new Date(isoDate).toLocaleDateString('es-AR', {
+                const dateLabel = formatDate(isoDate, {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',

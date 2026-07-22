@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getPersonalStats } from '@/src/domains/stats/data'
 import { routes } from '@/src/core/lib/routes'
+import { formatDate } from '@/src/core/lib/utils'
+import { StarRating } from '@/src/core/components/ui'
 
 export const metadata: Metadata = {
     title: 'Mis estadísticas | RITUAL',
@@ -58,18 +60,17 @@ export default async function StatsPage() {
                         {/* KPIs principales */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {[
-                                { label: 'Shows en total', value: stats.totalShows, sub: null },
-                                { label: 'Fui', value: stats.showsAttended, sub: null },
-                                { label: 'Voy a ir', value: stats.showsGoing, sub: null },
-                                { label: 'Me interesa', value: stats.showsInterested, sub: null },
-                            ].map(({ label, value, sub }) => (
+                                { label: 'Shows en total', value: stats.totalShows },
+                                { label: 'Fui', value: stats.showsAttended },
+                                { label: 'Voy a ir', value: stats.showsGoing },
+                                { label: 'Me interesa', value: stats.showsInterested },
+                            ].map(({ label, value }) => (
                                 <div
                                     key={label}
                                     className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5"
                                 >
                                     <p className="text-3xl md:text-4xl font-bold text-white tabular-nums">{value}</p>
                                     <p className="text-xs uppercase tracking-widest text-zinc-500 mt-1">{label}</p>
-                                    {sub && <p className="text-xs text-zinc-600 mt-0.5">{sub}</p>}
                                 </div>
                             ))}
                         </div>
@@ -94,11 +95,7 @@ export default async function StatsPage() {
                             <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 flex items-center gap-6">
                                 <div>
                                     <p className="text-5xl font-bold text-white tabular-nums">{stats.averageRating}</p>
-                                    <div className="flex gap-0.5 mt-2">
-                                        {[1, 2, 3, 4, 5].map((s) => (
-                                            <span key={s} className={`text-lg ${s <= Math.round(stats.averageRating!) ? 'text-white' : 'text-zinc-700'}`}>★</span>
-                                        ))}
-                                    </div>
+                                    <StarRating value={Math.round(stats.averageRating)} size="lg" className="mt-2" />
                                 </div>
                                 <div>
                                     <p className="text-sm font-semibold text-zinc-300">Rating promedio</p>
@@ -203,7 +200,7 @@ export default async function StatsPage() {
                                                 >
                                                     <div className="w-12 shrink-0 text-center">
                                                         <p className="text-[10px] font-bold text-zinc-600 uppercase">
-                                                            {dateObj.toLocaleDateString('es-AR', { month: 'short' })}
+                                                            {formatDate(dateObj, { month: 'short' })}
                                                         </p>
                                                         <p className="text-lg font-bold text-white leading-none">
                                                             {dateObj.getDate()}
@@ -218,11 +215,7 @@ export default async function StatsPage() {
                                                         )}
                                                     </div>
                                                     {ev.rating && (
-                                                        <div className="flex gap-0.5 shrink-0">
-                                                            {[1, 2, 3, 4, 5].map((s) => (
-                                                                <span key={s} className={`text-xs ${s <= ev.rating! ? 'text-white' : 'text-zinc-700'}`}>★</span>
-                                                            ))}
-                                                        </div>
+                                                        <StarRating value={ev.rating} size="xs" className="shrink-0" />
                                                     )}
                                                     <span className="text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0">→</span>
                                                 </Link>

@@ -5,6 +5,7 @@ import { getCurrentUserId } from '@/src/core/auth/session'
 import { getExpenseById } from '@/src/domains/expenses/data'
 import { deleteExpense } from '@/src/domains/expenses/actions'
 import { routes } from '@/src/core/lib/routes'
+import { formatDate } from '@/src/core/lib/utils'
 import { Card, LinkButton } from '@/src/core/components/ui'
 import { DeleteExpenseButton } from '@/src/domains/expenses/components'
 
@@ -43,7 +44,7 @@ export default async function ExpenseDetailPage({ params }: ExpenseDetailPagePro
       <article>
         <header className="mb-8">
           <p className="text-sm text-zinc-400 uppercase tracking-widest">
-            {new Date(expense.date).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {formatDate(expense.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
           <h1 className="text-4xl font-bold text-white mt-1">
             ${Number(expense.amount).toLocaleString('es-AR')}

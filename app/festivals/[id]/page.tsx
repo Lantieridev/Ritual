@@ -3,6 +3,8 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getFestivalById } from '@/src/domains/festivals/data'
 import { routes } from '@/src/core/lib/routes'
+import { safeHref } from '@/src/core/lib/validation'
+import { formatDate } from '@/src/core/lib/utils'
 import { FestivalAttendanceButton } from '@/src/domains/festivals/components/FestivalAttendanceButton'
 
 interface FestivalDetailPageProps {
@@ -68,9 +70,9 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                             </h1>
                             <div className="flex flex-wrap gap-4 text-sm text-zinc-400">
                                 <span>
-                                    📅 {start.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                    📅 {formatDate(start)}
                                     {end && end.getTime() !== start.getTime() && (
-                                        <> — {end.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}</>
+                                        <> — {formatDate(end, { day: 'numeric', month: 'long' })}</>
                                     )}
                                 </span>
                                 {location && <span>📍 {location}</span>}
@@ -138,7 +140,7 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                                                     <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{fe.day_label}</p>
                                                 )}
                                                 <p className="font-semibold text-white">
-                                                    {date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                                    {formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' })}
                                                 </p>
                                                 {artists.length > 0 && (
                                                     <p className="text-sm text-zinc-500 mt-1 truncate">
@@ -161,10 +163,10 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                 )}
 
                 {/* Website */}
-                {festival.website && (
+                {safeHref(festival.website) && (
                     <section className="border-t border-white/[0.06] pt-6">
                         <a
-                            href={festival.website}
+                            href={safeHref(festival.website)!}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"

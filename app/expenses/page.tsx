@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { getExpenses, getExpensesSummary } from '@/src/domains/expenses/data'
 import { routes } from '@/src/core/lib/routes'
+import { formatDate } from '@/src/core/lib/utils'
 import { Card, LinkButton } from '@/src/core/components/ui'
 import { PageShell } from '@/src/core/components/layout'
 
@@ -151,7 +152,7 @@ export default async function ExpensesPage() {
                             )}
                           </div>
                           <p className="text-sm text-zinc-600 whitespace-nowrap">
-                            {new Date(ex.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                            {formatDate(ex.date, { day: 'numeric', month: 'short' })}
                           </p>
                         </div>
                       </Card>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { saveMemory } from '@/src/domains/events/attendance-actions'
+import { StarRating } from '@/src/core/components/ui'
 
 interface RatingAndReviewFormProps {
     eventId: string
@@ -20,7 +21,6 @@ export function RatingAndReviewForm({
     initialNotes,
 }: RatingAndReviewFormProps) {
     const [rating, setRating] = useState<number>(initialRating ?? 0)
-    const [hovered, setHovered] = useState<number>(0)
     const [review, setReview] = useState(initialReview ?? '')
     const [notes, setNotes] = useState(initialNotes ?? '')
     const [saved, setSaved] = useState(false)
@@ -45,27 +45,13 @@ export function RatingAndReviewForm({
         })
     }
 
-    const displayRating = hovered || rating
-
     return (
         <form onSubmit={handleSubmit} className="space-y-5">
             {/* Estrellas */}
             <div>
                 <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2">Tu rating</p>
-                <div className="flex gap-1" role="group" aria-label="Rating del show">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                            key={star}
-                            type="button"
-                            onClick={() => setRating(star)}
-                            onMouseEnter={() => setHovered(star)}
-                            onMouseLeave={() => setHovered(0)}
-                            className="text-2xl transition-transform hover:scale-110 focus:outline-none"
-                            aria-label={`${star} estrella${star > 1 ? 's' : ''}`}
-                        >
-                            <span className={displayRating >= star ? 'text-white' : 'text-zinc-700'}>★</span>
-                        </button>
-                    ))}
+                <div className="flex items-center gap-1">
+                    <StarRating value={rating} onChange={setRating} size="2xl" ariaLabel="Rating del show" />
                     {rating > 0 && (
                         <button
                             type="button"
