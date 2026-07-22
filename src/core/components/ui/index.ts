@@ -1,6 +1,7 @@
 export { Card } from './Card'
 export { Button } from './Button'
 export { LinkButton } from './LinkButton'
+export { Combobox, type ComboboxOption } from './Combobox'
 export { FormField, inputClass } from './FormField'
 export { EmptyState } from './EmptyState'
 export { Input } from './Input'

@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { getVenues } from '@/src/domains/venues/data'
 import { getArtists } from '@/src/domains/artists/data'
 import { createEvent } from '@/src/domains/events/actions'
+import { findOrCreateVenue } from '@/src/domains/venues/actions'
+import { findOrCreateArtist } from '@/src/domains/artists/actions'
 import { routes } from '@/src/core/lib/routes'
 import { EventForm } from '@/src/domains/events/components'
 import { PageShell } from '@/src/core/components/layout'
@@ -25,7 +27,13 @@ export default async function NewEventPage() {
       title="Nuevo recital"
       description="Cargá datos y elegí los artistas del lineup."
     >
-      <EventForm venues={venues} artists={artists} createEvent={createEvent} />
+      <EventForm
+        venues={venues}
+        artists={artists}
+        createEvent={createEvent}
+        findOrCreateVenue={findOrCreateVenue}
+        findOrCreateArtist={findOrCreateArtist}
+      />
     </PageShell>
   )
 }
