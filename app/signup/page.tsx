@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
-import { SignupForm } from './signup-form'
+import { SignupForm } from '@/src/domains/auth/components'
 
 export default async function SignupPage() {
     const supabase = await createClient()

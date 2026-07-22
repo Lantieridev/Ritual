@@ -10,7 +10,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { getProfile, updateProfile } from '@/src/domains/auth/profile-actions'
+import { updateProfile } from '@/src/domains/auth/actions'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -46,60 +46,6 @@ function makeFile(name: string, size: number, type: string): File {
   const bytes = new Uint8Array(size)
   return new File([bytes], name, { type })
 }
-
-describe('getProfile', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('fetches the current authenticated user profile when no id is passed', async () => {
-    const supabase = makeSupabase({
-      user: { id: 'user-1' },
-      profileResult: { data: { id: 'user-1', username: 'martin' }, error: null },
-    })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const profile = await getProfile()
-
-    expect(supabase.auth.getUser).toHaveBeenCalledTimes(1)
-    expect(supabase.profileBuilder.eq).toHaveBeenCalledWith('id', 'user-1')
-    expect(profile).toEqual({ id: 'user-1', username: 'martin' })
-  })
-
-  it('fetches a specific profile by id without checking the session', async () => {
-    const supabase = makeSupabase({
-      user: null,
-      profileResult: { data: { id: 'user-2', username: 'other' }, error: null },
-    })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const profile = await getProfile('user-2')
-
-    expect(supabase.auth.getUser).not.toHaveBeenCalled()
-    expect(profile).toEqual({ id: 'user-2', username: 'other' })
-  })
-
-  it('returns null when there is no logged-in user and no id was passed', async () => {
-    const supabase = makeSupabase({ user: null })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const profile = await getProfile()
-
-    expect(profile).toBeNull()
-  })
-
-  it('returns null when the query errors out', async () => {
-    const supabase = makeSupabase({
-      user: { id: 'user-1' },
-      profileResult: { data: null, error: { message: 'boom' } },
-    })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const profile = await getProfile()
-
-    expect(profile).toBeNull()
-  })
-})
 
 describe('updateProfile', () => {
   beforeEach(() => {

@@ -1,10 +1,12 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
-import { SignOutButton } from './sign-out-button'
-import { getProfile } from '@/src/domains/auth/profile-actions'
+import { SignOutButton } from '@/src/domains/auth/components'
+import { getProfile } from '@/src/domains/auth/data'
+import { safeHref } from '@/src/core/lib/validation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/src/core/components/ui/Button'
+import { PageShell } from '@/src/core/components/layout'
 
 export const metadata = {
     title: 'Mi Perfil | RITUAL',
@@ -21,14 +23,8 @@ export default async function ProfilePage() {
     const profile = await getProfile(user.id)
 
     return (
-        <main className="min-h-screen bg-neutral-950 text-white font-sans pt-24 px-6 md:px-8">
+        <PageShell title="Mi Perfil" action={<SignOutButton />}>
             <div className="max-w-2xl mx-auto space-y-8">
-
-                {/* Header with Sign Out */}
-                <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold tracking-tight">Mi Perfil</h1>
-                    <SignOutButton />
-                </div>
 
                 <hr className="border-white/10" />
 
@@ -72,9 +68,9 @@ export default async function ProfilePage() {
                                     📍 {profile.location}
                                 </div>
                             )}
-                            {profile?.website && (
-                                <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:underline flex items-center gap-2">
-                                    🔗 {profile.website.replace(/^https?:\/\//, '')}
+                            {safeHref(profile?.website) && (
+                                <a href={safeHref(profile?.website)!} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:underline flex items-center gap-2">
+                                    🔗 {profile!.website!.replace(/^https?:\/\//, '')}
                                 </a>
                             )}
                         </div>
@@ -101,6 +97,6 @@ export default async function ProfilePage() {
                 </section>
 
             </div>
-        </main>
+        </PageShell>
     )
 }
