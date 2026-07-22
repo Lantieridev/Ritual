@@ -1,0 +1,77 @@
+import { isPastEvent } from '@/src/core/lib/dates'
+import { getBestSpotifyImage, type SpotifyArtist } from '@/src/core/lib/spotify'
+import { getBestLastFmImage, getLastFmTags, type LastFmArtist } from '@/src/core/lib/lastfm'
+import type { ArtistWithEvents } from '@/src/domains/artists/data'
+
+const MAX_BIO_LENGTH = 500
+const MAX_TAGS = 5
+const MAX_SIMILAR_ARTISTS = 5
+
+export interface ArtistEnrichment {
+    heroImage: string | null
+    tags: string[]
+    similarArtists: { name: string }[]
+    bio: string
+    listeners: string | null
+    spotifyFollowers: string | null
+    spotifyUrl: string | null
+    internalPast: ArtistWithEvents['events']
+    internalUpcoming: ArtistWithEvents['events']
+}
+
+/**
+ * Deriva todos los campos de UI a partir de las respuestas ya resueltas de
+ * Spotify/Last.fm y del historial interno del artista — antes vivía inline
+ * en app/artists/[id]/page.tsx mezclado con el fetch y el JSX (R2-001,
+ * "Fase 3 — Estructura y legibilidad"). No hace ningún fetch: recibe los
+ * resultados ya resueltos (o null si la API no está configurada o falló).
+ */
+export function buildArtistEnrichment(
+    artist: ArtistWithEvents,
+    spotifyArtist: SpotifyArtist | null,
+    lastfmArtist: LastFmArtist | null
+): ArtistEnrichment {
+    const heroImage = spotifyArtist
+        ? getBestSpotifyImage(spotifyArtist.images)
+        : lastfmArtist
+            ? getBestLastFmImage(lastfmArtist.image)
+            : null
+
+    const tags = lastfmArtist ? getLastFmTags(lastfmArtist, MAX_TAGS) : artist.genre ? [artist.genre] : []
+
+    const similarArtists = lastfmArtist?.similar?.artist?.slice(0, MAX_SIMILAR_ARTISTS) ?? []
+
+    // Limpiar bio de Last.fm (viene con HTML y links)
+    const rawBio = lastfmArtist?.bio?.summary ?? ''
+    const bio = rawBio
+        .replace(/<a[^>]*>.*?<\/a>/gi, '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, MAX_BIO_LENGTH)
+
+    const listeners = lastfmArtist?.stats?.listeners
+        ? Number(lastfmArtist.stats.listeners).toLocaleString('es-AR')
+        : null
+
+    const spotifyFollowers = spotifyArtist?.followers?.total
+        ? Number(spotifyArtist.followers.total).toLocaleString('es-AR')
+        : null
+
+    const spotifyUrl = spotifyArtist?.external_urls?.spotify ?? null
+
+    const internalPast = artist.events.filter((e) => isPastEvent(e.date))
+    const internalUpcoming = artist.events.filter((e) => !isPastEvent(e.date))
+
+    return {
+        heroImage,
+        tags,
+        similarArtists,
+        bio,
+        listeners,
+        spotifyFollowers,
+        spotifyUrl,
+        internalPast,
+        internalUpcoming,
+    }
+}

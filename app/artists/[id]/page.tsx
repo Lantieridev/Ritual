@@ -4,20 +4,13 @@ import Image from 'next/image'
 import type { Metadata } from 'next'
 import { getArtistById } from '@/src/domains/artists/data'
 import { routes } from '@/src/core/lib/routes'
-import {
-    searchSpotifyArtist,
-    getBestSpotifyImage,
-    isSpotifyConfigured,
-} from '@/src/core/lib/spotify'
-import {
-    getLastFmArtistInfo,
-    getLastFmTags,
-    getBestLastFmImage,
-    isLastFmConfigured,
-} from '@/src/core/lib/lastfm'
+import { searchSpotifyArtist, isSpotifyConfigured } from '@/src/core/lib/spotify'
+import { getLastFmArtistInfo, isLastFmConfigured } from '@/src/core/lib/lastfm'
 import { isTicketmasterConfigured, searchTicketmasterEvents } from '@/src/core/lib/ticketmaster'
 import { WishlistButton } from '@/src/domains/artists/components/WishlistButton'
 import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
+import { ArtistProfile } from '@/src/domains/artists/components/ArtistProfile'
+import { buildArtistEnrichment } from '@/src/domains/artists/enrichment'
 
 interface ArtistDetailPageProps {
     params: Promise<{ id: string }>
@@ -32,8 +25,6 @@ export async function generateMetadata({ params }: ArtistDetailPageProps): Promi
         description: `Historial de shows de ${artist.name} en RITUAL.`,
     }
 }
-
-import { ArtistProfile } from '@/src/domains/artists/components/ArtistProfile'
 
 export default async function ArtistDetailPage({ params }: ArtistDetailPageProps) {
     const { id } = await params
@@ -59,40 +50,17 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
 
     const inWishlist = wishlistIds.includes(artist.id)
 
-    const heroImage = spotifyArtist
-        ? getBestSpotifyImage(spotifyArtist.images)
-        : lastfmArtist
-            ? getBestLastFmImage(lastfmArtist.image)
-            : null
-
-    const tags = lastfmArtist ? getLastFmTags(lastfmArtist, 5) : artist.genre ? [artist.genre] : []
-
-    // Similar artists from Last.fm
-    const similarArtists = lastfmArtist?.similar?.artist?.slice(0, 5) ?? []
-
-    // Limpiar bio de Last.fm (viene con HTML y links)
-    const rawBio = lastfmArtist?.bio?.summary ?? ''
-    const bio = rawBio
-        .replace(/<a[^>]*>.*?<\/a>/gi, '')
-        .replace(/<[^>]+>/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 500)
-
-    const listeners = lastfmArtist?.stats?.listeners
-        ? Number(lastfmArtist.stats.listeners).toLocaleString('es-AR')
-        : null
-
-    const spotifyFollowers = spotifyArtist?.followers?.total
-        ? Number(spotifyArtist.followers.total).toLocaleString('es-AR')
-        : null
-
-    const spotifyUrl = spotifyArtist?.external_urls?.spotify ?? null
-
-    const now = new Date()
-    // Separate internal events
-    const internalPast = artist.events.filter((e) => new Date(e.date) < now)
-    const internalUpcoming = artist.events.filter((e) => new Date(e.date) >= now)
+    const {
+        heroImage,
+        tags,
+        similarArtists,
+        bio,
+        listeners,
+        spotifyFollowers,
+        spotifyUrl,
+        internalPast,
+        internalUpcoming,
+    } = buildArtistEnrichment(artist, spotifyArtist, lastfmArtist)
 
     return (
         <main className="min-h-screen bg-neutral-950 text-white font-sans">

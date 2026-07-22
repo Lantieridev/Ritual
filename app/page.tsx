@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getEventsWithAttendance } from '@/src/domains/events/data'
+import { buildHomeFeed, type HomeFilter } from '@/src/domains/events/home-view'
 import { routes } from '@/src/core/lib/routes'
-import { LinkButton } from '@/src/core/components/ui'
+import { isPastEvent, eventYear } from '@/src/core/lib/dates'
+import { formatDate } from '@/src/core/lib/utils'
+import { LinkButton, StarRating } from '@/src/core/components/ui'
 import { Hero } from '@/src/core/components/home'
 import { EmptyState } from '@/src/core/components/ui/EmptyState'
 
@@ -10,8 +13,6 @@ export const metadata: Metadata = {
   title: 'RITUAL — Tu historial de recitales',
   description: 'Registrá, recordá y revivé cada show que fuiste. Tu archivo musical personal.',
 }
-
-type Filter = 'all' | 'upcoming' | 'past' | 'interested' | 'going' | 'went'
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   interested: { label: 'Me interesa', className: 'bg-zinc-800 text-zinc-400 border-zinc-700' },
@@ -25,46 +26,15 @@ interface PageProps {
 
 export default async function HomePage({ searchParams }: PageProps) {
   const { filter: rawFilter } = await searchParams
-  const filter = (rawFilter as Filter) ?? 'all'
+  const filter = (rawFilter as HomeFilter) ?? 'all'
 
   const allEvents = await getEventsWithAttendance()
   const now = new Date()
 
-  // Próximo show con status 'going'
-  const nextShow = allEvents.find((ev) => {
-    const isFuture = new Date(ev.date) >= now
-    const status = ev.attendance?.[0]?.status
-    return isFuture && status === 'going'
-  })
-
-  // Aplicar filtro
-  const events = allEvents.filter((ev) => {
-    const isPast = new Date(ev.date) < now
-    const userAttendance = ev.attendance?.[0]
-    const status = userAttendance?.status
-
-    switch (filter) {
-      case 'upcoming': return !isPast
-      case 'past': return isPast
-      case 'interested': return !isPast && status === 'interested'
-      case 'going': return !isPast && status === 'going'
-      case 'went': return status === 'went'
-      default: return true
-    }
-  })
-
-  // Agrupar por año
-  const byYear = events.reduce<Record<string, typeof events>>((acc, ev) => {
-    const year = new Date(ev.date).getFullYear().toString()
-    if (!acc[year]) acc[year] = []
-    acc[year].push(ev)
-    return acc
-  }, {})
-
-  const years = Object.keys(byYear).sort((a, b) => Number(b) - Number(a))
+  const { nextShow, events, byYear, years } = buildHomeFeed(allEvents, filter, now)
   const currentYear = now.getFullYear()
 
-  const FILTERS: { value: Filter; label: string }[] = [
+  const FILTERS: { value: HomeFilter; label: string }[] = [
     { value: 'all', label: 'Todos' },
     { value: 'upcoming', label: 'Próximos' },
     { value: 'past', label: 'Pasados' },
@@ -95,7 +65,7 @@ export default async function HomePage({ searchParams }: PageProps) {
               </p>
               {nextShow.venues && (
                 <p className="text-xs text-zinc-500 truncate">
-                  {new Date(nextShow.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {formatDate(nextShow.date)}
                   {' · '}
                   {[nextShow.venues.name, nextShow.venues.city].filter(Boolean).join(', ')}
                 </p>
@@ -202,11 +172,10 @@ export default async function HomePage({ searchParams }: PageProps) {
                 <ul className="divide-y divide-white/[0.04]">
                   {byYear[year].map((ev) => {
                     const dateObj = new Date(ev.date)
-                    const evYear = dateObj.getFullYear()
-                    const isPast = dateObj < now
+                    const evYear = eventYear(ev.date)
+                    const isPast = isPastEvent(ev.date, now)
                     const userAttendance = ev.attendance?.[0]
                     const status = userAttendance?.status
-                    const memory = userAttendance?.memories?.[0]
                     const venueLabel = ev.venues
                       ? [ev.venues.name, ev.venues.city].filter(Boolean).join(', ')
                       : null
@@ -221,7 +190,7 @@ export default async function HomePage({ searchParams }: PageProps) {
                           {/* Fecha */}
                           <div className="w-14 shrink-0 text-center pt-0.5">
                             <p className="text-xs font-bold text-zinc-500 uppercase">
-                              {dateObj.toLocaleDateString('es-AR', { month: 'short' })}
+                              {formatDate(dateObj, { month: 'short' })}
                             </p>
                             <p className="text-2xl font-bold text-white leading-none mt-0.5">
                               {dateObj.getDate()}
@@ -254,12 +223,8 @@ export default async function HomePage({ searchParams }: PageProps) {
                               </p>
                             )}
                             {/* Rating si existe */}
-                            {memory?.rating && (
-                              <div className="flex gap-0.5 mt-1.5">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                  <span key={s} className={`text-xs ${s <= memory.rating! ? 'text-white' : 'text-zinc-700'}`}>★</span>
-                                ))}
-                              </div>
+                            {userAttendance?.rating && (
+                              <StarRating value={userAttendance.rating} size="xs" className="mt-1.5" />
                             )}
                           </div>
 
