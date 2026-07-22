@@ -6,11 +6,23 @@ import { routes } from '@/src/core/lib/routes'
 
 import { ProfileDropdown } from './ProfileDropdown'
 
-const NAV_LINKS = [
+// Artistas y Sedes son el catálogo compartido: cualquiera puede navegarlo,
+// con o sin sesión. Wishlist y Gastos son datos propios de una cuenta —
+// mostrarlos a un visitante sin sesión solo lleva a una pantalla vacía o a
+// un aviso de "iniciá sesión", así que quedan aparte y solo se agregan al
+// menú cuando hay un usuario logueado.
+const PUBLIC_NAV_LINKS = [
     { label: 'Inicio', href: routes.home },
     { label: 'Buscar', href: routes.events.search },
+    { label: 'Artistas', href: routes.artists.list },
+    { label: 'Sedes', href: routes.venues.list },
     { label: 'Festivales', href: routes.festivals.list },
     { label: 'Stats', href: routes.stats },
+]
+
+const AUTHENTICATED_NAV_LINKS = [
+    { label: 'Wishlist', href: routes.wishlist },
+    { label: 'Gastos', href: routes.expenses.list },
 ]
 
 /**
@@ -25,6 +37,7 @@ interface NavbarProps {
 
 export function Navbar({ user }: NavbarProps) {
     const pathname = usePathname()
+    const navLinks = user ? [...PUBLIC_NAV_LINKS, ...AUTHENTICATED_NAV_LINKS] : PUBLIC_NAV_LINKS
 
     function isActive(href: string) {
         if (href === '/') return pathname === '/'
@@ -45,7 +58,7 @@ export function Navbar({ user }: NavbarProps) {
                 {/* Nav links — scrollable on mobile with fade */}
                 <nav className="relative flex-1 overflow-hidden">
                     <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pr-8">
-                        {NAV_LINKS.map(({ label, href }) => {
+                        {navLinks.map(({ label, href }) => {
                             const active = isActive(href)
                             return (
                                 <Link

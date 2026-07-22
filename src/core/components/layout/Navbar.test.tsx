@@ -38,4 +38,19 @@ describe('Navbar', () => {
     // '/stats'.startsWith('/') would be true for every route if home used a prefix match
     expect(screen.getByRole('link', { name: 'Inicio' })).not.toHaveClass('text-white')
   })
+
+  it('hides Wishlist/Gastos (account-specific, not shared catalog) for an anonymous visitor', () => {
+    render(<Navbar user={null} />)
+    expect(screen.queryByRole('link', { name: 'Wishlist' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Gastos' })).not.toBeInTheDocument()
+    // El catálogo compartido sigue visible sin sesión.
+    expect(screen.getByRole('link', { name: 'Artistas' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sedes' })).toBeInTheDocument()
+  })
+
+  it('shows Wishlist/Gastos once there is a logged-in user', () => {
+    render(<Navbar user={{ email: 'martin@example.com' } as User} />)
+    expect(screen.getByRole('link', { name: 'Wishlist' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Gastos' })).toBeInTheDocument()
+  })
 })

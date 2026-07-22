@@ -50,7 +50,7 @@ describe('ProfileDropdown', () => {
     render(<ProfileDropdown user={user} />)
     await userEvent.click(screen.getByRole('button'))
 
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Wishlist' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Mi Perfil' }))
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })

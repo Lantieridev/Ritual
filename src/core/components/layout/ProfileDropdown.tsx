@@ -34,12 +34,10 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
         return () => document.removeEventListener('keydown', handleKeyDown)
     }, [isOpen])
 
+    // Navegación de contenido vive en la Navbar principal — este menú es
+    // solo para acciones de cuenta.
     const menuItems = [
         { label: 'Mi Perfil', href: routes.profile, border: true },
-        { label: 'Wishlist', href: routes.wishlist },
-        { label: 'Mis Gastos', href: routes.expenses.list },
-        { label: 'Mis Artistas', href: routes.artists.list },
-        { label: 'Mis Sedes', href: routes.venues.list, border: true },
     ]
 
     return (
