@@ -103,9 +103,9 @@ describe('createEvent', () => {
     expect(mockRedirect).toHaveBeenCalledWith('/')
   })
 
-  // Regression test for R3-003: the event used to redirect as if everything
-  // succeeded even when the lineup insert silently failed, losing the
-  // artist link with no indication anything went wrong.
+  // The event used to redirect as if everything succeeded even when the
+  // lineup insert silently failed, losing the artist link with no
+  // indication anything went wrong.
   it('returns an error and does not redirect when the lineup insert fails', async () => {
     const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: { message: 'boom' } })
@@ -207,9 +207,9 @@ describe('addExternalEvent', () => {
     }
   )
 
-  // Regression test for R3-003: the caller used to get back `{ eventId }`
-  // with no `error` even when the lineup insert failed, so the UI navigated
-  // straight to the new event as if the artist link had been saved.
+  // The caller used to get back `{ eventId }` with no `error` even when the
+  // lineup insert failed, so the UI navigated straight to the new event as
+  // if the artist link had been saved.
   it('returns an error alongside the event id when the lineup insert fails', async () => {
     mockFindOrCreateByName
       .mockResolvedValueOnce({ id: VALID_VENUE_ID })
@@ -224,6 +224,54 @@ describe('addExternalEvent', () => {
 
     expect(result.error).toBeTruthy()
     expect(result.eventId).toBe(VALID_EVENT_ID)
+  })
+
+  // Setlist.fm imports pass the real setlist as `notes` so it doesn't get
+  // discarded — persisted by creating the attendance row directly in 'went'
+  // (a setlist only exists for a show that already happened), so the notes
+  // are visible without an extra status-change step.
+  it('creates a "went" attendance row with the notes when notes are passed', async () => {
+    mockFindOrCreateByName
+      .mockResolvedValueOnce({ id: VALID_VENUE_ID })
+      .mockResolvedValueOnce({ id: VALID_ARTIST_ID })
+
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
+    const attendanceUpsert = vi.fn(() => Promise.resolve({ error: null }))
+    const fromMock = vi.fn((table: string) => {
+      if (table === 'events') return eventsBuilder
+      if (table === 'lineups') return lineupsBuilder
+      return { upsert: attendanceUpsert }
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await addExternalEvent(baseEvent, undefined, '1. Cumbia Rara\n2. Ela')
+
+    expect(attendanceUpsert).toHaveBeenCalledWith(
+      { event_id: VALID_EVENT_ID, user_id: 'user-1', status: 'went', notes: '1. Cumbia Rara\n2. Ela' },
+      { onConflict: 'event_id,user_id' }
+    )
+    expect(result).toEqual({ eventId: VALID_EVENT_ID })
+  })
+
+  it('does not touch attendance when no notes are passed', async () => {
+    mockFindOrCreateByName
+      .mockResolvedValueOnce({ id: VALID_VENUE_ID })
+      .mockResolvedValueOnce({ id: VALID_ARTIST_ID })
+
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
+    const attendanceUpsert = vi.fn(() => Promise.resolve({ error: null }))
+    const fromMock = vi.fn((table: string) => {
+      if (table === 'events') return eventsBuilder
+      if (table === 'lineups') return lineupsBuilder
+      return { upsert: attendanceUpsert }
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    await addExternalEvent(baseEvent)
+
+    expect(attendanceUpsert).not.toHaveBeenCalled()
   })
 
   it('stops and returns the error when the venue cannot be found or created', async () => {

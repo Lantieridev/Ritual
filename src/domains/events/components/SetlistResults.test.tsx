@@ -77,8 +77,21 @@ describe('SetlistResults', () => {
     })
     expect(mockAddExternalEvent).toHaveBeenCalledWith(
       expect.objectContaining({ datetime: '2024-12-25T00:00:00Z' }),
-      'Bandalos Chinos'
+      'Bandalos Chinos',
+      '1. Cumbia Rara\n2. Ela'
     )
+  })
+
+  it('passes undefined notes when the setlist has no songs, instead of an empty string', async () => {
+    mockAddExternalEvent.mockResolvedValue({ eventId: 'new-event-1' })
+    const emptySetlist = { ...setlist, sets: { set: [] } }
+    render(<SetlistResults setlists={[emptySetlist]} />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Guardar/ }))
+
+    await waitFor(() => {
+      expect(mockAddExternalEvent).toHaveBeenCalledWith(expect.anything(), 'Bandalos Chinos', undefined)
+    })
   })
 
   it('shows a per-show error and does not navigate when adding fails', async () => {

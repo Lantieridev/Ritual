@@ -12,6 +12,7 @@ const MAX_NAME_LENGTH = 200
 const MAX_VENUE_NAME_LENGTH = 200
 const MAX_ARTIST_NAME_LENGTH = 200
 const MAX_LOCATION_LENGTH = 100
+const MAX_NOTES_LENGTH = 5000
 
 function validateCreate(data: EventCreateInput): string | null {
   const name = sanitizeText(data.name, MAX_NAME_LENGTH)
@@ -73,10 +74,17 @@ export async function createEvent(formData: EventCreateInput): Promise<ActionRes
 /**
  * Crea en nuestra base un recital a partir de un evento externo (Ticketmaster, Setlist.fm, Last.fm, etc.).
  * Busca o crea sede y artista para no duplicar.
+ *
+ * `notes` es opcional y se usa para el setlist real que trae Setlist.fm al
+ * importar un show pasado — antes se mostraba y se descartaba, obligando a
+ * reescribirlo a mano. Como un setlist solo existe para shows que ya
+ * pasaron, la asistencia se crea directamente en 'went' para que las notas
+ * queden visibles y editables sin un paso extra.
  */
 export async function addExternalEvent(
   event: FutureEvent,
-  artistNameForLineup?: string
+  artistNameForLineup?: string,
+  notes?: string
 ): Promise<ActionResult<{ eventId?: string }>> {
   const userId = await getCurrentUserId()
   if (!userId) return { error: 'Usuario no autenticado' }
@@ -132,6 +140,19 @@ export async function addExternalEvent(
     return {
       error: 'El recital se guardó, pero no se pudo guardar el artista del lineup. Editalo para agregarlo.',
       eventId: newEvent.id,
+    }
+  }
+
+  const sanitizedNotes = sanitizeText(notes, MAX_NOTES_LENGTH)
+  if (sanitizedNotes) {
+    const { error: attendanceErr } = await supabase.from('attendance').upsert(
+      { event_id: newEvent.id, user_id: userId, status: 'went', notes: sanitizedNotes },
+      { onConflict: 'event_id,user_id' }
+    )
+    if (attendanceErr) {
+      // No bloqueamos el alta por esto — el setlist es una comodidad, no
+      // datos esenciales como el lineup. El usuario puede cargarlo a mano.
+      console.error('Error guardando notas iniciales:', attendanceErr)
     }
   }
 

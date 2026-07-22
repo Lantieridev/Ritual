@@ -12,6 +12,10 @@ interface SetlistResultsProps {
     setlists: Setlist[]
 }
 
+function getSongs(setlist: Setlist): string[] {
+    return setlist.sets.set.flatMap((s) => s.song.map((song) => song.name))
+}
+
 /**
  * Lista de shows pasados de Setlist.fm con botón "Agregar a mis recitales".
  * Muestra el setlist (canciones) de cada show.
@@ -30,6 +34,10 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
         startTransition(async () => {
             try {
                 const isoDate = parseSetlistDate(setlist.eventDate)
+                const songs = getSongs(setlist)
+                const notes = songs.length > 0
+                    ? songs.map((song, i) => `${i + 1}. ${song}`).join('\n')
+                    : undefined
                 const result = await addExternalEvent(
                     {
                         id: setlist.id,
@@ -43,7 +51,8 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
                         lineup: [setlist.artist.name],
                         url: setlist.url,
                     },
-                    setlist.artist.name
+                    setlist.artist.name,
+                    notes
                 )
                 if (result.error) {
                     setErrors((prev) => ({ ...prev, [setlist.id]: result.error! }))
@@ -82,7 +91,7 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
                     month: 'short',
                     year: 'numeric',
                 })
-                const allSongs = setlist.sets.set.flatMap((s) => s.song.map((song) => song.name))
+                const allSongs = getSongs(setlist)
                 const venueLabel = [
                     setlist.venue.name,
                     setlist.venue.city.name,
