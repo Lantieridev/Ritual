@@ -1,8 +1,7 @@
--- Fase 0 de la auditoría 2026-07-21: cierra los bloqueantes de seguridad
--- documentados en "Plan de Implementación - Auditoría 2026-07-21" (vault).
+-- Cierra varios bloqueantes de seguridad encontrados en una revisión de RLS.
 -- Nada de esto cambia la forma de las tablas salvo event_photos (user_id nueva).
 
--- ─── R1-001: catálogo compartido (events/lineups/venues/artists/festivals) ──
+-- ─── Catálogo compartido (events/lineups/venues/artists/festivals) ──────────
 -- Restringe todas las escrituras del catálogo a usuarios autenticados.
 -- SELECT se mantiene público a propósito (catálogo compartido, de lectura libre).
 
@@ -23,7 +22,7 @@ alter policy "Public delete festivals" on "public"."festivals" to authenticated;
 alter policy "Public insert festival_events" on "public"."festival_events" to authenticated;
 alter policy "Public delete festival_events" on "public"."festival_events" to authenticated;
 
--- ─── R1-003 / R1-007: event_photos necesita dueño real ──────────────────────
+-- ─── event_photos necesita dueño real ───────────────────────────────────────
 
 alter table "public"."event_photos"
   add column if not exists "user_id" uuid references auth.users(id) on delete cascade;
@@ -47,7 +46,7 @@ create policy "Owner delete event_photos"
   on "public"."event_photos" for delete to authenticated
   using (auth.uid() = user_id);
 
--- ─── R1-002: bucket de Storage event-photos era 100% público ────────────────
+-- ─── bucket de Storage event-photos era 100% público ────────────────────────
 
 drop policy if exists "Public upload event-photos" on storage.objects;
 drop policy if exists "Public delete event-photos" on storage.objects;
@@ -81,14 +80,14 @@ create policy "Owner update event-photos"
     )
   );
 
--- ─── R1-004: migrate_legacy_data era una escalada de privilegios ────────────
+-- ─── migrate_legacy_data era una escalada de privilegios ────────────────────
 -- Sin deploy todavía, no hay datos legacy reales que migrar — se elimina
 -- en vez de intentar "validar" un caller contra un placeholder sin dueño real.
 
 -- DROP FUNCTION revokes all grants on it too, no separate REVOKE needed.
 drop function if exists migrate_legacy_data(uuid);
 
--- ─── R1-008: bucket "avatars" nunca estuvo en control de versiones ──────────
+-- ─── bucket "avatars" nunca estuvo en control de versiones ──────────────────
 -- profile-actions.ts sube a un nombre plano "{user.id}-{random}.{ext}"
 -- (sin subcarpeta), así que la política de dueño matchea por prefijo del name.
 

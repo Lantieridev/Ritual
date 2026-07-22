@@ -6,17 +6,16 @@
 }
 
 /*
- * Tokens semánticos (Fase 3, R2-003): nombran la paleta que la app ya usa
- * de hecho — relevada contando clases reales en app/ + src/, no inventada.
- * Antes de esto había 8 variantes de border-white/opacidad, 7 de
- * text-zinc-* y 6 de bg-white/opacidad haciendo el mismo trabajo (borde
- * sutil / texto secundario / superficie de card) sin ningún nombre común.
+ * Tokens semánticos: nombran la paleta que la app ya usa de hecho —
+ * relevada contando clases reales en app/ + src/, no inventada. Antes de
+ * esto había 8 variantes de border-white/opacidad, 7 de text-zinc-* y 6 de
+ * bg-white/opacidad haciendo el mismo trabajo (borde sutil / texto
+ * secundario / superficie de card) sin ningún nombre común.
  *
- * Definidos y listos para adoptar, pero NO migrados todavía en los 38
- * archivos que usan las clases ad-hoc — ese cambio toca visualmente cada
- * pantalla de la app y se hace en la Fase 5 (rediseño visual), con
- * screenshots reales para verificar que nada se rompió. Ver plan de
- * implementación en el vault.
+ * Definidos y listos para adoptar, pero todavía NO migrados en los
+ * archivos que usan las clases ad-hoc — esa migración toca visualmente
+ * cada pantalla de la app, así que se hace aparte con screenshots reales
+ * para verificar que nada se rompió.
  */
 @theme inline {
   --color-background: var(--background);

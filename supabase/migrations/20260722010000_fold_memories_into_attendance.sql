@@ -1,8 +1,8 @@
--- Fase 3 (arquitectura): memories era una relación forzada 1:1 con
--- attendance (memories_attendance_id_key unique constraint, migración
--- 20260711000000), y cada lectura pagaba un join para reensamblar "mi
--- experiencia de este show". festival_attendance ya modela lo mismo plano,
--- en una sola tabla — este cambio lleva attendance al mismo patrón.
+-- memories era una relación forzada 1:1 con attendance
+-- (memories_attendance_id_key unique constraint, migración 20260711000000),
+-- y cada lectura pagaba un join para reensamblar "mi experiencia de este
+-- show". festival_attendance ya modela lo mismo plano, en una sola tabla —
+-- este cambio lleva attendance al mismo patrón.
 --
 -- RLS: no hace falta ninguna policy nueva. attendance ya tiene policies
 -- "Owner ..." (auth.uid() = user_id) por fila desde security_hardening —

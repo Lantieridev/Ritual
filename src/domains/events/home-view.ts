@@ -14,8 +14,7 @@ export interface HomeFeed {
 /**
  * Toda la lógica de agregación que antes vivía inline en app/page.tsx
  * (próximo show, filtro por status, agrupamiento por año) — separada del
- * fetch y del JSX para que sea testeable sin renderizar la página (R2-001,
- * "Fase 3 — Estructura y legibilidad").
+ * fetch y del JSX para que sea testeable sin renderizar la página.
  */
 export function buildHomeFeed(
     allEvents: EventWithAttendance[],

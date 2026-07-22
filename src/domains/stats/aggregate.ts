@@ -2,8 +2,7 @@
  * Pura, sin tocar la DB ni sesión — a propósito separada de data.ts (que sí
  * importa 'server-only' transitivamente vía core/auth/session). Mezclar las
  * dos hacía que cualquier import de esta función arrastrara el guard de
- * server-only, rompiendo tests o cualquier uso desde un Client Component
- * (mismo problema ya resuelto una vez con core/lib/http.ts en la Fase 1).
+ * server-only, rompiendo tests o cualquier uso desde un Client Component.
  */
 
 /** Forma mínima que necesita aggregateEventStats — cualquier lista de eventos con esta forma sirve. */

@@ -94,9 +94,8 @@ describe('parseYearParam', () => {
     expect(parseYearParam(undefined, 2026)).toBe(2026)
   })
 
-  // Regression test for R3-004: "/wrapped?year=abc" used to render the
-  // literal string "NaN Wrapped" because parseInt('abc') is NaN and nothing
-  // guarded against it.
+  // "/wrapped?year=abc" used to render the literal string "NaN Wrapped"
+  // because parseInt('abc') is NaN and nothing guarded against it.
   it('returns the fallback instead of NaN for a non-numeric param', () => {
     expect(parseYearParam('abc', 2026)).toBe(2026)
     expect(Number.isNaN(parseYearParam('abc', 2026))).toBe(false)

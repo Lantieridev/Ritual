@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { aggregateEventStats } from '@/src/domains/stats/aggregate'
 
-// Fase 3 (R2-005): esta lógica vivía duplicada en app/wrapped/page.tsx con
-// su propia implementación de conteo — ahora getPersonalStats y Wrapped
-// llaman a esta misma función, cada uno con la lista de eventos que ya
-// filtró (todo el historial vs. solo el año seleccionado). Separada de
-// stats/data.ts (que sí toca la DB) para que se pueda importar y testear
-// sin arrastrar 'server-only' (ver comentario en aggregate.ts).
+// Esta lógica vivía duplicada en app/wrapped/page.tsx con su propia
+// implementación de conteo — ahora getPersonalStats y Wrapped llaman a esta
+// misma función, cada uno con la lista de eventos que ya filtró (todo el
+// historial vs. solo el año seleccionado). Separada de stats/data.ts (que sí
+// toca la DB) para que se pueda importar y testear sin arrastrar
+// 'server-only' (ver comentario en aggregate.ts).
 describe('aggregateEventStats', () => {
   it('counts unique artists/venues and sorts top lists by show count', () => {
     const result = aggregateEventStats([

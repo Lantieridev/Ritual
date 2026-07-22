@@ -21,10 +21,10 @@ export interface ArtistEnrichment {
 
 /**
  * Deriva todos los campos de UI a partir de las respuestas ya resueltas de
- * Spotify/Last.fm y del historial interno del artista — antes vivía inline
- * en app/artists/[id]/page.tsx mezclado con el fetch y el JSX (R2-001,
- * "Fase 3 — Estructura y legibilidad"). No hace ningún fetch: recibe los
- * resultados ya resueltos (o null si la API no está configurada o falló).
+ * Spotify/Last.fm y del historial interno del artista, separado del fetch y
+ * del JSX de app/artists/[id]/page.tsx para que sea testeable sin renderizar
+ * la página. No hace ningún fetch: recibe los resultados ya resueltos (o
+ * null si la API no está configurada o falló).
  */
 export function buildArtistEnrichment(
     artist: ArtistWithEvents,

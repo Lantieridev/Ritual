@@ -70,9 +70,8 @@ describe('getEventsWithAttendance', () => {
     expect(result[0].attendance).toEqual([])
   })
 
-  // Regression test found during the Fase 2 checkpoint re-audit: this query
-  // ran unbounded against the whole shared catalog, for every visitor
-  // (logged in or not — `/` and `/wrapped` aren't behind the auth
+  // This query ran unbounded against the whole shared catalog, for every
+  // visitor (logged in or not — `/` and `/wrapped` aren't behind the auth
   // middleware), unlike its sibling getPersonalStats() which was already
   // bounded by requiring a session first.
   it('caps the query with a defensive limit instead of fetching the whole catalog', async () => {

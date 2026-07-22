@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { isPastEvent, isUpcomingEvent, nearestUpcoming, todayDateOnly, eventYear, eventMonth } from './dates'
 
-// Regression tests for the timezone bug (R3-002): a date-only string like
-// "2026-07-21" parses as UTC midnight, which is 2026-07-20T21:00 in
-// Argentina (UTC-3). Comparing that instant directly against `now` made a
-// show happening "today" read as already past for the entire day — these
-// tests pin the exact boundary that broke.
+// Regression tests for a timezone bug: a date-only string like "2026-07-21"
+// parses as UTC midnight, which is 2026-07-20T21:00 in Argentina (UTC-3).
+// Comparing that instant directly against `now` made a show happening
+// "today" read as already past for the entire day — these tests pin the
+// exact boundary that broke.
 
 describe('isPastEvent', () => {
   it('does not mark a same-day (Argentina) show as past at midday', () => {
@@ -56,10 +56,9 @@ describe('todayDateOnly', () => {
   })
 })
 
-// Regression test found during the Fase 1 checkpoint re-audit: grouping
-// shows by year via `new Date(dateStr).getFullYear()` reads the SERVER's
-// local time (UTC in most deployments), not Argentina's — a show right
-// after midnight UTC on Jan 1st is still Dec 31st in Buenos Aires.
+// Grouping shows by year via `new Date(dateStr).getFullYear()` reads the
+// SERVER's local time (UTC in most deployments), not Argentina's — a show
+// right after midnight UTC on Jan 1st is still Dec 31st in Buenos Aires.
 describe('eventYear', () => {
   it('reads the year from an Argentina-anchored calendar day, not the server/UTC day', () => {
     expect(eventYear('2026-01-01T01:00:00Z')).toBe(2025)
@@ -71,11 +70,10 @@ describe('eventYear', () => {
   })
 })
 
-// Same root cause as eventYear, caught while extracting Wrapped's "busiest
-// month" out of app/wrapped/page.tsx into wrapped-view.ts (Fase 3): a raw
-// `new Date(dateStr).getMonth()` reads the SERVER's local timezone, not
-// Argentina's — a bare "YYYY-MM-DD" string parses as UTC midnight, which
-// rolls back to the previous month in any timezone behind UTC.
+// Same root cause as eventYear: a raw `new Date(dateStr).getMonth()` reads
+// the SERVER's local timezone, not Argentina's — a bare "YYYY-MM-DD" string
+// parses as UTC midnight, which rolls back to the previous month in any
+// timezone behind UTC.
 describe('eventMonth', () => {
   it('reads the month straight from a date-only string, 0-indexed like Date#getMonth', () => {
     expect(eventMonth('2026-03-01')).toBe(2)
@@ -89,9 +87,9 @@ describe('eventMonth', () => {
   })
 })
 
-// Regression test for R3-001: the homepage's "próximo show" used .find() over
-// a descending-sorted array and returned the FARTHEST future match instead
-// of the nearest one whenever 2+ shows were marked "Voy".
+// The homepage's "próximo show" used to call .find() over a descending-sorted
+// array and return the FARTHEST future match instead of the nearest one
+// whenever 2+ shows were marked "Voy".
 
 describe('nearestUpcoming', () => {
   const now = new Date('2026-07-21T15:00:00Z')

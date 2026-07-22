@@ -44,11 +44,10 @@ describe('getBestLastFmImage', () => {
     expect(getBestLastFmImage([])).toBeNull()
   })
 
-  // Regression test found while extracting artist enrichment logic in
-  // Fase 3: getLastFmArtistInfo casts the API response as LastFmArtist with
-  // zero runtime validation, so a response missing `image` entirely (not
-  // just an empty array) crashed this with "Cannot read properties of
-  // undefined (reading 'find')" instead of degrading gracefully.
+  // getLastFmArtistInfo casts the API response as LastFmArtist with zero
+  // runtime validation, so a response missing `image` entirely (not just an
+  // empty array) crashed this with "Cannot read properties of undefined
+  // (reading 'find')" instead of degrading gracefully.
   it('does not throw when images is null or undefined', () => {
     expect(getBestLastFmImage(null)).toBeNull()
     expect(getBestLastFmImage(undefined)).toBeNull()

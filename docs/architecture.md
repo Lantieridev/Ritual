@@ -1,6 +1,6 @@
 # 🏛️ Arquitectura del Sistema RITUAL
 
-Este documento define el modelo de datos y la lógica de negocio real de la app (actualizado en la Fase 3 de la auditoría 2026-07-21 para reflejar el esquema efectivamente implementado, no el diseño original).
+Este documento define el modelo de datos y la lógica de negocio real de la app, reflejando el esquema efectivamente implementado (no el diseño original — ver nota histórica al final para el porqué de esa diferencia).
 
 ## 1. Conceptos Core
 
@@ -35,7 +35,7 @@ No existe el concepto de "gira" (tour): se evaluó en el diseño original pero n
     * `stage`, `start_time`, `is_headliner`.
 
 ### D. User Experience
-* **`attendance`**: Asistencia del usuario a un `event` puntual, con su rating/reseña/notas de ESE show planos en la misma fila (fusionado desde una tabla `memories` separada en la Fase 3 — ver nota al final).
+* **`attendance`**: Asistencia del usuario a un `event` puntual, con su rating/reseña/notas de ESE show planos en la misma fila (fusionado desde una tabla `memories` separada — ver nota histórica al final).
     * `user_id`, `event_id`, `status`: ENUM ('interested', 'going', 'went'), `rating` (0-5), `review`, `notes`.
 * **`festival_attendance`**: Asistencia del usuario a un `festival` (independiente de la de sus `events` individuales, si los tiene vinculados). Mismo patrón plano que `attendance`.
     * `festival_id`, `user_id`, `status`, `rating`, `review`.
@@ -46,7 +46,7 @@ No existe el concepto de "gira" (tour): se evaluó en el diseño original pero n
 1.  El usuario busca "Cosquín Rock" y lo carga como `festival`.
 2.  Opcionalmente vincula `events` puntuales como sus días (`festival_events`, con `day_label`).
 3.  El usuario marca su asistencia general al festival en `festival_attendance` (status/rating/review propios del festival).
-4.  Si además quiere trackear un día específico como show individual, marca attendance en ESE `event` por separado — son registros independientes a propósito (ver Fase 3 de la auditoría: no es redundancia, son cardinalidades distintas).
+4.  Si además quiere trackear un día específico como show individual, marca attendance en ESE `event` por separado — son registros independientes a propósito: no es redundancia, son cardinalidades distintas.
 
 ### Caso 2: Asistir a un Show Suelto
 1.  El usuario busca un artista o importa un show vía Ticketmaster/Setlist.fm.
@@ -55,6 +55,6 @@ No existe el concepto de "gira" (tour): se evaluó en el diseño original pero n
 
 ---
 
-**Nota histórica (Fase 3, 2026-07-21):** el diseño original de este documento planteaba un modelo jerárquico con `tours` (giras) y `festival_editions` (ediciones anuales de festival) como "contenedores" de `events`, vía columnas `events.tour_id`/`events.festival_edition_id`/`events.is_child_event`. Ninguna de las dos tablas ni esas columnas llegaron a tener código de aplicación que las usara — se auditó el repo completo antes de esta reescritura y se confirmó cero referencias reales. Se eliminaron en la migración `20260722000000_drop_dead_tour_columns.sql`. El modelo que sí se construyó y funciona es el descrito arriba: `festivals` + `festival_events` como tabla puente, plano y sin jerarquía de "ediciones".
+**Nota histórica (2026-07-21):** el diseño original de este documento planteaba un modelo jerárquico con `tours` (giras) y `festival_editions` (ediciones anuales de festival) como "contenedores" de `events`, vía columnas `events.tour_id`/`events.festival_edition_id`/`events.is_child_event`. Ninguna de las dos tablas ni esas columnas llegaron a tener código de aplicación que las usara — se confirmó cero referencias reales en todo el repo. Se eliminaron en la migración `20260722000000_drop_dead_tour_columns.sql`. El modelo que sí se construyó y funciona es el descrito arriba: `festivals` + `festival_events` como tabla puente, plano y sin jerarquía de "ediciones".
 
-Además, en la misma fase se eliminó la tabla `memories` (que guardaba rating/review/notes en una fila 1:1 aparte de `attendance`, vía un `attendance_id` con constraint único) y se fusionaron sus columnas directamente en `attendance` — mismo razonamiento: era una relación forzada 1:1 sin ninguna razón de diseño viva, y `festival_attendance` ya modelaba lo mismo plano desde el principio. Migración: `20260722010000_fold_memories_into_attendance.sql`.
+Además, en ese mismo momento se eliminó la tabla `memories` (que guardaba rating/review/notes en una fila 1:1 aparte de `attendance`, vía un `attendance_id` con constraint único) y se fusionaron sus columnas directamente en `attendance` — mismo razonamiento: era una relación forzada 1:1 sin ninguna razón de diseño viva, y `festival_attendance` ya modelaba lo mismo plano desde el principio. Migración: `20260722010000_fold_memories_into_attendance.sql`.

@@ -19,11 +19,10 @@ export interface WrappedSummary {
 }
 
 /**
- * Toda la lógica de agregación que antes vivía inline en app/wrapped/page.tsx
- * — separada del fetch y del JSX para que sea testeable sin renderizar la
- * página (R2-001, "Fase 3 — Estructura y legibilidad"). Reutiliza
- * aggregateEventStats (R2-005) para no recalcular artistas/venues/rating con
- * una segunda implementación propia.
+ * Lógica de agregación separada del fetch y del JSX de app/wrapped/page.tsx
+ * para que sea testeable sin renderizar la página. Reutiliza
+ * aggregateEventStats para no recalcular artistas/venues/rating con una
+ * segunda implementación propia.
  */
 export function buildWrappedSummary(
     allEvents: EventWithAttendance[],

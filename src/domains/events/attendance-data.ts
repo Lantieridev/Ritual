@@ -12,7 +12,7 @@ export interface EventAttendance {
 
 /**
  * Obtiene el registro de asistencia (incluye rating/reseña/notas, plana
- * sobre la misma fila desde la Fase 3 — ver migración
+ * sobre la misma fila — ver migración
  * 20260722010000_fold_memories_into_attendance.sql) para un evento.
  * Devuelve null si el usuario no tiene attendance para ese evento.
  */

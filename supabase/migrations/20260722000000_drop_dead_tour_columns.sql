@@ -1,4 +1,4 @@
--- Fase 3 (R2 architecture finding): events.tour_id, events.festival_edition_id
+-- events.tour_id, events.festival_edition_id
 -- and events.is_child_event belonged to an abandoned "tours" / "festival
 -- editions" design that no application code reads or writes — the real
 -- festival model is `festivals` + `festival_events` (see festivals/actions.ts,

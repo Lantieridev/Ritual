@@ -49,9 +49,8 @@ describe('WishlistButton', () => {
     })
   })
 
-  // Regression test found during the Fase 2 checkpoint re-audit: the button
-  // rolled back correctly on failure, but never told the user WHY — the
-  // star just silently flipped back with zero explanation.
+  // The button rolled back correctly on failure, but never told the user
+  // WHY — the star just silently flipped back with zero explanation.
   it('shows the error message when the action fails, not just a silent rollback', async () => {
     mockToggleWishlist.mockResolvedValue({ inWishlist: false, error: 'No autenticado' })
     render(<WishlistButton artistId="a1" initialInWishlist={false} />)
