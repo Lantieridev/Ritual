@@ -1,4 +1,5 @@
 import { createClient } from '@/src/core/lib/supabase/server'
+import { eventYear } from '@/src/core/lib/dates'
 import type { Expense } from '@/src/core/types'
 
 export interface ExpenseSummary {
@@ -68,7 +69,7 @@ export async function getExpensesSummary(userId: string | null): Promise<Expense
     const cat = ex.category ?? 'Otro'
     result.byCategory[cat] = (result.byCategory[cat] ?? 0) + amount
 
-    const year = new Date(ex.date).getFullYear().toString()
+    const year = eventYear(ex.date).toString()
     result.byYear[year] = (result.byYear[year] ?? 0) + amount
   }
 

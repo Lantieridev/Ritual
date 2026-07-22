@@ -5,6 +5,8 @@ import {
   sanitizeText,
   validateRating,
   validateDate,
+  parseYearParam,
+  safeHref,
   sanitizeError,
   sanitizeAuthError,
 } from '@/src/core/lib/validation'
@@ -84,6 +86,52 @@ describe('validateDate', () => {
     expect(validateDate('')).toBeTruthy()
     expect(validateDate(12345)).toBeTruthy()
     expect(validateDate('not-a-date')).toBeTruthy()
+  })
+})
+
+describe('parseYearParam', () => {
+  it('returns the fallback when the param is missing', () => {
+    expect(parseYearParam(undefined, 2026)).toBe(2026)
+  })
+
+  // Regression test for R3-004: "/wrapped?year=abc" used to render the
+  // literal string "NaN Wrapped" because parseInt('abc') is NaN and nothing
+  // guarded against it.
+  it('returns the fallback instead of NaN for a non-numeric param', () => {
+    expect(parseYearParam('abc', 2026)).toBe(2026)
+    expect(Number.isNaN(parseYearParam('abc', 2026))).toBe(false)
+  })
+
+  it('returns the fallback for out-of-range years', () => {
+    expect(parseYearParam('1899', 2026)).toBe(2026)
+    expect(parseYearParam('10000', 2026)).toBe(2026)
+  })
+
+  it('truncates a decimal year to its integer part, same as parseInt', () => {
+    expect(parseYearParam('2024.5', 2026)).toBe(2024)
+  })
+
+  it('accepts a valid year', () => {
+    expect(parseYearParam('2024', 2026)).toBe(2024)
+  })
+})
+
+describe('safeHref', () => {
+  it('accepts http and https URLs unchanged', () => {
+    expect(safeHref('https://example.com')).toBe('https://example.com/')
+    expect(safeHref('http://example.com/path')).toBe('http://example.com/path')
+  })
+
+  it('rejects javascript: and other non-http(s) schemes', () => {
+    expect(safeHref('javascript:alert(1)')).toBeNull()
+    expect(safeHref('data:text/html,<script>alert(1)</script>')).toBeNull()
+  })
+
+  it('returns null for empty, missing, or unparseable values', () => {
+    expect(safeHref(undefined)).toBeNull()
+    expect(safeHref(null)).toBeNull()
+    expect(safeHref('')).toBeNull()
+    expect(safeHref('not a url')).toBeNull()
   })
 })
 

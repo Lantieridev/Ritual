@@ -56,6 +56,35 @@ export function validateDate(value: unknown): string | null {
 }
 
 /**
+ * Returns the URL unchanged only if it's a safe http(s) link, otherwise null.
+ * Use this on any user-supplied URL (profile.website, festival.website, etc.)
+ * before rendering it as an <a href>— an unchecked string lets a stored
+ * "javascript:" URI execute in the visitor's session when clicked.
+ */
+export function safeHref(value: string | null | undefined): string | null {
+    if (!value) return null
+    try {
+        const url = new URL(value.trim())
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+        return url.toString()
+    } catch {
+        return null
+    }
+}
+
+/**
+ * Parses a "?year=" query param into a valid year, falling back to
+ * `fallback` for anything that isn't a real integer year (missing, "abc",
+ * "2024.5", out-of-range) instead of letting NaN leak into the page.
+ */
+export function parseYearParam(raw: string | undefined, fallback: number): number {
+    if (!raw) return fallback
+    const n = Number.parseInt(raw, 10)
+    if (!Number.isInteger(n) || n < 1900 || n > 9999) return fallback
+    return n
+}
+
+/**
  * Sanitizes an error before returning it to the client.
  * Strips internal Supabase/Postgres details that could leak schema info.
  */
