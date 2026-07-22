@@ -119,6 +119,12 @@ export default async function BuscarPage({ searchParams }: PageProps) {
             <span className="ml-2 text-[10px] text-zinc-700">no disponible</span>
           )}
         </a>
+        <a
+          href={routes.search}
+          className="px-4 py-2.5 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors border-b-2 border-transparent -mb-px ml-auto"
+        >
+          Ya guardado →
+        </a>
       </div>
 
       {/* Formulario de búsqueda */}

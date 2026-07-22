@@ -3,9 +3,10 @@ import Link from 'next/link'
 import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
 import { createClient } from '@/src/core/lib/supabase/server'
+import { formatDate } from '@/src/core/lib/utils'
 
 export const metadata: Metadata = {
-    title: 'Buscar | RITUAL',
+    title: 'Buscar en lo tuyo | RITUAL',
     description: 'Buscá entre tus eventos, artistas y venues guardados.',
 }
 
@@ -53,10 +54,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
     return (
         <PageShell
-            backHref={routes.home}
-            backLabel="← Inicio"
-            title="Buscar"
-            description="Buscá entre tus eventos, artistas y venues."
+            backHref={routes.events.search}
+            backLabel="← Buscar shows nuevos"
+            title="Buscar en lo tuyo"
+            description="Buscá entre los eventos, artistas y venues que ya guardaste."
         >
             {/* Search input */}
             <form method="GET" action={routes.search} className="mb-8">
@@ -105,11 +106,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                                                 </span>
                                             </div>
                                             <span className="text-sm text-zinc-600 whitespace-nowrap">
-                                                {new Date(ev.date).toLocaleDateString('es-AR', {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                    year: 'numeric',
-                                                })}
+                                                {formatDate(ev.date, { day: 'numeric', month: 'short', year: 'numeric' })}
                                             </span>
                                         </Link>
                                     </li>
