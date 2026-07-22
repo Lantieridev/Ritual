@@ -24,6 +24,15 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   return builder
 }
 
+function makeLookupBuilder(result: { data: unknown; error: unknown }) {
+  const builder: Record<string, unknown> = {}
+  const chain = () => builder
+  builder.select = vi.fn(chain)
+  builder.ilike = vi.fn(chain)
+  builder.single = vi.fn(() => Promise.resolve(result))
+  return builder
+}
+
 describe('createVenue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -86,6 +95,29 @@ describe('createVenue', () => {
     const result = await createVenue({ name: 'Niceto Club' } as never)
 
     expect(result?.error).toBe('Ya existe un registro con esos datos.')
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  // A name-collision used to dead-end on the same generic message as any
+  // other DB error — now it looks up the existing row so the form can link
+  // straight to it instead of leaving the user stuck.
+  it('looks up and returns the existing venue id on a name collision', async () => {
+    const insertBuilder = makeQueryBuilder({
+      data: null,
+      error: { code: '23505', message: 'duplicate key value violates unique constraint "venues_name_key_unique"' },
+    })
+    const lookupBuilder = makeLookupBuilder({ data: { id: 'existing-venue-1' }, error: null })
+    let callCount = 0
+    const fromMock = vi.fn(() => {
+      callCount++
+      return callCount === 1 ? insertBuilder : lookupBuilder
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await createVenue({ name: 'Niceto Club' } as never)
+
+    expect(lookupBuilder.ilike).toHaveBeenCalledWith('name', 'Niceto Club')
+    expect(result).toEqual({ error: 'Ya existe una sede con ese nombre.', existingId: 'existing-venue-1' })
     expect(mockRedirect).not.toHaveBeenCalled()
   })
 })

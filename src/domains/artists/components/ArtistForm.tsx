@@ -7,16 +7,18 @@ import { routes } from '@/src/core/lib/routes'
 import type { ArtistCreateInput } from '@/src/core/types'
 
 interface ArtistFormProps {
-  createArtist: (data: ArtistCreateInput) => Promise<{ error?: string }>
+  createArtist: (data: ArtistCreateInput) => Promise<{ error?: string; existingId?: string }>
 }
 
 export function ArtistForm({ createArtist }: ArtistFormProps) {
   const [error, setError] = useState<string | null>(null)
+  const [existingId, setExistingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    setExistingId(null)
     setIsSubmitting(true)
     const form = e.currentTarget
     const result = await createArtist({
@@ -25,6 +27,7 @@ export function ArtistForm({ createArtist }: ArtistFormProps) {
     })
     if (result?.error) {
       setError(result.error)
+      setExistingId(result.existingId ?? null)
       setIsSubmitting(false)
     }
   }
@@ -32,7 +35,17 @@ export function ArtistForm({ createArtist }: ArtistFormProps) {
   return (
     <form onSubmit={handleSubmit} className="max-w-xl space-y-6">
       {error && (
-        <div role="alert" className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 text-sm">{error}</div>
+        <div role="alert" className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 text-sm">
+          {error}
+          {existingId && (
+            <>
+              {' '}
+              <Link href={routes.artists.detail(existingId)} className="underline underline-offset-2 hover:text-red-300">
+                Ver el artista existente →
+              </Link>
+            </>
+          )}
+        </div>
       )}
       <FormField label="Nombre del artista" id="name" required>
         <input id="name" name="name" type="text" required placeholder="Ej: Coldplay" className={inputClass} />
