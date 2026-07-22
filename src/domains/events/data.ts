@@ -20,7 +20,8 @@ const EVENTS_WITH_ATTENDANCE_SELECT = `
     id,
     status,
     user_id,
-    memories ( rating, review )
+    rating,
+    review
   )
 `
 
@@ -29,9 +30,15 @@ export interface EventWithAttendance extends EventWithRelations {
     id: string
     status: string
     user_id: string
-    memories?: Array<{ rating: number | null; review: string | null }>
+    rating: number | null
+    review: string | null
   }>
 }
+
+// Cota defensiva: sin esto, la query crece sin límite con el catálogo
+// compartido entero (no solo con los shows del usuario que la pide) —
+// cualquier visitante, logueado o no, paga el costo de traer todo.
+export const MAX_EVENTS = 1000
 
 export async function getEvents(): Promise<EventWithRelations[]> {
   const supabase = await createClient()
@@ -39,6 +46,7 @@ export async function getEvents(): Promise<EventWithRelations[]> {
     .from('events')
     .select(EVENTS_SELECT)
     .order('date', { ascending: false })
+    .limit(MAX_EVENTS)
 
   if (error) {
     console.error('Error cargando eventos:', error)
@@ -57,6 +65,7 @@ export async function getEventsWithAttendance(): Promise<EventWithAttendance[]> 
     .from('events')
     .select(EVENTS_WITH_ATTENDANCE_SELECT)
     .order('date', { ascending: false })
+    .limit(MAX_EVENTS)
 
   if (error) {
     console.error('Error cargando eventos con attendance:', error)

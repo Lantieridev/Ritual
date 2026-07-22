@@ -48,7 +48,7 @@ describe('getPersonalStats', () => {
           date: '2024-05-01',
           venues: { name: 'Niceto', city: 'Buenos Aires', country: 'AR' },
           lineups: [{ artists: { name: 'Bandalos Chinos' } }],
-          attendance: [{ status: 'went', user_id: 'user-1', memories: [{ rating: 9 }] }],
+          attendance: [{ status: 'went', user_id: 'user-1', rating: 4 }],
         },
         {
           id: 'evt-not-mine',
@@ -83,7 +83,7 @@ describe('getPersonalStats', () => {
         date: '2023-01-01',
         venues: null,
         lineups: [],
-        attendance: [{ status: 'went', user_id: 'user-1', memories: [] }],
+        attendance: [{ status: 'went', user_id: 'user-1', rating: null }],
       },
       {
         id: 'evt-going',
@@ -91,7 +91,7 @@ describe('getPersonalStats', () => {
         date: '2099-01-01',
         venues: null,
         lineups: [],
-        attendance: [{ status: 'going', user_id: 'user-1', memories: [] }],
+        attendance: [{ status: 'going', user_id: 'user-1', rating: null }],
       },
       {
         id: 'evt-interested',
@@ -99,7 +99,7 @@ describe('getPersonalStats', () => {
         date: '2099-02-01',
         venues: null,
         lineups: [],
-        attendance: [{ status: 'interested', user_id: 'user-1', memories: [] }],
+        attendance: [{ status: 'interested', user_id: 'user-1', rating: null }],
       },
     ]
     mockEvents(events)
@@ -112,7 +112,7 @@ describe('getPersonalStats', () => {
     expect(stats.showsInterested).toBe(1)
   })
 
-  it('computes averageRating only from rated memories on my own attended shows', async () => {
+  it('computes averageRating only from rated attendance on my own attended shows', async () => {
     const events = [
       {
         id: 'evt-1',
@@ -120,7 +120,7 @@ describe('getPersonalStats', () => {
         date: '2023-01-01',
         venues: null,
         lineups: [],
-        attendance: [{ status: 'went', user_id: 'user-1', memories: [{ rating: 8 }] }],
+        attendance: [{ status: 'went', user_id: 'user-1', rating: 4 }],
       },
       {
         id: 'evt-2',
@@ -128,7 +128,7 @@ describe('getPersonalStats', () => {
         date: '2023-02-01',
         venues: null,
         lineups: [],
-        attendance: [{ status: 'went', user_id: 'user-1', memories: [{ rating: 10 }] }],
+        attendance: [{ status: 'went', user_id: 'user-1', rating: 5 }],
       },
       {
         id: 'evt-3-unrated',
@@ -136,14 +136,14 @@ describe('getPersonalStats', () => {
         date: '2023-03-01',
         venues: null,
         lineups: [],
-        attendance: [{ status: 'went', user_id: 'user-1', memories: [{ rating: null }] }],
+        attendance: [{ status: 'went', user_id: 'user-1', rating: null }],
       },
     ]
     mockEvents(events)
 
     const stats = await getPersonalStats()
 
-    expect(stats.averageRating).toBe(9)
+    expect(stats.averageRating).toBe(4.5)
     expect(stats.totalRated).toBe(2)
   })
 
@@ -155,7 +155,7 @@ describe('getPersonalStats', () => {
         date: '2023-01-01',
         venues: null,
         lineups: [],
-        attendance: [{ status: 'went', user_id: 'user-1', memories: [] }],
+        attendance: [{ status: 'went', user_id: 'user-1', rating: null }],
       },
     ])
 
@@ -173,7 +173,7 @@ describe('getPersonalStats', () => {
         date: '2099-01-01',
         venues: null,
         lineups: [],
-        attendance: [{ status: 'going', user_id: 'user-1', memories: [] }],
+        attendance: [{ status: 'going', user_id: 'user-1', rating: null }],
       },
       {
         id: 'evt-past',
@@ -181,7 +181,7 @@ describe('getPersonalStats', () => {
         date: '2020-01-01',
         venues: null,
         lineups: [],
-        attendance: [{ status: 'went', user_id: 'user-1', memories: [] }],
+        attendance: [{ status: 'went', user_id: 'user-1', rating: null }],
       },
     ])
 
@@ -199,7 +199,7 @@ describe('getPersonalStats', () => {
       date: `20${10 + i}-01-01`,
       venues: null,
       lineups: [],
-      attendance: [{ status: 'went', user_id: 'user-1', memories: [] }],
+      attendance: [{ status: 'went', user_id: 'user-1', rating: null }],
     }))
     mockEvents(events)
 
@@ -208,7 +208,7 @@ describe('getPersonalStats', () => {
     expect(stats.recentActivity).toHaveLength(10)
   })
 
-  it('returns empty stats when there is no logged-in user', async () => {
+  it('returns empty stats when there is no logged-in user, without querying the catalog', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue(null)
     mockEvents([
       {
@@ -226,6 +226,10 @@ describe('getPersonalStats', () => {
     expect(stats.totalShows).toBe(0)
     expect(stats.uniqueArtists).toBe(0)
     expect(stats.recentActivity).toEqual([])
+    // Resilience fix: an anonymous visitor (e.g. /wrapped, which isn't behind
+    // the auth middleware) shouldn't trigger a full app-wide catalog fetch
+    // that's guaranteed to be discarded a moment later.
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('returns empty stats when the query errors out', async () => {

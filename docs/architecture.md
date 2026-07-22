@@ -1,73 +1,60 @@
 # 🏛️ Arquitectura del Sistema RITUAL
 
-Este documento define el modelo de datos y la lógica de negocio para manejar la complejidad de giras y festivales.
+Este documento define el modelo de datos y la lógica de negocio real de la app (actualizado en la Fase 3 de la auditoría 2026-07-21 para reflejar el esquema efectivamente implementado, no el diseño original).
 
 ## 1. Conceptos Core
 
-Para resolver el problema de "Shows vs. Festivales", el sistema utiliza una estructura jerárquica:
-
 * **Artist (Artista):** La unidad base (ej. *Los Piojos*, *Charly García*).
-* **Context (Contexto):** El "contenedor" del evento. Puede ser:
-    * **Gira (Tour):** Un artista principal recorriendo lugares (ej. *Ritual 87*).
-    * **Edición de Festival:** Un evento masivo con múltiples artistas (ej. *Cosquín Rock 2026*).
-* **Event (Evento/Fecha):** La instancia espacio-temporal concreta a la que asiste el usuario.
-    * Tiene una fecha y un lugar (`Venue`) específico.
-    * Si es un festival, representa un "Día" (ej. *Día 1*).
+* **Event (Evento/Fecha):** Un show puntual, con fecha y `Venue` específicos. Es la unidad central de la app — todo lo demás (attendance, expenses) cuelga de acá.
+* **Festival:** Un evento de varios días con múltiples artistas (ej. *Cosquín Rock 2026*). Se modela como una entidad propia con sus propios `attendance`/`rating` (no reutiliza `attendance` de eventos), y opcionalmente puede vincular `events` individuales como sus días (ver `festival_events`).
 
-## 2. Esquema de Base de Datos (ERD Preliminar)
+No existe el concepto de "gira" (tour): se evaluó en el diseño original pero nunca se construyó ninguna funcionalidad sobre él — ver nota al final.
+
+## 2. Esquema de Base de Datos
 
 ### A. Entidades Globales
 * **`profiles`**: Usuarios de la app (Extiende de Supabase Auth).
     * `id`, `username`, `avatar_url`, `bio`.
 * **`artists`**:
-    * `id`, `name`, `genre`, `image_url`, `spotify_id`.
+    * `id`, `name`, `genre`, `image_url`, `spotify_id`, `name_key` (generada, para dedup case-insensitive).
 * **`venues`**: Lugares físicos.
-    * `id`, `name`, `address`, `city`, `lat`, `lng`.
+    * `id`, `name`, `address`, `city`, `country`, `lat`, `lng`, `name_key` (generada, para dedup case-insensitive).
 
-### B. Estructura de Eventos
-* **`tours`**:
-    * `id`, `artist_id` (Dueño de la gira), `name` (ej. "Gira 2026"), `year`.
-* **`festivals`**: La marca del festival.
-    * `id`, `name` (ej. "Lollapalooza").
-* **`festival_editions`**: La realización anual.
-    * `id`, `festival_id`, `year`, `name` (ej. "Lollapalooza Arg 2025").
-
+### B. Estructura de Eventos y Festivales
 * **`events` (La tabla principal)**:
-    * `id` (UUID)
-    * `date`: TIMESTAMP (Fecha y hora).
-    * `venue_id`: FK.
-    * `tour_id`: FK (Nullable) -> Si pertenece a una gira.
-    * `festival_edition_id`: FK (Nullable) -> Si es parte de un festival.
-    * `is_child_event`: Boolean (True si es el "Día 1" de un festival).
+    * `id` (UUID), `name`, `date` (timestamptz), `venue_id` (FK), `status`.
+* **`festivals`**: Festival con sus propios datos, independiente de `events`.
+    * `id`, `name`, `edition`, `start_date`, `end_date`, `venue_id`, `city`, `country`, `website`, `notes`.
+* **`festival_events`**: Tabla puente — vincula `events` individuales (los "días") a un `festival`.
+    * `festival_id` (FK), `event_id` (FK), `day_label` (ej. "Día 1").
 
 ### C. Relación Artista-Evento
-* **`lineups`**: Tabla intermedia (Muchos a Muchos).
+* **`lineups`**: Tabla intermedia (Muchos a Muchos), solo para `events`.
     * `event_id`: FK.
     * `artist_id`: FK.
-    * `stage`: Texto (ej. "Escenario Norte").
-    * `order`: Integer (Para ordenar el cartel).
-    * `is_headliner`: Boolean.
+    * `stage`, `start_time`, `is_headliner`.
 
 ### D. User Experience
-* **`attendance` (La "Asistencia")**:
-    * `user_id`, `event_id`.
-    * `status`: ENUM ('interested', 'going', 'went').
-* **`memories` (Bitácora)**:
-    * `attendance_id`.
-    * `rating`: 1-5.
-    * `review`: Texto.
-    * `media_urls`: Array de fotos.
+* **`attendance`**: Asistencia del usuario a un `event` puntual, con su rating/reseña/notas de ESE show planos en la misma fila (fusionado desde una tabla `memories` separada en la Fase 3 — ver nota al final).
+    * `user_id`, `event_id`, `status`: ENUM ('interested', 'going', 'went'), `rating` (0-5), `review`, `notes`.
+* **`festival_attendance`**: Asistencia del usuario a un `festival` (independiente de la de sus `events` individuales, si los tiene vinculados). Mismo patrón plano que `attendance`.
+    * `festival_id`, `user_id`, `status`, `rating`, `review`.
 
 ## 3. Flujos de Usuario
 
-### Caso 1: Asistir a un Festival
-1.  El usuario busca "Cosquín Rock".
-2.  El sistema muestra la `festival_edition`.
-3.  El usuario ve los `events` hijos (Día 1, Día 2).
-4.  El usuario marca "Voy" al `event` "Día 1".
-5.  En la tabla `attendance` se guarda la relación con ese día específico.
+### Caso 1: Asistir a un Festival (con días vinculados)
+1.  El usuario busca "Cosquín Rock" y lo carga como `festival`.
+2.  Opcionalmente vincula `events` puntuales como sus días (`festival_events`, con `day_label`).
+3.  El usuario marca su asistencia general al festival en `festival_attendance` (status/rating/review propios del festival).
+4.  Si además quiere trackear un día específico como show individual, marca attendance en ESE `event` por separado — son registros independientes a propósito (ver Fase 3 de la auditoría: no es redundancia, son cardinalidades distintas).
 
-### Caso 2: Asistir a un Show de Gira
-1.  El usuario busca "Los Piojos".
-2.  El sistema muestra el `tour` actual y los próximos `events` (fechas).
-3.  El usuario marca "Voy" a la fecha de La Plata.
+### Caso 2: Asistir a un Show Suelto
+1.  El usuario busca un artista o importa un show vía Ticketmaster/Setlist.fm.
+2.  El sistema crea el `event` (con su `venue` y `lineup`).
+3.  El usuario marca "Voy"/"Fui" — se guarda en `attendance`, junto con el rating/reseña de ese show cuando lo carga.
+
+---
+
+**Nota histórica (Fase 3, 2026-07-21):** el diseño original de este documento planteaba un modelo jerárquico con `tours` (giras) y `festival_editions` (ediciones anuales de festival) como "contenedores" de `events`, vía columnas `events.tour_id`/`events.festival_edition_id`/`events.is_child_event`. Ninguna de las dos tablas ni esas columnas llegaron a tener código de aplicación que las usara — se auditó el repo completo antes de esta reescritura y se confirmó cero referencias reales. Se eliminaron en la migración `20260722000000_drop_dead_tour_columns.sql`. El modelo que sí se construyó y funciona es el descrito arriba: `festivals` + `festival_events` como tabla puente, plano y sin jerarquía de "ediciones".
+
+Además, en la misma fase se eliminó la tabla `memories` (que guardaba rating/review/notes en una fila 1:1 aparte de `attendance`, vía un `attendance_id` con constraint único) y se fusionaron sus columnas directamente en `attendance` — mismo razonamiento: era una relación forzada 1:1 sin ninguna razón de diseño viva, y `festival_attendance` ya modelaba lo mismo plano desde el principio. Migración: `20260722010000_fold_memories_into_attendance.sql`.

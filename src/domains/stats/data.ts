@@ -1,5 +1,10 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import { getCurrentUserId } from '@/src/core/auth/session'
+import { isPastEvent, eventYear } from '@/src/core/lib/dates'
+import { aggregateEventStats, type AggregatableEvent } from '@/src/domains/stats/aggregate'
+
+export { aggregateEventStats } from '@/src/domains/stats/aggregate'
+export type { AggregatableEvent, AggregatedEventStats } from '@/src/domains/stats/aggregate'
 
 export interface StatsData {
     totalShows: number
@@ -29,7 +34,7 @@ export interface StatsData {
 type RawAttendance = {
     status: string | null
     user_id: string
-    memories: Array<{ rating: number | null }>
+    rating: number | null
 }
 
 type RawEvent = {
@@ -43,12 +48,26 @@ type RawEvent = {
 
 type EventWithMyAttendance = RawEvent & { myAttendance: RawAttendance | null }
 
+function toAggregatable(ev: EventWithMyAttendance): AggregatableEvent {
+    return {
+        lineups: ev.lineups,
+        venues: ev.venues,
+        rating: ev.myAttendance?.rating ?? null,
+    }
+}
+
 /**
  * Calcula todas las estadísticas personales del usuario.
- * Combina eventos, attendance y memories en una sola query eficiente.
+ * Combina eventos y attendance (rating incluido) en una sola query eficiente.
  */
 export async function getPersonalStats(): Promise<StatsData> {
-    // Traer todos los eventos con venue, lineup, attendance y memories
+    // Sin sesión no hay stats personales que mostrar — no tiene sentido
+    // traer el catálogo entero de eventos (compartido entre todos los
+    // usuarios) solo para filtrarlo a [] después.
+    const userId = await getCurrentUserId()
+    if (!userId) return emptyStats()
+
+    // Traer todos los eventos con venue, lineup y attendance (rating incluido)
     const supabase = await createClient()
     const { data: events, error } = await supabase
         .from('events')
@@ -57,8 +76,7 @@ export async function getPersonalStats(): Promise<StatsData> {
       venues ( name, city, country ),
       lineups ( artists ( name ) ),
       attendance!left (
-        status, user_id,
-        memories ( rating )
+        status, user_id, rating
       )
     `)
         .order('date', { ascending: false })
@@ -69,13 +87,11 @@ export async function getPersonalStats(): Promise<StatsData> {
     }
 
     const rawEvents = events as unknown as RawEvent[]
-    const userId = await getCurrentUserId()
-    const now = new Date()
 
     // Filtrar attendance del usuario actual (RLS ya filtra, tomamos el primero si existe)
     const eventsWithMyAttendance: EventWithMyAttendance[] = rawEvents.map((ev) => ({
         ...ev,
-        myAttendance: userId ? (ev.attendance?.[0] ?? null) : null,
+        myAttendance: ev.attendance?.[0] ?? null,
     }))
 
     // Solo cuentan para las stats personales los eventos donde tengo attendance registrada
@@ -86,64 +102,20 @@ export async function getPersonalStats(): Promise<StatsData> {
     const showsGoing = userEvents.filter((e) => e.myAttendance?.status === 'going').length
     const showsInterested = userEvents.filter((e) => e.myAttendance?.status === 'interested').length
 
-    // Artistas únicos (de mis shows)
-    const artistSet = new Set<string>()
-    const artistCount: Record<string, number> = {}
-    for (const ev of userEvents) {
-        for (const l of ev.lineups ?? []) {
-            const name = l.artists?.name
-            if (name) {
-                artistSet.add(name)
-                artistCount[name] = (artistCount[name] ?? 0) + 1
-            }
-        }
-    }
-
-    // Venues únicos (de mis shows)
-    const venueMap: Record<string, { name: string; city: string | null; count: number }> = {}
-    const citySet = new Set<string>()
-    const countrySet = new Set<string>()
-    for (const ev of userEvents) {
-        const v = ev.venues
-        if (v?.name) {
-            if (!venueMap[v.name]) venueMap[v.name] = { name: v.name, city: v.city ?? null, count: 0 }
-            venueMap[v.name].count++
-            if (v.city) citySet.add(v.city)
-            if (v.country) countrySet.add(v.country)
-        }
-    }
-
     // Shows por año (de mis shows)
     const showsByYear: Record<string, number> = {}
     for (const ev of userEvents) {
-        const year = new Date(ev.date).getFullYear().toString()
+        const year = eventYear(ev.date).toString()
         showsByYear[year] = (showsByYear[year] ?? 0) + 1
     }
 
-    // Rating promedio
-    const ratings: number[] = []
-    for (const ev of userEvents) {
-        const r = ev.myAttendance?.memories?.[0]?.rating
-        if (r) ratings.push(r)
-    }
-    const averageRating = ratings.length > 0
-        ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
-        : null
-
-    // Top artistas (más de 1 show)
-    const topArtists = Object.entries(artistCount)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5)
-
-    // Top venues
-    const topVenues = Object.values(venueMap)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5)
+    const agg = aggregateEventStats(userEvents.map(toAggregatable))
+    const topArtists = agg.topArtists.slice(0, 5)
+    const topVenues = agg.topVenues.slice(0, 5)
 
     // Actividad reciente (últimos 10 shows pasados)
     const recentActivity = userEvents
-        .filter((e) => new Date(e.date) < now)
+        .filter((e) => isPastEvent(e.date))
         .slice(0, 10)
         .map((e) => ({
             id: e.id,
@@ -152,7 +124,7 @@ export async function getPersonalStats(): Promise<StatsData> {
             venueName: e.venues?.name ?? null,
             venueCity: e.venues?.city ?? null,
             status: e.myAttendance?.status ?? null,
-            rating: e.myAttendance?.memories?.[0]?.rating ?? null,
+            rating: e.myAttendance?.rating ?? null,
         }))
 
     return {
@@ -160,15 +132,15 @@ export async function getPersonalStats(): Promise<StatsData> {
         showsAttended,
         showsGoing,
         showsInterested,
-        uniqueArtists: artistSet.size,
-        uniqueVenues: Object.keys(venueMap).length,
-        uniqueCities: Array.from(citySet),
-        uniqueCountries: Array.from(countrySet),
+        uniqueArtists: agg.uniqueArtists,
+        uniqueVenues: agg.uniqueVenues,
+        uniqueCities: agg.uniqueCities,
+        uniqueCountries: agg.uniqueCountries,
         showsByYear,
         topArtists,
         topVenues,
-        averageRating,
-        totalRated: ratings.length,
+        averageRating: agg.averageRating,
+        totalRated: agg.totalRated,
         recentActivity,
     }
 }

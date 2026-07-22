@@ -189,33 +189,39 @@ describe('saveMemory', () => {
     expect(result.error).toBeTruthy()
   })
 
-  it('upserts only the fields that were actually passed, scoped by attendance_id', async () => {
-    const attendanceBuilder = makeQueryBuilder(
+  it('updates only the fields that were actually passed, scoped by attendance id', async () => {
+    const attendanceSelectBuilder = makeQueryBuilder(
       { data: { id: 'att-1', status: 'went' }, error: null }
     )
-    const memoriesUpsert = vi.fn(() => Promise.resolve({ error: null }))
-    const fromMock = vi.fn((table: string) =>
-      table === 'attendance' ? attendanceBuilder : { upsert: memoriesUpsert }
-    )
+    const updateEq = vi.fn(() => Promise.resolve({ error: null }))
+    const updateMock = vi.fn(() => ({ eq: updateEq }))
+    let callCount = 0
+    const fromMock = vi.fn(() => {
+      callCount++
+      // getOrCreateAttendance does the first from('attendance') call (select),
+      // saveMemory's own update is the second from('attendance') call.
+      return callCount === 1 ? attendanceSelectBuilder : { update: updateMock }
+    })
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
 
     const result = await saveMemory(VALID_EVENT_ID, { rating: 5, review: 'Genial' })
 
-    expect(memoriesUpsert).toHaveBeenCalledWith(
-      { attendance_id: 'att-1', rating: 5, review: 'Genial' },
-      { onConflict: 'attendance_id' }
-    )
+    expect(updateMock).toHaveBeenCalledWith({ rating: 5, review: 'Genial' })
+    expect(updateEq).toHaveBeenCalledWith('id', 'att-1')
     expect(result).toEqual({})
   })
 
-  it('returns a sanitized error when the memories upsert fails', async () => {
-    const attendanceBuilder = makeQueryBuilder(
+  it('returns a sanitized error when the attendance update fails', async () => {
+    const attendanceSelectBuilder = makeQueryBuilder(
       { data: { id: 'att-1', status: 'went' }, error: null }
     )
-    const memoriesUpsert = vi.fn(() => Promise.resolve({ error: { message: 'boom' } }))
-    const fromMock = vi.fn((table: string) =>
-      table === 'attendance' ? attendanceBuilder : { upsert: memoriesUpsert }
-    )
+    const updateEq = vi.fn(() => Promise.resolve({ error: { message: 'boom' } }))
+    const updateMock = vi.fn(() => ({ eq: updateEq }))
+    let callCount = 0
+    const fromMock = vi.fn(() => {
+      callCount++
+      return callCount === 1 ? attendanceSelectBuilder : { update: updateMock }
+    })
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
 
     const result = await saveMemory(VALID_EVENT_ID, { notes: 'nota' })

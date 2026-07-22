@@ -3,6 +3,7 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import { validateUUID, validateRating, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { getCurrentUserId } from '@/src/core/auth/session'
+import type { ActionResult } from '@/src/core/types'
 
 export type AttendanceStatus = 'interested' | 'going' | 'went'
 
@@ -59,7 +60,7 @@ export async function getOrCreateAttendance(
 export async function setAttendanceStatus(
     eventId: string,
     status: AttendanceStatus
-): Promise<{ error?: string }> {
+): Promise<ActionResult> {
     const idErr = validateUUID(eventId, 'Evento')
     if (idErr) return { error: idErr }
 
@@ -88,7 +89,7 @@ export async function setAttendanceStatus(
 export async function saveMemory(
     eventId: string,
     data: { rating?: number; review?: string; notes?: string }
-): Promise<{ error?: string }> {
+): Promise<ActionResult> {
     const idErr = validateUUID(eventId, 'Evento')
     if (idErr) return { error: idErr }
 
@@ -116,11 +117,9 @@ export async function saveMemory(
     if (notes !== undefined) payload.notes = notes
 
     const { error } = await supabase
-        .from('memories')
-        .upsert(
-            { attendance_id: attendance.id, ...payload },
-            { onConflict: 'attendance_id' }
-        )
+        .from('attendance')
+        .update(payload)
+        .eq('id', attendance.id)
     if (error) return { error: sanitizeError(error) }
 
     return {}

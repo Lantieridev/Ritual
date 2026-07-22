@@ -10,7 +10,7 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn(),
 }))
 
-import { getEventsWithAttendance } from '@/src/domains/events/data'
+import { getEventsWithAttendance, MAX_EVENTS } from '@/src/domains/events/data'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
@@ -19,6 +19,7 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   builder.select = vi.fn(chain)
   builder.eq = vi.fn(chain)
   builder.order = vi.fn(chain)
+  builder.limit = vi.fn(chain)
   builder.single = vi.fn(() => Promise.resolve(result))
   builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
     Promise.resolve(result).then(onFulfilled, onRejected)
@@ -67,6 +68,22 @@ describe('getEventsWithAttendance', () => {
     const result = await getEventsWithAttendance()
 
     expect(result[0].attendance).toEqual([])
+  })
+
+  // Regression test found during the Fase 2 checkpoint re-audit: this query
+  // ran unbounded against the whole shared catalog, for every visitor
+  // (logged in or not — `/` and `/wrapped` aren't behind the auth
+  // middleware), unlike its sibling getPersonalStats() which was already
+  // bounded by requiring a session first.
+  it('caps the query with a defensive limit instead of fetching the whole catalog', async () => {
+    const builder = makeQueryBuilder({ data: [], error: null })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+
+    await getEventsWithAttendance()
+
+    expect(builder.limit).toHaveBeenCalledWith(MAX_EVENTS)
   })
 
   it('returns an empty list when the query errors out', async () => {

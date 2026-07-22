@@ -28,9 +28,9 @@ describe('getAttendanceForEvent', () => {
     vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
   })
 
-  it('returns attendance scoped to the current user, flattening the memory array', async () => {
+  it('returns attendance with rating/review/notes read straight off the row', async () => {
     const builder = makeQueryBuilder({
-      data: { id: 'att-1', status: 'went', memories: [{ id: 'mem-1', rating: 5, review: 'Genial', notes: null }] },
+      data: { id: 'att-1', status: 'went', rating: 5, review: 'Genial', notes: null },
       error: null,
     })
     const fromMock = vi.fn(() => builder)
@@ -42,20 +42,22 @@ describe('getAttendanceForEvent', () => {
     expect(result).toEqual({
       id: 'att-1',
       status: 'went',
-      memory: { id: 'mem-1', rating: 5, review: 'Genial', notes: null },
+      rating: 5,
+      review: 'Genial',
+      notes: null,
     })
   })
 
-  it('returns null memory when there are no memories for the attendance', async () => {
+  it('returns null rating/review/notes when the attendance was never rated', async () => {
     const builder = makeQueryBuilder({
-      data: { id: 'att-1', status: 'interested', memories: [] },
+      data: { id: 'att-1', status: 'interested', rating: null, review: null, notes: null },
       error: null,
     })
     mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
 
     const result = await getAttendanceForEvent('evt-1')
 
-    expect(result?.memory).toBeNull()
+    expect(result?.rating).toBeNull()
   })
 
   it('returns null without touching the client when there is no logged-in user', async () => {

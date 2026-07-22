@@ -7,7 +7,9 @@ import { deleteEvent } from '@/src/domains/events/actions'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
 import { getEventPhotos } from '@/src/domains/events/photo-actions'
 import { routes } from '@/src/core/lib/routes'
-import { LinkButton } from '@/src/core/components/ui'
+import { isPastEvent } from '@/src/core/lib/dates'
+import { formatDate } from '@/src/core/lib/utils'
+import { LinkButton, StarRating } from '@/src/core/components/ui'
 import { DeleteEventButton } from '@/src/domains/events/components'
 import { AttendanceStatusButtons } from '@/src/domains/events/components/AttendanceStatusButtons'
 import { RatingAndReviewForm } from '@/src/domains/events/components/RatingAndReviewForm'
@@ -27,7 +29,7 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
     : 'Sede por confirmar'
   return {
     title: `${event.name || 'Recital'} | RITUAL`,
-    description: `${event.name || 'Recital'} — ${new Date(event.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })} · ${venueLabel}`,
+    description: `${event.name || 'Recital'} — ${formatDate(event.date)} · ${venueLabel}`,
   }
 }
 
@@ -54,13 +56,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     : 'Sede por confirmar'
 
   const dateObj = new Date(event.date)
-  const dateLabel = dateObj.toLocaleDateString('es-AR', {
+  const dateLabel = formatDate(dateObj, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   })
-  const isPast = dateObj < new Date()
+  const isPast = isPastEvent(event.date)
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white font-sans">
@@ -173,41 +175,32 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <p className="text-xs uppercase tracking-widest text-zinc-500 mb-4">Tu memoria del show</p>
 
             {/* Mostrar rating guardado */}
-            {attendance?.memory?.rating && (
-              <div className="flex gap-0.5 mb-4">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    className={`text-xl ${star <= (attendance.memory?.rating ?? 0) ? 'text-white' : 'text-zinc-700'}`}
-                  >
-                    ★
-                  </span>
-                ))}
-              </div>
+            {attendance?.rating && (
+              <StarRating value={attendance.rating} size="xl" className="mb-4" />
             )}
 
             {/* Mostrar reseña guardada */}
-            {attendance?.memory?.review && (
+            {attendance?.review && (
               <p className="text-zinc-300 text-sm italic mb-4 border-l-2 border-white/10 pl-4">
-                &quot;{attendance.memory.review}&quot;
+                &quot;{attendance.review}&quot;
               </p>
             )}
 
             {/* Mostrar notas guardadas */}
-            {attendance?.memory?.notes && (
+            {attendance?.notes && (
               <div className="mb-6 rounded-lg bg-white/[0.03] border border-white/[0.06] px-4 py-3">
                 <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-2">Notas / Setlist</p>
                 <pre className="text-sm text-zinc-400 whitespace-pre-wrap font-mono leading-relaxed">
-                  {attendance.memory.notes}
+                  {attendance.notes}
                 </pre>
               </div>
             )}
 
             <RatingAndReviewForm
               eventId={event.id}
-              initialRating={attendance?.memory?.rating}
-              initialReview={attendance?.memory?.review}
-              initialNotes={attendance?.memory?.notes}
+              initialRating={attendance?.rating}
+              initialReview={attendance?.review}
+              initialNotes={attendance?.notes}
             />
           </section>
         )}
