@@ -33,6 +33,7 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   const { nextShow, events, byYear, years } = buildHomeFeed(allEvents, filter, now)
   const currentYear = now.getFullYear()
+  const hasData = allEvents.length > 0
 
   const FILTERS: { value: HomeFilter; label: string }[] = [
     { value: 'all', label: 'Todos' },
@@ -45,9 +46,15 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   return (
     <>
-      <Hero />
+      {/* El hero full-viewport es para la primera visita / estado vacío —
+          un usuario recurrente con shows cargados no necesita el pitch de
+          marketing en cada visita, entra directo al feed. */}
+      {!hasData && <Hero />}
 
-      <section id="recitales" className="max-w-4xl mx-auto px-6 md:px-8 py-16">
+      <section
+        id="recitales"
+        className={`max-w-4xl mx-auto px-6 md:px-8 pb-16 ${hasData ? 'pt-28' : 'py-16'}`}
+      >
 
         {/* Banner: próximo show */}
         {nextShow && filter === 'all' && (
