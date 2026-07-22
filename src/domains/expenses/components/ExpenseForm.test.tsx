@@ -63,7 +63,7 @@ describe('ExpenseForm — edit mode', () => {
   const expense = {
     id: 'x1',
     amount: 2000,
-    category: 'Comida / Bebida',
+    category: 'Comida',
     note: 'Cena post-show',
     date: '2024-05-01',
     event_id: 'e1',

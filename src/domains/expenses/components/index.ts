@@ -1,2 +1,2 @@
-export { ExpenseForm, EXPENSE_CATEGORIES } from './ExpenseForm'
+export { ExpenseForm } from './ExpenseForm'
 export { DeleteExpenseButton } from './DeleteExpenseButton'

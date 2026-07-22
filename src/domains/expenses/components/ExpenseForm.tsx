@@ -5,17 +5,9 @@ import Link from 'next/link'
 import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
+import { EXPENSE_CATEGORIES } from '@/src/domains/expenses/categories'
 import type { ExpenseCreateInput, ExpenseUpdateInput, Expense } from '@/src/core/types'
 import type { EventWithRelations } from '@/src/core/types'
-
-export const EXPENSE_CATEGORIES = [
-  'Entrada',
-  'Viaje',
-  'Hospedaje',
-  'Comida / Bebida',
-  'Merchandising',
-  'Otro',
-]
 
 interface ExpenseFormProps {
   events: EventWithRelations[]
@@ -78,7 +70,7 @@ export function ExpenseForm({ events, createExpense, expense, updateExpense }: E
         <select id="category" name="category" required className={inputClass} defaultValue={expense?.category ?? ''}>
           <option value="">Elegir...</option>
           {EXPENSE_CATEGORIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c.name} value={c.name}>{c.icon} {c.name}</option>
           ))}
         </select>
       </FormField>

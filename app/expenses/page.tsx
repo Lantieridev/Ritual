@@ -4,30 +4,13 @@ import { getCurrentUserId } from '@/src/core/auth/session'
 import { getExpenses, getExpensesSummary } from '@/src/domains/expenses/data'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
+import { getExpenseCategory } from '@/src/domains/expenses/categories'
 import { Card, LinkButton } from '@/src/core/components/ui'
 import { PageShell } from '@/src/core/components/layout'
 
 export const metadata: Metadata = {
   title: 'Mis gastos | RITUAL',
   description: 'Gastos personales de recitales. No se comparten con otros usuarios.',
-}
-
-const CATEGORY_ICONS: Record<string, string> = {
-  Entrada: '🎟️',
-  Transporte: '🚌',
-  Merch: '👕',
-  Comida: '🍔',
-  Alojamiento: '🏨',
-  Otro: '💸',
-}
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Entrada: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
-  Transporte: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  Merch: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
-  Comida: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-  Alojamiento: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
-  Otro: 'bg-zinc-500/20 text-zinc-300 border-zinc-500/30',
 }
 
 function formatARS(amount: number) {
@@ -105,11 +88,10 @@ export default async function ExpensesPage() {
               <div className="space-y-2">
                 {topCategories.map(([cat, amount]) => {
                   const pct = summary.total > 0 ? (amount / summary.total) * 100 : 0
-                  const icon = CATEGORY_ICONS[cat] ?? '💸'
-                  const colorClass = CATEGORY_COLORS[cat] ?? CATEGORY_COLORS['Otro']
+                  const { icon, color } = getExpenseCategory(cat)
                   return (
                     <div key={cat} className="flex items-center gap-3">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${colorClass} min-w-[110px]`}>
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${color} min-w-[110px]`}>
                         {icon} {cat}
                       </span>
                       <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
@@ -133,8 +115,7 @@ export default async function ExpensesPage() {
             <p className="text-xs uppercase tracking-widest text-zinc-500 mb-3">Todos los gastos</p>
             <ul className="grid gap-3 md:grid-cols-2">
               {expenses.map((ex) => {
-                const icon = CATEGORY_ICONS[ex.category] ?? '💸'
-                const colorClass = CATEGORY_COLORS[ex.category] ?? CATEGORY_COLORS['Otro']
+                const { icon, color } = getExpenseCategory(ex.category)
                 return (
                   <li key={ex.id}>
                     <Link href={routes.expenses.detail(ex.id)} className="block h-full">
@@ -142,7 +123,7 @@ export default async function ExpensesPage() {
                         <div className="flex justify-between items-start gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${colorClass}`}>
+                              <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${color}`}>
                                 {icon} {ex.category}
                               </span>
                             </div>
