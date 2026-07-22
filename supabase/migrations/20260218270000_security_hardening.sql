@@ -64,18 +64,26 @@ create policy "Owner update attendance"
 create policy "Owner delete attendance"
   on "public"."attendance" for delete to authenticated using (auth.uid() = user_id);
 
--- Memories
+-- Memories (ownership lives on attendance, memories has no user_id column)
 create policy "Owner select memories"
-  on "public"."memories" for select to authenticated using (auth.uid() = user_id);
+  on "public"."memories" for select to authenticated using (
+    exists (select 1 from public.attendance a where a.id = memories.attendance_id and a.user_id = auth.uid())
+  );
 
 create policy "Owner insert memories"
-  on "public"."memories" for insert to authenticated with check (auth.uid() = user_id);
+  on "public"."memories" for insert to authenticated with check (
+    exists (select 1 from public.attendance a where a.id = memories.attendance_id and a.user_id = auth.uid())
+  );
 
 create policy "Owner update memories"
-  on "public"."memories" for update to authenticated using (auth.uid() = user_id);
+  on "public"."memories" for update to authenticated using (
+    exists (select 1 from public.attendance a where a.id = memories.attendance_id and a.user_id = auth.uid())
+  );
 
 create policy "Owner delete memories"
-  on "public"."memories" for delete to authenticated using (auth.uid() = user_id);
+  on "public"."memories" for delete to authenticated using (
+    exists (select 1 from public.attendance a where a.id = memories.attendance_id and a.user_id = auth.uid())
+  );
 
 -- Wishlist
 create policy "Owner select wishlist"
