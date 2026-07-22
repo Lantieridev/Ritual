@@ -26,7 +26,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+  if (getUserError) {
+    console.error("supabase.auth.getUser() failed in root layout:", getUserError);
+  }
 
   return (
     <html lang="es" className="dark">

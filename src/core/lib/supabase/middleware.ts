@@ -29,7 +29,10 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: getUserError } = await supabase.auth.getUser()
+    if (getUserError) {
+        console.error('supabase.auth.getUser() failed in middleware:', getUserError)
+    }
 
     // ─── Route Protection ────────────────────────────────────────────────────────
     const url = request.nextUrl.clone()

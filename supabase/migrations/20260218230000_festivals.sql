@@ -18,6 +18,21 @@ create table if not exists "public"."festivals" (
   constraint "festivals_pkey" primary key ("id")
 );
 
+-- The 20260216230841 remote-schema snapshot already created a bare "festivals"
+-- table (id, name, description, created_at), so the CREATE TABLE IF NOT EXISTS
+-- above is a no-op on fresh installs. Backfill the columns explicitly.
+alter table "public"."festivals" add column if not exists "edition" text;
+alter table "public"."festivals" add column if not exists "start_date" date;
+update "public"."festivals" set "start_date" = "created_at"::date where "start_date" is null;
+alter table "public"."festivals" alter column "start_date" set not null;
+alter table "public"."festivals" add column if not exists "end_date" date;
+alter table "public"."festivals" add column if not exists "venue_id" uuid references public.venues(id) on delete set null;
+alter table "public"."festivals" add column if not exists "city" text;
+alter table "public"."festivals" add column if not exists "country" text;
+alter table "public"."festivals" add column if not exists "website" text;
+alter table "public"."festivals" add column if not exists "poster_url" text;
+alter table "public"."festivals" add column if not exists "notes" text;
+
 alter table "public"."festivals" enable row level security;
 
 create policy "Public select festivals"

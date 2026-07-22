@@ -9,7 +9,10 @@ import { createClient } from '@/src/core/lib/supabase/server'
 export async function getCurrentUserId(): Promise<string | null> {
     const supabase = await createClient()
     try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { user }, error: getUserError } = await supabase.auth.getUser()
+        if (getUserError) {
+            console.error('supabase.auth.getUser() failed in getCurrentUserId:', getUserError)
+        }
         return user?.id ?? null
     } catch (error) {
         console.error('Error fetching current user:', error)

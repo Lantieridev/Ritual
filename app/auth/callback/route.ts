@@ -2,11 +2,19 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { sanitizeAuthError } from '@/src/core/lib/validation'
 
+// Solo permite rutas internas relativas (un solo "/" inicial, sin "//" ni
+// esquema) para evitar que "next" se use como open-redirect.
+function safeNextPath(raw: string | null): string {
+    if (!raw) return '/'
+    if (!raw.startsWith('/') || raw.startsWith('//')) return '/'
+    if (raw.includes('://')) return '/'
+    return raw
+}
+
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
-    // if "next" is in param, use it as the redirect URL
-    const next = searchParams.get('next') ?? '/'
+    const next = safeNextPath(searchParams.get('next'))
 
     if (code) {
         const supabase = await createClient()
