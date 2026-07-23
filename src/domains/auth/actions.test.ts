@@ -10,7 +10,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { updateProfile } from '@/src/domains/auth/actions'
+import { updateProfile, modifyProfile } from '@/src/domains/auth/actions'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -173,5 +173,71 @@ describe('updateProfile', () => {
     const result = await updateProfile({}, new FormData())
 
     expect(result).toEqual({ success: 'Perfil actualizado correctamente.' })
+  })
+})
+
+describe('modifyProfile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('requires a logged-in user', async () => {
+    const supabase = makeSupabase({ user: null })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await modifyProfile({ username: 'martin' })
+
+    expect(result).toEqual({ error: 'No estás autenticado.' })
+  })
+
+  it('trims and caps text fields, and never touches avatar_url', async () => {
+    const supabase = makeSupabase({
+      user: { id: 'user-1' },
+      profileResult: { data: null, error: null },
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    await modifyProfile({
+      full_name: '  Martin  ',
+      username: '  martin_dev  ',
+      bio: '  Fan del rock  ',
+      website: '  https://example.com  ',
+      location: '  CABA  ',
+    })
+
+    const upsertMock = supabase.profileBuilder.upsert as ReturnType<typeof vi.fn>
+    const upserted = upsertMock.mock.calls[0][0]
+    expect(upserted).toMatchObject({
+      full_name: 'Martin',
+      username: 'martin_dev',
+      bio: 'Fan del rock',
+      website: 'https://example.com',
+      location: 'CABA',
+    })
+    expect(upserted).not.toHaveProperty('avatar_url')
+  })
+
+  it('returns a specific error for a duplicate username', async () => {
+    const supabase = makeSupabase({
+      user: { id: 'user-1' },
+      profileResult: { data: null, error: { code: '23505' } },
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await modifyProfile({ username: 'taken' })
+
+    expect(result).toEqual({ error: 'Ese nombre de usuario ya está en uso.' })
+  })
+
+  it('returns {} on success, no redirect involved', async () => {
+    const supabase = makeSupabase({
+      user: { id: 'user-1' },
+      profileResult: { data: null, error: null },
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await modifyProfile({})
+
+    expect(result).toEqual({})
   })
 })
