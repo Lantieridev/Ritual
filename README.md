@@ -34,7 +34,7 @@ Porque la música es cultura compartida. Queremos que RITUAL sea construido por 
 
 ¡Toda ayuda es bienvenida! Ya sea reportando bugs, proponiendo ideas o tirando código.
 
-1.  Revisá el [ROADMAP.md](./docs/ROADMAP.md) para ver qué falta hacer. Los issues marcados como "Good First Issue" o "Help Wanted" son ideales para empezar.
+1.  Revisá los [Issues abiertos](https://github.com/Lantieridev/Ritual/issues) para ver qué falta hacer. Los marcados como "good first issue" o "help wanted" son ideales para empezar.
 2.  Leé nuestra [Guía de Contribución](./CONTRIBUTING.md) para conocer los estándares de código.
 3.  Hacé un Fork y mandá tu Pull Request.
 
