@@ -15,7 +15,7 @@ vi.mock('next/navigation', () => ({
   redirect: (...args: unknown[]) => mockRedirect(...args),
 }))
 
-import { createExpense, updateExpense, deleteExpense } from '@/src/domains/expenses/actions'
+import { createExpense, updateExpense, deleteExpense, insertExpense, modifyExpense, removeExpense } from '@/src/domains/expenses/actions'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 const VALID_EXPENSE_ID = '11111111-1111-1111-1111-111111111111'
@@ -28,6 +28,8 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   builder.update = vi.fn(chain)
   builder.delete = vi.fn(chain)
   builder.eq = vi.fn(chain)
+  builder.select = vi.fn(chain)
+  builder.single = vi.fn(() => Promise.resolve(result))
   builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
     Promise.resolve(result).then(onFulfilled, onRejected)
   return builder
@@ -86,7 +88,7 @@ describe('createExpense', () => {
   })
 
   it('inserts scoped to the current user and redirects to the list', async () => {
-    const builder = makeQueryBuilder({ data: null, error: null })
+    const builder = makeQueryBuilder({ data: { id: 'expense-1' }, error: null })
     mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
 
     await createExpense({
@@ -216,5 +218,49 @@ describe('deleteExpense', () => {
     const result = await deleteExpense(VALID_EXPENSE_ID)
 
     expect(result.error).toBeTruthy()
+  })
+})
+
+describe('insertExpense / modifyExpense / removeExpense', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('insertExpense returns the new id without redirecting', async () => {
+    const builder = makeQueryBuilder({ data: { id: 'expense-1' }, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await insertExpense({ amount: 100, category: 'Entrada', date: '2024-01-01' } as never)
+
+    expect(result).toEqual({ id: 'expense-1' })
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  it('modifyExpense updates without redirecting', async () => {
+    const builder = makeQueryBuilder({ data: null, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await modifyExpense(VALID_EXPENSE_ID, { category: 'Comida' })
+
+    expect(result).toEqual({})
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  it('modifyExpense reports noChanges when nothing was actually provided, without touching the client', async () => {
+    const result = await modifyExpense(VALID_EXPENSE_ID, {})
+
+    expect(result).toEqual({ noChanges: true })
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('removeExpense deletes without redirecting', async () => {
+    const builder = makeQueryBuilder({ data: null, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await removeExpense(VALID_EXPENSE_ID)
+
+    expect(result).toEqual({})
+    expect(mockRedirect).not.toHaveBeenCalled()
   })
 })

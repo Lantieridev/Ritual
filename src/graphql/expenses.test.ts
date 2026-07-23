@@ -6,6 +6,12 @@ vi.mock('@/src/domains/expenses/data', () => ({
   getExpensesSummary: vi.fn(),
 }))
 
+vi.mock('@/src/domains/expenses/actions', () => ({
+  insertExpense: vi.fn(),
+  modifyExpense: vi.fn(),
+  removeExpense: vi.fn(),
+}))
+
 vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: vi.fn().mockResolvedValue({}),
 }))
@@ -16,6 +22,7 @@ vi.mock('@/src/core/auth/session', () => ({
 }))
 
 import { getExpenses, getExpenseById, getExpensesSummary } from '@/src/domains/expenses/data'
+import { insertExpense, modifyExpense, removeExpense } from '@/src/domains/expenses/actions'
 import { POST } from '@/app/api/graphql/route'
 
 async function query(source: string) {
@@ -87,5 +94,74 @@ describe('expenses GraphQL schema', () => {
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ expense: null })
     expect(getExpenseById).toHaveBeenCalledWith('missing', 'user-1')
+  })
+})
+
+describe('expenses GraphQL mutations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('creates an expense, mapping camelCase input to the domain snake_case shape', async () => {
+    vi.mocked(insertExpense).mockResolvedValue({ id: 'ex-new' })
+
+    const body = await query(`mutation {
+      createExpense(input: { amount: 5000, category: "Entrada", date: "2026-03-01", eventId: "e1" }) { id error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ createExpense: { id: 'ex-new', error: null } })
+    expect(insertExpense).toHaveBeenCalledWith({
+      amount: 5000,
+      category: 'Entrada',
+      note: undefined,
+      event_id: 'e1',
+      date: '2026-03-01',
+    })
+  })
+
+  it('updates an expense, translating ActionResult into {success, error}', async () => {
+    vi.mocked(modifyExpense).mockResolvedValue({})
+
+    const body = await query(`mutation {
+      updateExpense(id: "ex1", input: { category: "Comida" }) { success error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ updateExpense: { success: true, error: null } })
+    expect(modifyExpense).toHaveBeenCalledWith('ex1', {
+      amount: undefined,
+      category: 'Comida',
+      note: undefined,
+      event_id: undefined,
+      date: undefined,
+    })
+  })
+
+  it('reports a no-op update as success, same as the Server Action does', async () => {
+    vi.mocked(modifyExpense).mockResolvedValue({ noChanges: true })
+
+    const body = await query('mutation { updateExpense(id: "ex1", input: {}) { success error } }')
+
+    expect(body.data).toEqual({ updateExpense: { success: true, error: null } })
+  })
+
+  it('deletes an expense', async () => {
+    vi.mocked(removeExpense).mockResolvedValue({})
+
+    const body = await query('mutation { deleteExpense(id: "ex1") { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ deleteExpense: { success: true, error: null } })
+    expect(removeExpense).toHaveBeenCalledWith('ex1')
+  })
+
+  it('reports failure through success:false, not a thrown GraphQL error', async () => {
+    vi.mocked(removeExpense).mockResolvedValue({ error: 'boom' })
+
+    const body = await query('mutation { deleteExpense(id: "ex1") { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ deleteExpense: { success: false, error: 'boom' } })
   })
 })

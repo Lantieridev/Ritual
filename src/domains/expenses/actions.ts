@@ -27,7 +27,12 @@ function validateAmount(amount: number): string | null {
   return null
 }
 
-export async function createExpense(formData: ExpenseCreateInput): Promise<ActionResult> {
+/**
+ * Inserta el gasto y devuelve su id — sin redirigir. Misma razón que en
+ * venues/artists/festivals: la mutation de GraphQL nunca debería redirigir,
+ * eso queda para la Server Action que maneja el submit del formulario.
+ */
+export async function insertExpense(formData: ExpenseCreateInput): Promise<ActionResult<{ id?: string }>> {
   const r = await requireUserId()
   if ('error' in r) return r
 
@@ -48,25 +53,42 @@ export async function createExpense(formData: ExpenseCreateInput): Promise<Actio
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.from('expenses').insert({
-    user_id: r.userId,
-    amount,
-    category,
-    note: sanitizeText(formData.note, MAX_NOTE_LENGTH),
-    event_id: formData.event_id || null,
-    date: formData.date,
-  })
+  const { data, error } = await supabase
+    .from('expenses')
+    .insert({
+      user_id: r.userId,
+      amount,
+      category,
+      note: sanitizeText(formData.note, MAX_NOTE_LENGTH),
+      event_id: formData.event_id || null,
+      date: formData.date,
+    })
+    .select('id')
+    .single()
   if (error) {
     console.error('Error creando gasto:', error)
     return { error: sanitizeError(error) }
   }
+  return { id: data.id }
+}
+
+export async function createExpense(formData: ExpenseCreateInput): Promise<ActionResult> {
+  const result = await insertExpense(formData)
+  if (result.error) return result
   redirect(routes.expenses.list)
 }
 
-export async function updateExpense(
+/**
+ * Actualiza el gasto sin redirigir — misma razón que insertExpense.
+ * `noChanges` distingue "no había nada que actualizar" de una actualización
+ * real: updateExpense necesita esa distinción para no redirigir en el caso
+ * en que no se tocó nada (mismo comportamiento que tenía antes de separar
+ * esta función).
+ */
+export async function modifyExpense(
   id: string,
   formData: ExpenseUpdateInput
-): Promise<ActionResult> {
+): Promise<ActionResult<{ noChanges?: boolean }>> {
   const r = await requireUserId()
   if ('error' in r) return r
 
@@ -95,7 +117,7 @@ export async function updateExpense(
   if (formData.event_id !== undefined) payload.event_id = formData.event_id || null
   if (formData.date !== undefined) payload.date = formData.date
 
-  if (Object.keys(payload).length === 0) return {}
+  if (Object.keys(payload).length === 0) return { noChanges: true }
 
   const supabase = await createClient()
   const { error } = await supabase
@@ -107,10 +129,21 @@ export async function updateExpense(
     console.error('Error actualizando gasto:', error)
     return { error: sanitizeError(error) }
   }
+  return {}
+}
+
+export async function updateExpense(
+  id: string,
+  formData: ExpenseUpdateInput
+): Promise<ActionResult> {
+  const result = await modifyExpense(id, formData)
+  if (result.error) return result
+  if (result.noChanges) return {}
   redirect(routes.expenses.detail(id))
 }
 
-export async function deleteExpense(id: string): Promise<ActionResult> {
+/** Borra el gasto sin redirigir — misma razón que insertExpense. */
+export async function removeExpense(id: string): Promise<ActionResult> {
   const r = await requireUserId()
   if ('error' in r) return r
 
@@ -127,5 +160,11 @@ export async function deleteExpense(id: string): Promise<ActionResult> {
     console.error('Error eliminando gasto:', error)
     return { error: sanitizeError(error) }
   }
+  return {}
+}
+
+export async function deleteExpense(id: string): Promise<ActionResult> {
+  const result = await removeExpense(id)
+  if (result.error) return result
   redirect(routes.expenses.list)
 }
