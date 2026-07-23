@@ -1,6 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
-
-vi.mock('server-only', () => ({}))
+import { describe, it, expect } from 'vitest'
 
 import { buildArtistEnrichment } from '@/src/domains/artists/enrichment'
 import type { ArtistWithEvents } from '@/src/domains/artists/data'

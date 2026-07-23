@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('server-only', () => ({}))
-
 vi.mock('@/src/core/lib/env', () => ({
   getTicketmasterApiKey: vi.fn(),
 }))
