@@ -25,7 +25,12 @@ function validateCreate(data: EventCreateInput): string | null {
   return null
 }
 
-export async function createEvent(formData: EventCreateInput): Promise<ActionResult> {
+/**
+ * Inserta el evento (y su lineup, si se pasan artist_ids) y devuelve su id
+ * — sin redirigir, misma razón que en los demás dominios: la mutation de
+ * GraphQL nunca debería redirigir.
+ */
+export async function insertEvent(formData: EventCreateInput): Promise<ActionResult<{ id?: string }>> {
   const userId = await getCurrentUserId()
   if (!userId) return { error: 'Usuario no autenticado' }
 
@@ -64,10 +69,17 @@ export async function createEvent(formData: EventCreateInput): Promise<ActionRes
       // quedó a medio hacer. El usuario tiene que enterarse y completarlo.
       return {
         error: 'El recital se guardó, pero no se pudieron guardar los artistas del lineup. Editalo para agregarlos.',
+        id: newEvent.id,
       }
     }
   }
 
+  return { id: newEvent.id }
+}
+
+export async function createEvent(formData: EventCreateInput): Promise<ActionResult> {
+  const result = await insertEvent(formData)
+  if (result.error) return result
   redirect(routes.home)
 }
 
@@ -162,10 +174,8 @@ export async function addExternalEvent(
   return { eventId: newEvent.id }
 }
 
-export async function updateEvent(
-  id: string,
-  formData: EventUpdateInput
-): Promise<ActionResult> {
+/** Actualiza el evento (y su lineup) sin redirigir — misma razón que insertEvent. */
+export async function modifyEvent(id: string, formData: EventUpdateInput): Promise<ActionResult> {
   const userId = await getCurrentUserId()
   if (!userId) return { error: 'Usuario no autenticado' }
 
@@ -224,10 +234,20 @@ export async function updateEvent(
     }
   }
 
+  return {}
+}
+
+export async function updateEvent(
+  id: string,
+  formData: EventUpdateInput
+): Promise<ActionResult> {
+  const result = await modifyEvent(id, formData)
+  if (result.error) return result
   redirect(routes.events.detail(id))
 }
 
-export async function deleteEvent(id: string): Promise<ActionResult> {
+/** Borra el evento (y su lineup) sin redirigir — misma razón que insertEvent. */
+export async function removeEvent(id: string): Promise<ActionResult> {
   const userId = await getCurrentUserId()
   if (!userId) return { error: 'Usuario no autenticado' }
 
@@ -247,5 +267,11 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
     return { error: sanitizeError(eventError) }
   }
 
+  return {}
+}
+
+export async function deleteEvent(id: string): Promise<ActionResult> {
+  const result = await removeEvent(id)
+  if (result.error) return result
   redirect(routes.home)
 }

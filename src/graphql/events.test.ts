@@ -13,6 +13,20 @@ vi.mock('@/src/domains/events/attendance-data', () => ({
 
 vi.mock('@/src/domains/events/photo-actions', () => ({
   getEventPhotos: vi.fn(),
+  deleteEventPhoto: vi.fn(),
+}))
+
+vi.mock('@/src/domains/events/actions', () => ({
+  insertEvent: vi.fn(),
+  modifyEvent: vi.fn(),
+  removeEvent: vi.fn(),
+  addExternalEvent: vi.fn(),
+}))
+
+vi.mock('@/src/domains/events/attendance-actions', () => ({
+  getOrCreateAttendance: vi.fn(),
+  setAttendanceStatus: vi.fn(),
+  saveMemory: vi.fn(),
 }))
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
@@ -25,7 +39,9 @@ vi.mock('@/src/core/auth/session', () => ({
 
 import { getEvents, getEventsWithAttendance, getEventById } from '@/src/domains/events/data'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
-import { getEventPhotos } from '@/src/domains/events/photo-actions'
+import { getEventPhotos, deleteEventPhoto } from '@/src/domains/events/photo-actions'
+import { insertEvent, modifyEvent, removeEvent, addExternalEvent } from '@/src/domains/events/actions'
+import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import { POST } from '@/app/api/graphql/route'
 
 async function query(source: string) {
@@ -152,5 +168,129 @@ describe('events GraphQL schema', () => {
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ events: [{ id: 'e2', name: null, venue: null, lineups: [] }] })
+  })
+})
+
+describe('events GraphQL mutations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('creates an event, mapping camelCase input to the domain snake_case shape', async () => {
+    vi.mocked(insertEvent).mockResolvedValue({ id: 'e-new' })
+
+    const body = await query(`mutation {
+      createEvent(input: { name: "Show", date: "2026-03-01", venueId: "v1", artistIds: ["a1", "a2"] }) { id error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ createEvent: { id: 'e-new', error: null } })
+    expect(insertEvent).toHaveBeenCalledWith({
+      name: 'Show',
+      date: '2026-03-01',
+      venue_id: 'v1',
+      artist_ids: ['a1', 'a2'],
+    })
+  })
+
+  it('updates an event', async () => {
+    vi.mocked(modifyEvent).mockResolvedValue({})
+
+    const body = await query('mutation { updateEvent(id: "e1", input: { name: "Nuevo nombre" }) { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ updateEvent: { success: true, error: null } })
+    expect(modifyEvent).toHaveBeenCalledWith('e1', {
+      name: 'Nuevo nombre',
+      date: undefined,
+      venue_id: undefined,
+      artist_ids: undefined,
+    })
+  })
+
+  it('deletes an event', async () => {
+    vi.mocked(removeEvent).mockResolvedValue({})
+
+    const body = await query('mutation { deleteEvent(id: "e1") { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ deleteEvent: { success: true, error: null } })
+    expect(removeEvent).toHaveBeenCalledWith('e1')
+  })
+
+  it('adds an external event, building only the fields addExternalEvent actually reads', async () => {
+    vi.mocked(addExternalEvent).mockResolvedValue({ eventId: 'e-new' })
+
+    const body = await query(`mutation {
+      addExternalEvent(
+        input: { title: "Show en Niceto", datetime: "2026-03-01T21:00:00Z", venue: { name: "Niceto", city: "CABA" }, lineup: ["Bandalos Chinos"] }
+        notes: "1. Cumbia Rara"
+      ) { eventId error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ addExternalEvent: { eventId: 'e-new', error: null } })
+    expect(addExternalEvent).toHaveBeenCalledWith(
+      {
+        id: '',
+        title: 'Show en Niceto',
+        datetime: '2026-03-01T21:00:00Z',
+        venue: { name: 'Niceto', city: 'CABA', country: undefined },
+        lineup: ['Bandalos Chinos'],
+      },
+      undefined,
+      '1. Cumbia Rara'
+    )
+  })
+
+  it('gets or creates attendance, filling the fields the function never selects as null', async () => {
+    vi.mocked(getOrCreateAttendance).mockResolvedValue({ id: 'att1', status: 'interested' })
+
+    const body = await query('mutation { getOrCreateAttendance(eventId: "e1") { id status rating review notes } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({
+      getOrCreateAttendance: { id: 'att1', status: 'interested', rating: null, review: null, notes: null },
+    })
+  })
+
+  it('returns null from getOrCreateAttendance when there is no session', async () => {
+    vi.mocked(getOrCreateAttendance).mockResolvedValue(null)
+
+    const body = await query('mutation { getOrCreateAttendance(eventId: "e1") { id } }')
+
+    expect(body.data).toEqual({ getOrCreateAttendance: null })
+  })
+
+  it('sets the attendance status using the shared enum', async () => {
+    vi.mocked(setAttendanceStatus).mockResolvedValue({})
+
+    const body = await query('mutation { setAttendanceStatus(eventId: "e1", status: went) { success } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ setAttendanceStatus: { success: true } })
+    expect(setAttendanceStatus).toHaveBeenCalledWith('e1', 'went')
+  })
+
+  it('deletes an event photo', async () => {
+    vi.mocked(deleteEventPhoto).mockResolvedValue({})
+
+    const body = await query('mutation { deleteEventPhoto(photoId: "ph1", eventId: "e1") { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ deleteEventPhoto: { success: true, error: null } })
+    expect(deleteEventPhoto).toHaveBeenCalledWith('ph1', 'e1')
+  })
+
+  it('saves rating/review/notes via saveMemory', async () => {
+    vi.mocked(saveMemory).mockResolvedValue({})
+
+    const body = await query(
+      'mutation { saveMemory(eventId: "e1", rating: 5, review: "Genial") { success } }'
+    )
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ saveMemory: { success: true } })
+    expect(saveMemory).toHaveBeenCalledWith('e1', { rating: 5, review: 'Genial', notes: undefined })
   })
 })

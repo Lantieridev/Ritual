@@ -20,7 +20,15 @@ vi.mock('@/src/core/lib/find-or-create', () => ({
   findOrCreateByName: (...args: unknown[]) => mockFindOrCreateByName(...args),
 }))
 
-import { createEvent, addExternalEvent, updateEvent, deleteEvent } from '@/src/domains/events/actions'
+import {
+  createEvent,
+  addExternalEvent,
+  updateEvent,
+  deleteEvent,
+  insertEvent,
+  modifyEvent,
+  removeEvent,
+} from '@/src/domains/events/actions'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { FutureEvent } from '@/src/core/types'
 
@@ -397,5 +405,47 @@ describe('deleteEvent', () => {
 
     expect(result.error).toBeTruthy()
     expect(eventsBuilder.delete).not.toHaveBeenCalled()
+  })
+})
+
+describe('insertEvent / modifyEvent / removeEvent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('insertEvent returns the new id without redirecting', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    const result = await insertEvent({ name: 'Show', date: '2024-01-01', venue_id: VALID_VENUE_ID } as never)
+
+    expect(result).toEqual({ id: VALID_EVENT_ID })
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  it('modifyEvent updates without redirecting', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: null, error: null }) as Record<string, unknown>
+    eventsBuilder.update = vi.fn(() => eventsBuilder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    const result = await modifyEvent(VALID_EVENT_ID, { name: 'Nuevo nombre' })
+
+    expect(result).toEqual({})
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  it('removeEvent deletes lineups and the event without redirecting', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: null, error: null })
+    const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
+    const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await removeEvent(VALID_EVENT_ID)
+
+    expect(lineupsBuilder.delete).toHaveBeenCalled()
+    expect(eventsBuilder.delete).toHaveBeenCalled()
+    expect(result).toEqual({})
+    expect(mockRedirect).not.toHaveBeenCalled()
   })
 })

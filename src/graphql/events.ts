@@ -2,8 +2,12 @@ import { builder } from './builder'
 import { getEvents, getEventsWithAttendance, getEventById } from '@/src/domains/events/data'
 import type { EventWithAttendance } from '@/src/domains/events/data'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
-import { getEventPhotos } from '@/src/domains/events/photo-actions'
+import { getEventPhotos, deleteEventPhoto } from '@/src/domains/events/photo-actions'
+import { insertEvent, modifyEvent, removeEvent, addExternalEvent } from '@/src/domains/events/actions'
+import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import type { EventWithRelations, LineupRow } from '@/src/core/types'
+import type { FutureEvent } from '@/src/core/types'
+import { MutationResultRef, toMutationResult } from './shared'
 
 export const AttendanceStatusEnum = builder.enumType('AttendanceStatus', {
     values: ['interested', 'going', 'went'] as const,
@@ -142,5 +146,196 @@ builder.queryField('event', (t) =>
             id: t.arg.id({ required: true }),
         },
         resolve: (_root, args) => getEventById(String(args.id)),
+    })
+)
+
+const EventCreateInput = builder.inputType('EventCreateInput', {
+    fields: (t) => ({
+        name: t.string({ required: true }),
+        date: t.string({ required: true }),
+        venueId: t.id({ required: true }),
+        artistIds: t.idList(),
+    }),
+})
+
+const EventUpdateInput = builder.inputType('EventUpdateInput', {
+    fields: (t) => ({
+        name: t.string(),
+        date: t.string(),
+        venueId: t.id(),
+        artistIds: t.idList(),
+    }),
+})
+
+const CreateEventResultRef = builder.objectRef<{ id?: string; error?: string }>('CreateEventResult')
+CreateEventResultRef.implement({
+    fields: (t) => ({
+        id: t.exposeID('id', { nullable: true }),
+        error: t.exposeString('error', { nullable: true }),
+    }),
+})
+
+builder.mutationField('createEvent', (t) =>
+    t.field({
+        type: CreateEventResultRef,
+        args: {
+            input: t.arg({ type: EventCreateInput, required: true }),
+        },
+        resolve: (_root, args) =>
+            insertEvent({
+                name: args.input.name,
+                date: args.input.date,
+                venue_id: String(args.input.venueId),
+                artist_ids: args.input.artistIds?.map(String),
+            }),
+    })
+)
+
+builder.mutationField('updateEvent', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            id: t.arg.id({ required: true }),
+            input: t.arg({ type: EventUpdateInput, required: true }),
+        },
+        resolve: async (_root, args) =>
+            toMutationResult(
+                await modifyEvent(String(args.id), {
+                    name: args.input.name ?? undefined,
+                    date: args.input.date ?? undefined,
+                    venue_id: args.input.venueId ? String(args.input.venueId) : undefined,
+                    artist_ids: args.input.artistIds?.map(String),
+                })
+            ),
+    })
+)
+
+builder.mutationField('deleteEvent', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            id: t.arg.id({ required: true }),
+        },
+        resolve: async (_root, args) => toMutationResult(await removeEvent(String(args.id))),
+    })
+)
+
+const AddExternalEventVenueInput = builder.inputType('AddExternalEventVenueInput', {
+    fields: (t) => ({
+        name: t.string({ required: true }),
+        city: t.string(),
+        country: t.string(),
+    }),
+})
+
+// Solo los campos que addExternalEvent() efectivamente lee (title, datetime,
+// venue, el primer artista del lineup) — no todo el shape de FutureEvent
+// (id/url/image/priceRange/genre/status), que sirve para MOSTRAR resultados
+// de búsqueda pero nunca se usa al importar el show elegido.
+const AddExternalEventInput = builder.inputType('AddExternalEventInput', {
+    fields: (t) => ({
+        title: t.string(),
+        datetime: t.string({ required: true }),
+        venue: t.field({ type: AddExternalEventVenueInput, required: true }),
+        lineup: t.stringList(),
+    }),
+})
+
+const AddExternalEventResultRef = builder.objectRef<{ eventId?: string; error?: string }>('AddExternalEventResult')
+AddExternalEventResultRef.implement({
+    fields: (t) => ({
+        eventId: t.exposeID('eventId', { nullable: true }),
+        error: t.exposeString('error', { nullable: true }),
+    }),
+})
+
+builder.mutationField('addExternalEvent', (t) =>
+    t.field({
+        type: AddExternalEventResultRef,
+        description: 'Crea un recital a partir de un resultado externo (Ticketmaster/Setlist.fm), buscando o creando sede y artista.',
+        args: {
+            input: t.arg({ type: AddExternalEventInput, required: true }),
+            artistNameForLineup: t.arg.string(),
+            notes: t.arg.string(),
+        },
+        resolve: (_root, args) => {
+            const futureEvent: FutureEvent = {
+                id: '',
+                title: args.input.title ?? '',
+                datetime: args.input.datetime,
+                venue: {
+                    name: args.input.venue.name,
+                    city: args.input.venue.city ?? undefined,
+                    country: args.input.venue.country ?? undefined,
+                },
+                lineup: args.input.lineup ?? [],
+            }
+            return addExternalEvent(futureEvent, args.artistNameForLineup ?? undefined, args.notes ?? undefined)
+        },
+    })
+)
+
+builder.mutationField('getOrCreateAttendance', (t) =>
+    t.field({
+        type: EventAttendanceRef,
+        nullable: true,
+        description: 'Obtiene la attendance del evento para el usuario actual, creándola en "interested" si no existe.',
+        args: {
+            eventId: t.arg.id({ required: true }),
+        },
+        resolve: async (_root, args) => {
+            const attendance = await getOrCreateAttendance(String(args.eventId))
+            if (!attendance) return null
+            return { ...attendance, rating: null, review: null, notes: null }
+        },
+    })
+)
+
+builder.mutationField('setAttendanceStatus', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            eventId: t.arg.id({ required: true }),
+            status: t.arg({ type: AttendanceStatusEnum, required: true }),
+        },
+        resolve: async (_root, args) =>
+            toMutationResult(await setAttendanceStatus(String(args.eventId), args.status)),
+    })
+)
+
+// Sin mutation de subida de fotos a propósito: uploadEventPhoto() recibe un
+// File por FormData, mismo caso que el avatar de perfil (ver auth.ts) —
+// necesita soporte de multipart/Upload scalar en Yoga, que es trabajo
+// aparte. Subir fotos sigue siendo solo desde el formulario web por ahora.
+builder.mutationField('deleteEventPhoto', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            photoId: t.arg.id({ required: true }),
+            eventId: t.arg.id({ required: true }),
+        },
+        resolve: async (_root, args) =>
+            toMutationResult(await deleteEventPhoto(String(args.photoId), String(args.eventId))),
+    })
+)
+
+builder.mutationField('saveMemory', (t) =>
+    t.field({
+        type: MutationResultRef,
+        description: 'Guarda o actualiza rating, reseña y notas de un evento.',
+        args: {
+            eventId: t.arg.id({ required: true }),
+            rating: t.arg.int(),
+            review: t.arg.string(),
+            notes: t.arg.string(),
+        },
+        resolve: async (_root, args) =>
+            toMutationResult(
+                await saveMemory(String(args.eventId), {
+                    rating: args.rating ?? undefined,
+                    review: args.review ?? undefined,
+                    notes: args.notes ?? undefined,
+                })
+            ),
     })
 )
