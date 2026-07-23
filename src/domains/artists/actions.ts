@@ -11,17 +11,30 @@ import type { ActionResult, ArtistCreateInput } from '@/src/core/types'
 const MAX_NAME = 200
 const MAX_GENRE = 100
 
-export async function createArtist(formData: ArtistCreateInput): Promise<ActionResult<{ existingId?: string }>> {
+/**
+ * Inserta el artista y devuelve su id — sin redirigir, para que tanto la
+ * Server Action (que sí redirige tras un submit de formulario) como la
+ * mutation de GraphQL (que nunca debería redirigir, la navegación la
+ * decide el cliente) compartan la misma lógica de inserción y manejo de
+ * duplicados en un solo lugar.
+ */
+export async function insertArtist(
+  formData: ArtistCreateInput
+): Promise<ActionResult<{ id?: string; existingId?: string }>> {
   const userId = await getCurrentUserId()
   if (!userId) return { error: 'Usuario no autenticado' }
 
   const name = sanitizeText(formData.name, MAX_NAME)
   if (!name) return { error: 'El nombre del artista es obligatorio.' }
   const supabase = await createClient()
-  const { error } = await supabase.from('artists').insert({
-    name,
-    genre: sanitizeText(formData.genre, MAX_GENRE),
-  })
+  const { data, error } = await supabase
+    .from('artists')
+    .insert({
+      name,
+      genre: sanitizeText(formData.genre, MAX_GENRE),
+    })
+    .select('id')
+    .single()
   if (error) {
     console.error('Error creando artista:', error)
     // El artista ya existe (constraint artists_name_key_unique) — en vez del
@@ -37,6 +50,12 @@ export async function createArtist(formData: ArtistCreateInput): Promise<ActionR
     }
     return { error: sanitizeError(error) }
   }
+  return { id: data.id }
+}
+
+export async function createArtist(formData: ArtistCreateInput): Promise<ActionResult<{ existingId?: string }>> {
+  const result = await insertArtist(formData)
+  if (result.error) return result
   redirect(routes.artists.list)
 }
 

@@ -15,12 +15,14 @@ vi.mock('next/navigation', () => ({
   redirect: (...args: unknown[]) => mockRedirect(...args),
 }))
 
-import { createArtist } from '@/src/domains/artists/actions'
+import { createArtist, insertArtist } from '@/src/domains/artists/actions'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
-  builder.insert = vi.fn(() => Promise.resolve(result))
+  builder.insert = vi.fn(() => builder)
+  builder.select = vi.fn(() => builder)
+  builder.single = vi.fn(() => Promise.resolve(result))
   return builder
 }
 
@@ -54,7 +56,7 @@ describe('createArtist', () => {
   })
 
   it('trims name and genre, then redirects to the list', async () => {
-    const fromMock = vi.fn(() => makeQueryBuilder({ data: null, error: null }))
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: { id: 'a-new' }, error: null }))
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
 
     await createArtist({ name: '  Bandalos Chinos  ', genre: '  Indie  ' } as never)
@@ -65,7 +67,7 @@ describe('createArtist', () => {
   })
 
   it('truncates a name longer than 200 characters', async () => {
-    const fromMock = vi.fn(() => makeQueryBuilder({ data: null, error: null }))
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: { id: 'a-new' }, error: null }))
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
     const longName = 'A'.repeat(250)
 
@@ -108,6 +110,23 @@ describe('createArtist', () => {
 
     expect(lookupBuilder.ilike).toHaveBeenCalledWith('name', 'Bandalos Chinos')
     expect(result).toEqual({ error: 'Ya existe un artista con ese nombre.', existingId: 'existing-artist-1' })
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+})
+
+describe('insertArtist', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('returns the new id without redirecting, for callers other than the form submit flow', async () => {
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: { id: 'a-new' }, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await insertArtist({ name: 'Bandalos Chinos' } as never)
+
+    expect(result).toEqual({ id: 'a-new' })
     expect(mockRedirect).not.toHaveBeenCalled()
   })
 })
