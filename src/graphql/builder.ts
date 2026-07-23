@@ -14,5 +14,4 @@ builder.scalarType('JSON', {
 })
 
 builder.queryType({})
-// mutationType se declara recién en la Fase 7.3, cuando exista al menos un
-// campo de mutation — GraphQL no permite un tipo sin ningún campo.
+builder.mutationType({})

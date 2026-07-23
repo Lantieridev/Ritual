@@ -15,12 +15,14 @@ vi.mock('next/navigation', () => ({
   redirect: (...args: unknown[]) => mockRedirect(...args),
 }))
 
-import { createVenue } from '@/src/domains/venues/actions'
+import { createVenue, insertVenue } from '@/src/domains/venues/actions'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
-  builder.insert = vi.fn(() => Promise.resolve(result))
+  builder.insert = vi.fn(() => builder)
+  builder.select = vi.fn(() => builder)
+  builder.single = vi.fn(() => Promise.resolve(result))
   return builder
 }
 
@@ -54,7 +56,7 @@ describe('createVenue', () => {
   })
 
   it('trims and inserts optional fields, then redirects to the list', async () => {
-    const fromMock = vi.fn(() => makeQueryBuilder({ data: null, error: null }))
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: { id: 'v-new' }, error: null }))
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
 
     await createVenue({
@@ -75,7 +77,7 @@ describe('createVenue', () => {
   })
 
   it('truncates a name longer than 200 characters', async () => {
-    const fromMock = vi.fn(() => makeQueryBuilder({ data: null, error: null }))
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: { id: 'v-new' }, error: null }))
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
     const longName = 'A'.repeat(250)
 
@@ -118,6 +120,23 @@ describe('createVenue', () => {
 
     expect(lookupBuilder.ilike).toHaveBeenCalledWith('name', 'Niceto Club')
     expect(result).toEqual({ error: 'Ya existe una sede con ese nombre.', existingId: 'existing-venue-1' })
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+})
+
+describe('insertVenue', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('returns the new id without redirecting, for callers other than the form submit flow', async () => {
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: { id: 'v-new' }, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await insertVenue({ name: 'Niceto Club' } as never)
+
+    expect(result).toEqual({ id: 'v-new' })
     expect(mockRedirect).not.toHaveBeenCalled()
   })
 })

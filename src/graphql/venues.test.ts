@@ -5,6 +5,11 @@ vi.mock('@/src/domains/venues/data', () => ({
   getVenueById: vi.fn(),
 }))
 
+vi.mock('@/src/domains/venues/actions', () => ({
+  insertVenue: vi.fn(),
+  findOrCreateVenue: vi.fn(),
+}))
+
 vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: vi.fn().mockResolvedValue({}),
 }))
@@ -14,6 +19,7 @@ vi.mock('@/src/core/auth/session', () => ({
 }))
 
 import { getVenues, getVenueById } from '@/src/domains/venues/data'
+import { insertVenue, findOrCreateVenue } from '@/src/domains/venues/actions'
 import { POST } from '@/app/api/graphql/route'
 
 async function query(source: string) {
@@ -51,5 +57,56 @@ describe('venues GraphQL schema', () => {
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ venue: null })
     expect(getVenueById).toHaveBeenCalledWith('missing')
+  })
+})
+
+describe('venues GraphQL mutations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('creates a venue and passes null optional args through as undefined', async () => {
+    vi.mocked(insertVenue).mockResolvedValue({ id: 'v-new' })
+
+    const body = await query(`mutation {
+      createVenue(input: { name: "Niceto Club" }) { id existingId error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ createVenue: { id: 'v-new', existingId: null, error: null } })
+    expect(insertVenue).toHaveBeenCalledWith({
+      name: 'Niceto Club',
+      city: undefined,
+      address: undefined,
+      country: undefined,
+    })
+  })
+
+  it('surfaces the existingId payload on a name collision, not a thrown GraphQL error', async () => {
+    vi.mocked(insertVenue).mockResolvedValue({
+      error: 'Ya existe una sede con ese nombre.',
+      existingId: 'existing-1',
+    })
+
+    const body = await query(`mutation {
+      createVenue(input: { name: "Niceto Club" }) { id existingId error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({
+      createVenue: { id: null, existingId: 'existing-1', error: 'Ya existe una sede con ese nombre.' },
+    })
+  })
+
+  it('resolves findOrCreateVenue, passing optional args through', async () => {
+    vi.mocked(findOrCreateVenue).mockResolvedValue({ id: 'v-1' })
+
+    const body = await query(`mutation {
+      findOrCreateVenue(name: "Niceto Club", city: "CABA") { id error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ findOrCreateVenue: { id: 'v-1', error: null } })
+    expect(findOrCreateVenue).toHaveBeenCalledWith('Niceto Club', 'CABA', undefined)
   })
 })
