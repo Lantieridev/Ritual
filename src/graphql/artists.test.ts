@@ -14,9 +14,9 @@ vi.mock('@/src/core/auth/session', () => ({
 }))
 
 import { getArtists, getArtistById } from '@/src/domains/artists/data'
+import { POST } from '@/app/api/graphql/route'
 
 async function query(source: string) {
-  const { POST } = await import('@/app/api/graphql/route')
   const response = await POST(
     new Request('http://localhost/api/graphql', {
       method: 'POST',
