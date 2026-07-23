@@ -25,9 +25,14 @@ export interface FestivalCreateInput {
     notes?: string
 }
 
-export async function createFestival(
+/**
+ * Inserta el festival y devuelve su id — sin redirigir. Misma razón que
+ * insertVenue/insertArtist: la mutation de GraphQL nunca debería redirigir,
+ * eso queda para la Server Action que sí maneja el submit de un formulario.
+ */
+export async function insertFestival(
     data: FestivalCreateInput
-): Promise<ActionResult> {
+): Promise<ActionResult<{ id?: string }>> {
     const userId = await getCurrentUserId()
     if (!userId) return { error: 'Usuario no autenticado' }
 
@@ -57,10 +62,19 @@ export async function createFestival(
     }
 
     revalidatePath(routes.festivals.list)
-    redirect(routes.festivals.detail(newFestival.id))
+    return { id: newFestival.id }
 }
 
-export async function deleteFestival(id: string): Promise<ActionResult> {
+export async function createFestival(
+    data: FestivalCreateInput
+): Promise<ActionResult> {
+    const result = await insertFestival(data)
+    if (result.error || !result.id) return result
+    redirect(routes.festivals.detail(result.id))
+}
+
+/** Borra el festival sin redirigir — misma razón que insertFestival. */
+export async function removeFestival(id: string): Promise<ActionResult> {
     const userId = await getCurrentUserId()
     if (!userId) return { error: 'Usuario no autenticado' }
 
@@ -75,6 +89,12 @@ export async function deleteFestival(id: string): Promise<ActionResult> {
     }
 
     revalidatePath(routes.festivals.list)
+    return {}
+}
+
+export async function deleteFestival(id: string): Promise<ActionResult> {
+    const result = await removeFestival(id)
+    if (result.error) return result
     redirect(routes.festivals.list)
 }
 

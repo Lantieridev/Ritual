@@ -22,6 +22,8 @@ vi.mock('next/navigation', () => ({
 import {
   createFestival,
   deleteFestival,
+  insertFestival,
+  removeFestival,
   saveFestivalAttendance,
   linkEventToFestival,
 } from '@/src/domains/festivals/actions'
@@ -117,6 +119,34 @@ describe('deleteFestival', () => {
 
     expect(builder.delete).toHaveBeenCalled()
     expect(mockRedirect).toHaveBeenCalledWith('/festivals')
+  })
+})
+
+describe('insertFestival / removeFestival', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('insertFestival returns the new id without redirecting', async () => {
+    const builder = makeQueryBuilder({ data: { id: VALID_FESTIVAL_ID }, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await insertFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' } as never)
+
+    expect(result).toEqual({ id: VALID_FESTIVAL_ID })
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  it('removeFestival deletes without redirecting', async () => {
+    const builder = makeQueryBuilder({ data: null, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await removeFestival(VALID_FESTIVAL_ID)
+
+    expect(builder.delete).toHaveBeenCalled()
+    expect(result).toEqual({})
+    expect(mockRedirect).not.toHaveBeenCalled()
   })
 })
 

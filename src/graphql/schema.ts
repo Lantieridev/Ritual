@@ -1,4 +1,5 @@
 import { builder } from './builder'
+import './shared'
 import './health'
 import './venues'
 import './artists'

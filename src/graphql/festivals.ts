@@ -1,6 +1,14 @@
 import { builder } from './builder'
 import { getFestivals, getFestivalById } from '@/src/domains/festivals/data'
 import type { Festival } from '@/src/domains/festivals/data'
+import {
+    insertFestival,
+    removeFestival,
+    saveFestivalAttendance,
+    linkEventToFestival,
+} from '@/src/domains/festivals/actions'
+import { MutationResultRef, toMutationResult } from './shared'
+import { AttendanceStatusEnum } from './events'
 
 type FestivalVenueSummary = Festival['venues']
 type FestivalEventEntry = Festival['festival_events'][number]
@@ -94,5 +102,92 @@ builder.queryField('festival', (t) =>
             id: t.arg.id({ required: true }),
         },
         resolve: (_root, args) => getFestivalById(String(args.id)),
+    })
+)
+
+const FestivalCreateInput = builder.inputType('FestivalCreateInput', {
+    fields: (t) => ({
+        name: t.string({ required: true }),
+        edition: t.string(),
+        startDate: t.string({ required: true }),
+        endDate: t.string(),
+        city: t.string(),
+        country: t.string(),
+        website: t.string(),
+        notes: t.string(),
+    }),
+})
+
+const CreateFestivalResultRef = builder.objectRef<{ id?: string; error?: string }>('CreateFestivalResult')
+CreateFestivalResultRef.implement({
+    fields: (t) => ({
+        id: t.exposeID('id', { nullable: true }),
+        error: t.exposeString('error', { nullable: true }),
+    }),
+})
+
+builder.mutationField('createFestival', (t) =>
+    t.field({
+        type: CreateFestivalResultRef,
+        args: {
+            input: t.arg({ type: FestivalCreateInput, required: true }),
+        },
+        resolve: (_root, args) =>
+            insertFestival({
+                name: args.input.name,
+                edition: args.input.edition ?? undefined,
+                start_date: args.input.startDate,
+                end_date: args.input.endDate ?? undefined,
+                city: args.input.city ?? undefined,
+                country: args.input.country ?? undefined,
+                website: args.input.website ?? undefined,
+                notes: args.input.notes ?? undefined,
+            }),
+    })
+)
+
+builder.mutationField('deleteFestival', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            id: t.arg.id({ required: true }),
+        },
+        resolve: async (_root, args) => toMutationResult(await removeFestival(String(args.id))),
+    })
+)
+
+builder.mutationField('saveFestivalAttendance', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            festivalId: t.arg.id({ required: true }),
+            status: t.arg({ type: AttendanceStatusEnum, required: true }),
+            rating: t.arg.int(),
+            review: t.arg.string(),
+        },
+        resolve: async (_root, args) =>
+            toMutationResult(
+                await saveFestivalAttendance(
+                    String(args.festivalId),
+                    args.status,
+                    args.rating ?? undefined,
+                    args.review ?? undefined
+                )
+            ),
+    })
+)
+
+builder.mutationField('linkEventToFestival', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            festivalId: t.arg.id({ required: true }),
+            eventId: t.arg.id({ required: true }),
+            dayLabel: t.arg.string(),
+        },
+        resolve: async (_root, args) =>
+            toMutationResult(
+                await linkEventToFestival(String(args.festivalId), String(args.eventId), args.dayLabel ?? undefined)
+            ),
     })
 )
