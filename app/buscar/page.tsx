@@ -10,8 +10,13 @@ import { FutureEventsResults } from '@/src/domains/events/components/FutureEvent
 import { isTicketmasterConfigured, searchTicketmasterEvents } from '@/src/core/lib/ticketmaster'
 import { searchCachedExternalEvents } from '@/src/core/lib/external-sources/cache'
 import { isSetlistFmConfigured, getSetlistsByArtist } from '@/src/core/lib/setlistfm'
-import { searchCatalog } from '@/src/domains/search/service'
+import { searchCatalog, searchNearby } from '@/src/domains/search/service'
 import { festivalMetaLine } from '@/src/domains/search/festivalMeta'
+import { toSearchRows, nearbyToSearchRows, filterLabel, parseSearchFilter, type SearchFilter } from '@/src/domains/search/rows'
+import { SearchField } from '@/src/domains/search/components/SearchField'
+import { SearchFilters } from '@/src/domains/search/components/SearchFilters'
+import { SearchRowList } from '@/src/domains/search/components/SearchRowList'
+import { NearbyNotice } from '@/src/domains/search/components/NearbyNotice'
 import { formatDate } from '@/src/core/lib/utils'
 import { EmptyState } from '@/src/core/components/ui/EmptyState'
 import { createClient } from '@/src/core/lib/supabase/server'
@@ -22,7 +27,14 @@ export const metadata: Metadata = {
   description: 'En cartelera vía Ticketmaster/Setlist.fm, o en tu archivo ya guardado.',
 }
 
-type SearchParams = { artist?: string; location?: string; source?: 'future' | 'past'; tab?: 'cartelera' | 'archivo'; q?: string }
+type SearchParams = {
+  artist?: string
+  location?: string
+  source?: 'future' | 'past'
+  tab?: 'cartelera' | 'archivo'
+  q?: string
+  filtro?: string
+}
 
 interface PageProps {
   searchParams: Promise<SearchParams>
@@ -94,10 +106,28 @@ export default async function BuscarPage({ searchParams }: PageProps) {
   }
 
   const query = params.q?.trim() ?? ''
-  const archiveResults = tab === 'archivo' && query.length >= 2 ? await searchCatalog(query) : null
+  const filtro: SearchFilter = parseSearchFilter(params.filtro)
+
+  // El chip screen mobile SIEMPRE necesita resultados del catálogo cuando
+  // no está en "Cerca", sin importar en qué tab desktop esté la URL — por
+  // eso el gate ya no depende de `tab === 'archivo'`. Como SearchField manda
+  // `tab=archivo` en su hidden input, en la práctica ambos árboles terminan
+  // leyendo la MISMA consulta (D-5 del design.md): un solo fetch, no dos.
+  const archiveResults = filtro !== 'cerca' && query.length >= 2 ? await searchCatalog(query) : null
   const archiveTotal = archiveResults
     ? archiveResults.events.length + archiveResults.artists.length + archiveResults.venues.length + archiveResults.festivals.length
     : 0
+
+  const nearbyResult = filtro === 'cerca' ? await searchNearby(query || undefined) : null
+  const mobileRows =
+    filtro === 'cerca'
+      ? nearbyResult?.status === 'ok'
+        ? nearbyToSearchRows(nearbyResult.venues)
+        : []
+      : archiveResults
+        ? toSearchRows(archiveResults, filtro)
+        : []
+  const mobileFilterLabel = filterLabel(filtro)
 
   return (
     <PageShell
@@ -108,6 +138,12 @@ export default async function BuscarPage({ searchParams }: PageProps) {
         </LinkButton>
       }
     >
+      {/* Escritorio: dos tabs (cartelera/archivo) sin cambios de este WU,
+          salvo la sección de festivales agregada en WU1 (D-5 del
+          design.md). Mobile reemplaza todo esto por el chip screen de abajo
+          — mismo patrón hidden/md:block que el resto del port (ver
+          HomeHero.tsx). */}
+      <div className="hidden md:block" data-testid="buscar-desktop">
       {/* Tabs principales */}
       <div className="flex border-b border-ritual-border-subtle mb-8">
         <Link
@@ -293,6 +329,58 @@ export default async function BuscarPage({ searchParams }: PageProps) {
           )}
         </>
       )}
+      </div>
+
+      {/* Mobile: pantalla unificada de chips (buscar-mobile) — reemplaza el
+          selector de tabs entero, no sólo el contenido (Requirement
+          "Mobile-only branch, desktop unchanged"). */}
+      <div className="md:hidden" data-testid="buscar-mobile">
+        <SearchField defaultValue={query} filter={filtro} />
+        <SearchFilters active={filtro} query={query} />
+
+        <div className="pt-6">
+          {filtro === 'cerca' ? (
+            nearbyResult && nearbyResult.status !== 'ok' ? (
+              <NearbyNotice status={nearbyResult.status} />
+            ) : (
+              <>
+                {mobileFilterLabel && (
+                  <p className="font-label text-[9px] tracking-[0.24em] uppercase text-ritual-gray-mid-2 mb-3">{mobileFilterLabel}</p>
+                )}
+                {mobileRows.length === 0 ? (
+                  <p className="font-body text-sm text-ritual-gray-text text-center py-8">Ninguna sede guardada cerca tuyo todavía.</p>
+                ) : (
+                  <SearchRowList rows={mobileRows} />
+                )}
+              </>
+            )
+          ) : query.length === 0 ? (
+            <p className="font-body text-sm text-ritual-gray-text text-center py-8">Buscá entre lo que ya guardaste.</p>
+          ) : query.length < 2 ? (
+            <p className="font-body text-sm text-ritual-gray-text text-center py-4">Escribí al menos 2 caracteres.</p>
+          ) : (
+            <>
+              {mobileFilterLabel && (
+                <p className="font-label text-[9px] tracking-[0.24em] uppercase text-ritual-gray-mid-2 mb-3">{mobileFilterLabel}</p>
+              )}
+              {mobileRows.length === 0 ? (
+                <p className="font-body text-ritual-gray-text text-center py-8">
+                  Sin resultados para <strong className="text-ritual-gray-text">&quot;{query}&quot;</strong>
+                </p>
+              ) : (
+                <SearchRowList rows={mobileRows} />
+              )}
+            </>
+          )}
+
+          <Link
+            href="/buscar?tab=cartelera"
+            className="mt-6 inline-block font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid"
+          >
+            ¿No está en tu archivo? Buscá en cartelera →
+          </Link>
+        </div>
+      </div>
     </PageShell>
   )
 }

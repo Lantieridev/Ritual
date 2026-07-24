@@ -13,7 +13,7 @@ export interface SearchFieldProps {
  */
 export function SearchField({ defaultValue, filter }: SearchFieldProps) {
   return (
-    <form method="GET" action={routes.events.search} className="sticky top-0 z-10 bg-ritual-bg px-5 pt-4 pb-3">
+    <form method="GET" action={routes.events.search} className="sticky top-0 z-10 bg-ritual-bg pt-4 pb-3">
       <input type="hidden" name="tab" value="archivo" />
       <input type="hidden" name="filtro" value={filter} />
       <label htmlFor="buscar-mobile-q" className="sr-only">

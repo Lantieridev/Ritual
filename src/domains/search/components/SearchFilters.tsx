@@ -25,7 +25,7 @@ function chipClass(isActive: boolean) {
 /** Fila de 5 chips (Requirement "Chip filter set") — tap target ≥44px, `Link`s planos, sin estado de cliente. */
 export function SearchFilters({ active, query }: SearchFiltersProps) {
   return (
-    <ul role="list" className="flex gap-2 overflow-x-auto px-5 pt-4">
+    <ul role="list" className="flex gap-2 overflow-x-auto pt-4">
       {FILTERS.map((filtro) => {
         const isActive = filtro === active
         return (

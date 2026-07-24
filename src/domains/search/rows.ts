@@ -91,6 +91,13 @@ export function buscarHref(p: { q: string; filtro: SearchFilter }): string {
     return `${routes.events.search}?${usp.toString()}`
 }
 
+const VALID_FILTERS: readonly SearchFilter[] = ['todo', 'artistas', 'sedes', 'festivales', 'cerca']
+
+/** Valida el `filtro` de la URL contra los 5 valores conocidos — cualquier otra cosa (ausente, viejo, manipulado) cae a `'todo'`, nunca revienta la página. */
+export function parseSearchFilter(raw: string | undefined): SearchFilter {
+    return (VALID_FILTERS as readonly string[]).includes(raw ?? '') ? (raw as SearchFilter) : 'todo'
+}
+
 const FILTER_LABELS: Record<SearchFilter, string | null> = {
     todo: null,
     artistas: 'Artistas',

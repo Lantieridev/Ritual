@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toSearchRows, nearbyToSearchRows, buscarHref, filterLabel } from '@/src/domains/search/rows'
+import { toSearchRows, nearbyToSearchRows, buscarHref, filterLabel, parseSearchFilter } from '@/src/domains/search/rows'
 import type { CatalogSearchResults } from '@/src/domains/search/service'
 import { routes } from '@/src/core/lib/routes'
 
@@ -89,6 +89,21 @@ describe('buscarHref', () => {
 
   it('omite q cuando está vacío', () => {
     expect(buscarHref({ q: '', filtro: 'cerca' })).toBe(`${routes.events.search}?tab=archivo&filtro=cerca`)
+  })
+})
+
+describe('parseSearchFilter', () => {
+  it('acepta cualquiera de los 5 valores válidos', () => {
+    expect(parseSearchFilter('artistas')).toBe('artistas')
+    expect(parseSearchFilter('sedes')).toBe('sedes')
+    expect(parseSearchFilter('festivales')).toBe('festivales')
+    expect(parseSearchFilter('cerca')).toBe('cerca')
+    expect(parseSearchFilter('todo')).toBe('todo')
+  })
+
+  it('cualquier valor inválido o ausente cae a "todo"', () => {
+    expect(parseSearchFilter(undefined)).toBe('todo')
+    expect(parseSearchFilter('cualquier-cosa')).toBe('todo')
   })
 })
 
