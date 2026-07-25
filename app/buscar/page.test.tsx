@@ -67,6 +67,25 @@ describe('BuscarPage — desktop archivo tab, festival rows (WU1)', () => {
     expect(desktop.queryByText(/Festivales/)).not.toBeInTheDocument()
     expect(desktop.getByText('Show en Obras')).toBeInTheDocument()
   })
+
+  // Regresión: desktop no sabe nada de "Cerca", así que un link con
+  // `filtro=cerca` (compartido desde mobile, o escrito a mano) no puede
+  // dejar su panel de "en tu archivo" en blanco. Antes, `archiveResults` se
+  // gateaba por `filtro !== 'cerca'` y quedaba `null` también en desktop,
+  // sin que ninguna de sus tres ramas de render supiera explicarlo.
+  it('un link con filtro=cerca igual muestra los resultados del catálogo en escritorio, que ignora "Cerca"', async () => {
+    vi.mocked(searchCatalog).mockResolvedValue({
+      ...EMPTY,
+      events: [{ id: 'e1', name: 'Show en Obras', date: '2026-01-01' }],
+    })
+
+    const element = await BuscarPage({ searchParams: Promise.resolve({ tab: 'archivo', filtro: 'cerca', q: 'obras' }) })
+    render(element)
+    const desktop = within(screen.getByTestId('buscar-desktop'))
+
+    expect(searchCatalog).toHaveBeenCalledWith('obras')
+    expect(desktop.getByText('Show en Obras')).toBeInTheDocument()
+  })
 })
 
 describe('BuscarPage — mobile chip-filter screen (WU4)', () => {
@@ -122,6 +141,19 @@ describe('BuscarPage — mobile chip-filter screen (WU4)', () => {
 
     expect(mobile.getByRole('link', { name: /Estadio Obras/ })).toBeInTheDocument()
     expect(mobile.getByText('A 3 KM')).toBeInTheDocument()
+  })
+
+  it('filtro=cerca, sesión y ciudad pero sin sedes guardadas cerca: mensaje honesto de "vacío", nunca el aviso de "falta X"', async () => {
+    const ok: NearbySearchResult = { status: 'ok', venues: [] }
+    vi.mocked(searchNearby).mockResolvedValue(ok)
+
+    const element = await BuscarPage({ searchParams: Promise.resolve({ filtro: 'cerca' }) })
+    render(element)
+    const mobile = within(screen.getByTestId('buscar-mobile'))
+
+    expect(mobile.getByText('Ninguna sede guardada cerca tuyo todavía.')).toBeInTheDocument()
+    expect(mobile.queryByText('«Cerca» necesita tu sesión')).not.toBeInTheDocument()
+    expect(mobile.queryByText(/km/i)).not.toBeInTheDocument()
   })
 
   it('incluye el link de descubrimiento a cartelera, de baja jerarquía y no como sexto chip', async () => {

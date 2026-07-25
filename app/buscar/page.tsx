@@ -108,12 +108,17 @@ export default async function BuscarPage({ searchParams }: PageProps) {
   const query = params.q?.trim() ?? ''
   const filtro: SearchFilter = parseSearchFilter(params.filtro)
 
-  // El chip screen mobile SIEMPRE necesita resultados del catálogo cuando
-  // no está en "Cerca", sin importar en qué tab desktop esté la URL — por
-  // eso el gate ya no depende de `tab === 'archivo'`. Como SearchField manda
-  // `tab=archivo` en su hidden input, en la práctica ambos árboles terminan
-  // leyendo la MISMA consulta (D-5 del design.md): un solo fetch, no dos.
-  const archiveResults = filtro !== 'cerca' && query.length >= 2 ? await searchCatalog(query) : null
+  // Independiente de `tab` Y de `filtro`, a propósito: el chip screen
+  // mobile necesita resultados del catálogo sin importar en qué tab
+  // desktop esté la URL (un `?q=`+`filtro` sin `tab=archivo` explícito es
+  // válido si alguien escribe el link a mano). Y desktop no sabe nada de
+  // "Cerca" — si `archiveResults` dependiera de `filtro !== 'cerca'`,
+  // compartir un link de "Cerca" desde mobile dejaba el panel de escritorio
+  // en blanco sin ningún mensaje, porque ninguna de sus tres ramas de
+  // render contempla "archiveResults es null pero no por falta de query".
+  // El fetch de acá alimenta las dos ramas (D-5 del design.md): un solo
+  // fetch, no dos.
+  const archiveResults = query.length >= 2 ? await searchCatalog(query) : null
   const archiveTotal = archiveResults
     ? archiveResults.events.length + archiveResults.artists.length + archiveResults.venues.length + archiveResults.festivals.length
     : 0

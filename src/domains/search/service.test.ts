@@ -41,7 +41,7 @@ describe('searchCatalog', () => {
     vi.clearAllMocks()
   })
 
-  it('queries festivals by name alongside events/artists/venues, capped at 8', async () => {
+  it('queries festivals by name alongside events/artists/venues', async () => {
     const festivalRows = [{ id: 'f1', name: 'Cosquín Rock', edition: '2026', city: 'Córdoba', start_date: '2026-02-14' }]
     const supabase = makeSupabase({ festivals: { data: festivalRows, error: null } })
     mockCreateClient.mockReturnValue(Promise.resolve(supabase))
@@ -50,6 +50,24 @@ describe('searchCatalog', () => {
 
     expect(supabase.from).toHaveBeenCalledWith('festivals')
     expect(result.festivals).toEqual(festivalRows)
+  })
+
+  it('caps the festivals query at MAX_RESULTS_PER_TYPE, same as events/artists/venues', async () => {
+    const supabase = makeSupabase()
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+    const builders: Record<string, ReturnType<typeof makeQueryBuilder>> = {}
+    supabase.from = vi.fn((table: string) => {
+      const builder = makeQueryBuilder({ data: [], error: null })
+      builders[table] = builder
+      return builder
+    })
+
+    await searchCatalog('cosquin')
+
+    // El mock de .limit() ignora su argumento y siempre resuelve con la data
+    // configurada — el largo del resultado no puede probar el tope, así
+    // que se afirma directo el valor con el que se llamó.
+    expect(builders.festivals.limit).toHaveBeenCalledWith(8)
   })
 
   it('escapes % and _ wildcards before querying festivals, same as the other tables', async () => {
