@@ -33,7 +33,7 @@ describe('SearchEventsForm', () => {
     await userEvent.type(screen.getByLabelText(/Nombre del artista/), 'Radiohead')
     await userEvent.click(screen.getByRole('button', { name: 'Buscar' }))
 
-    expect(mockPush).toHaveBeenCalledWith('/buscar?source=past&artist=Radiohead')
+    expect(mockPush).toHaveBeenCalledWith('/buscar?source=past&artist=Radiohead&tab=cartelera')
   })
 
   it('omits the artist param when the field is left blank', async () => {
@@ -41,7 +41,7 @@ describe('SearchEventsForm', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Buscar' }))
 
-    expect(mockPush).toHaveBeenCalledWith('/buscar?source=future')
+    expect(mockPush).toHaveBeenCalledWith('/buscar?source=future&tab=cartelera')
   })
 
   it('hides the artist/location tabs when showLocationTab is false', () => {
@@ -56,7 +56,7 @@ describe('SearchEventsForm', () => {
     await userEvent.type(screen.getByLabelText(/Ciudad o ubicación/), 'Buenos Aires')
     await userEvent.click(screen.getByRole('button', { name: 'Buscar' }))
 
-    expect(mockPush).toHaveBeenCalledWith('/buscar?source=future&location=Buenos+Aires')
+    expect(mockPush).toHaveBeenCalledWith('/buscar?source=future&location=Buenos+Aires&tab=cartelera')
   })
 
   it('never offers the location tab for past-source search (Setlist.fm has no city search)', () => {

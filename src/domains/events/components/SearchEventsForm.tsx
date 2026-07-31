@@ -46,6 +46,7 @@ export function SearchEventsForm({
     } else if (mode === 'location' && location.trim()) {
       params.set('location', location.trim())
     }
+    params.set('tab', 'cartelera')
     router.push(`/buscar?${params.toString()}`)
   }
 
@@ -55,11 +56,11 @@ export function SearchEventsForm({
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
       {/* Tabs de modo (solo si hay búsqueda por ciudad disponible) */}
       {canSearchByLocation && (
-        <div className="flex gap-2 border-b border-white/10 pb-2">
+        <div className="flex gap-2 border-b border-ritual-border-subtle pb-2">
           <button
             type="button"
             onClick={() => setMode('artist')}
-            className={`px-3 py-1.5 text-sm rounded transition-colors ${mode === 'artist' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            className={`px-3 py-1.5 font-label text-[10px] tracking-[0.1em] uppercase transition-colors ${mode === 'artist' ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-mid hover:text-ritual-gray-text'
               }`}
           >
             Por artista
@@ -67,7 +68,7 @@ export function SearchEventsForm({
           <button
             type="button"
             onClick={() => setMode('location')}
-            className={`px-3 py-1.5 text-sm rounded transition-colors ${mode === 'location' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            className={`px-3 py-1.5 font-label text-[10px] tracking-[0.1em] uppercase transition-colors ${mode === 'location' ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-mid hover:text-ritual-gray-text'
               }`}
           >
             Por ciudad
@@ -84,7 +85,7 @@ export function SearchEventsForm({
             value={artist}
             onChange={(e) => setArtist(e.target.value)}
             placeholder={source === 'past' ? 'ej. Radiohead (nombre exacto)' : 'ej. Radiohead'}
-            className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-white placeholder-zinc-500 focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/20"
+            className="w-full border border-ritual-border bg-ritual-surface px-4 py-2.5 font-body text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none focus:ring-1 focus:ring-ritual-red/40"
           />
         </FormField>
       ) : (
@@ -95,7 +96,7 @@ export function SearchEventsForm({
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             placeholder="ej. Buenos Aires"
-            className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-white placeholder-zinc-500 focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/20"
+            className="w-full border border-ritual-border bg-ritual-surface px-4 py-2.5 font-body text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none focus:ring-1 focus:ring-ritual-red/40"
           />
         </FormField>
       )}
