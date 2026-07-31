@@ -50,36 +50,37 @@ export function AttendanceStatusButtons({ eventId, currentStatus, isPast }: Stat
     }
 
     return (
-        <div className="flex flex-wrap gap-2">
-            {options.map(({ value, label, emoji }) => {
-                const isActive = activeStatus === value
-                const isLoading = loadingStatus === value
-                return (
-                    <button
-                        key={value}
-                        type="button"
-                        disabled={Boolean(loadingStatus)}
-                        onClick={() => handleSelect(value)}
-                        className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed ${isActive
-                                ? 'bg-white text-neutral-950'
-                                : 'border border-white/15 text-zinc-400 hover:border-white/30 hover:text-white hover:bg-white/5'
-                            }`}
-                    >
-                        <span>{isLoading ? '…' : emoji}</span>
-                        {label}
-                    </button>
-                )
-            })}
+        <div>
+            <div className="flex border border-ritual-border">
+                {options.map(({ value, label }) => {
+                    const isActive = activeStatus === value
+                    const isLoading = loadingStatus === value
+                    return (
+                        <button
+                            key={value}
+                            type="button"
+                            disabled={Boolean(loadingStatus)}
+                            onClick={() => handleSelect(value)}
+                            className={`flex-1 px-4 py-3 font-label text-[10px] tracking-[0.14em] uppercase transition-all disabled:cursor-not-allowed border-r border-ritual-border last:border-r-0 ${isActive
+                                    ? 'bg-ritual-red text-ritual-panel'
+                                    : 'text-ritual-gray-text hover:bg-ritual-surface hover:text-ritual-bone'
+                                }`}
+                        >
+                            {isLoading ? '…' : label}
+                        </button>
+                    )
+                })}
+            </div>
 
             {error && (
-                <p role="alert" className="text-xs text-red-400 self-center">
+                <p role="alert" className="mt-2 font-label text-xs text-ritual-red">
                     {error}
                 </p>
             )}
 
             {/* Si el status guardado no coincide con las opciones disponibles, mostrar aviso */}
             {activeStatus && !options.find((o) => o.value === activeStatus) && (
-                <p className="text-xs text-zinc-600 self-center">
+                <p className="mt-2 font-body text-xs text-ritual-gray-mid">
                     {isPast
                         ? 'Tenías marcado "quiero ir" — ¿finalmente fuiste?'
                         : 'Tenías marcado "fui" para un show futuro.'}

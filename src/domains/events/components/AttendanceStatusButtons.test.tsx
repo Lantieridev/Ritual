@@ -46,7 +46,7 @@ describe('AttendanceStatusButtons', () => {
 
     expect(mockSetAttendanceStatus).toHaveBeenCalledWith('e1', 'going')
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Voy a ir/ })).toHaveClass('bg-white')
+      expect(screen.getByRole('button', { name: /Voy a ir/ })).toHaveClass('bg-ritual-red')
     })
   })
 
@@ -59,6 +59,6 @@ describe('AttendanceStatusButtons', () => {
     await waitFor(() => {
       expect(mockSetAttendanceStatus).toHaveBeenCalled()
     })
-    expect(screen.getByRole('button', { name: /Voy a ir/ })).not.toHaveClass('bg-white')
+    expect(screen.getByRole('button', { name: /Voy a ir/ })).not.toHaveClass('bg-ritual-red')
   })
 })

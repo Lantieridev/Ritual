@@ -6,7 +6,7 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
-import { getExpenses, getExpensesSummary } from '@/src/domains/expenses/data'
+import { getExpenses, getExpensesSummary, getExpensesForEvent } from '@/src/domains/expenses/data'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -46,6 +46,33 @@ describe('getExpenses', () => {
 
   it('returns an empty list without touching the client when there is no user id', async () => {
     const result = await getExpenses(null)
+
+    expect(mockCreateClient).not.toHaveBeenCalled()
+    expect(result).toEqual([])
+  })
+})
+
+describe('getExpensesForEvent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('reads only the expenses linked to the given event, through the session-aware client', async () => {
+    const mockExpenses = [
+      { id: 'exp-1', user_id: 'user-1', amount: 5000, category: 'Entrada', note: null, event_id: 'ev-1', date: '2026-07-01', created_at: '2026-07-01' },
+    ]
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: mockExpenses, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getExpensesForEvent('ev-1', 'user-1')
+
+    expect(mockCreateClient).toHaveBeenCalledTimes(1)
+    expect(fromMock).toHaveBeenCalledWith('expenses')
+    expect(result).toEqual(mockExpenses)
+  })
+
+  it('returns an empty list without touching the client when there is no user id', async () => {
+    const result = await getExpensesForEvent('ev-1', null)
 
     expect(mockCreateClient).not.toHaveBeenCalled()
     expect(result).toEqual([])

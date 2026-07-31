@@ -49,14 +49,14 @@ export function RatingAndReviewForm({
         <form onSubmit={handleSubmit} className="space-y-5">
             {/* Estrellas */}
             <div>
-                <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2">Tu rating</p>
+                <p className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text mb-2">Tu rating</p>
                 <div className="flex items-center gap-1">
                     <StarRating value={rating} onChange={setRating} size="2xl" ariaLabel="Rating del show" />
                     {rating > 0 && (
                         <button
                             type="button"
                             onClick={() => setRating(0)}
-                            className="ml-2 text-xs text-zinc-600 hover:text-zinc-400 transition-colors self-center"
+                            className="ml-2 font-label text-xs text-ritual-gray-mid hover:text-ritual-gray-text transition-colors self-center"
                         >
                             Borrar
                         </button>
@@ -66,7 +66,7 @@ export function RatingAndReviewForm({
 
             {/* Reseña */}
             <div>
-                <label htmlFor="review" className="text-xs uppercase tracking-widest text-zinc-500 block mb-2">
+                <label htmlFor="review" className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text block mb-2">
                     Reseña
                 </label>
                 <textarea
@@ -75,14 +75,14 @@ export function RatingAndReviewForm({
                     onChange={(e) => setReview(e.target.value.slice(0, MAX_REVIEW))}
                     placeholder="¿Cómo estuvo el show? ¿Qué momento fue el mejor?..."
                     rows={3}
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder-zinc-600 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                    className="w-full border border-ritual-border bg-ritual-surface px-4 py-3 font-body italic text-sm text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none focus:ring-1 focus:ring-ritual-red/40 resize-none"
                 />
-                <p className="text-right text-[10px] text-zinc-700 mt-1">{review.length}/{MAX_REVIEW}</p>
+                <p className="text-right font-label text-[10px] text-ritual-gray-mid mt-1">{review.length}/{MAX_REVIEW}</p>
             </div>
 
             {/* Notas / Setlist */}
             <div>
-                <label htmlFor="notes" className="text-xs uppercase tracking-widest text-zinc-500 block mb-2">
+                <label htmlFor="notes" className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text block mb-2">
                     Notas / Setlist
                 </label>
                 <textarea
@@ -91,20 +91,20 @@ export function RatingAndReviewForm({
                     onChange={(e) => setNotes(e.target.value.slice(0, MAX_NOTES))}
                     placeholder="Canciones que tocaron, con quién fuiste, momentos especiales..."
                     rows={5}
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder-zinc-600 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none font-mono"
+                    className="w-full border border-ritual-border bg-ritual-surface px-4 py-3 font-label text-sm text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none focus:ring-1 focus:ring-ritual-red/40 resize-none"
                 />
-                <p className="text-right text-[10px] text-zinc-700 mt-1">{notes.length}/{MAX_NOTES}</p>
+                <p className="text-right font-label text-[10px] text-ritual-gray-mid mt-1">{notes.length}/{MAX_NOTES}</p>
             </div>
 
             <div className="flex items-center gap-3">
                 <button
                     type="submit"
                     disabled={isPending}
-                    className="inline-flex items-center justify-center rounded-lg bg-white px-5 py-2 text-sm font-semibold text-neutral-950 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center justify-center bg-ritual-red px-5 py-2.5 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-panel hover:bg-ritual-red-hover transition-colors disabled:opacity-50"
                 >
                     {isPending ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar memoria'}
                 </button>
-                {error && <p className="text-sm text-red-400">{error}</p>}
+                {error && <p className="font-label text-sm text-ritual-red">{error}</p>}
             </div>
         </form>
     )

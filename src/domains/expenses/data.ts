@@ -45,6 +45,23 @@ export async function getExpenseById(
   return data as Expense
 }
 
+/** Gastos vinculados a un evento puntual, del usuario actual. RLS filtra por user_id. */
+export async function getExpensesForEvent(eventId: string, userId: string | null): Promise<Expense[]> {
+  if (!userId) return []
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('id, user_id, amount, category, note, event_id, date, created_at')
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+  if (error) {
+    console.error('Error cargando gastos del evento:', error)
+    return []
+  }
+  return (data ?? []) as Expense[]
+}
+
 /**
  * Calcula el resumen de gastos: total general, por categoría y por año.
  */

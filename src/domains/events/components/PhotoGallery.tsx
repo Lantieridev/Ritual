@@ -78,7 +78,7 @@ export function PhotoGallery({ eventId, initialPhotos }: PhotoGalleryProps) {
             {photos.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {photos.map((photo) => (
-                        <div key={photo.id} className="group relative aspect-square rounded-lg overflow-hidden bg-neutral-900">
+                        <div key={photo.id} className="group relative aspect-square overflow-hidden bg-ritual-surface">
                             <button
                                 type="button"
                                 onClick={(e) => {
@@ -103,7 +103,7 @@ export function PhotoGallery({ eventId, initialPhotos }: PhotoGalleryProps) {
                                     onClick={(e) => { e.stopPropagation(); handleDelete(photo) }}
                                     disabled={deletingId === photo.id || isPending}
                                     aria-label="Eliminar foto"
-                                    className="pointer-events-auto text-xs bg-red-600/90 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors disabled:opacity-50"
+                                    className="pointer-events-auto font-label text-xs bg-ritual-red/90 hover:bg-ritual-red text-ritual-panel px-2 py-1 transition-colors disabled:opacity-50"
                                 >
                                     {deletingId === photo.id ? '…' : '✕'}
                                 </button>
@@ -115,8 +115,8 @@ export function PhotoGallery({ eventId, initialPhotos }: PhotoGalleryProps) {
 
             {/* Upload button */}
             <div className="flex items-center gap-3">
-                <label className="inline-flex items-center gap-2 cursor-pointer rounded-lg border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] px-4 py-2 text-sm text-zinc-300 hover:text-white transition-all">
-                    <span>{uploading ? 'Subiendo…' : '📷 Agregar foto'}</span>
+                <label className="inline-flex items-center gap-2 cursor-pointer border border-ritual-border bg-ritual-surface hover:bg-ritual-surface-high px-4 py-2 font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text hover:text-ritual-bone transition-all">
+                    <span>{uploading ? 'Subiendo…' : '+ Agregar foto'}</span>
                     <input
                         ref={fileInputRef}
                         type="file"
@@ -126,11 +126,11 @@ export function PhotoGallery({ eventId, initialPhotos }: PhotoGalleryProps) {
                         disabled={uploading || isPending}
                     />
                 </label>
-                <p className="text-xs text-zinc-700">JPG, PNG, WebP · máx. 5MB</p>
+                <p className="font-label text-xs text-ritual-gray-mid">JPG, PNG, WebP · máx. 5MB</p>
             </div>
 
             {error && (
-                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                <p className="font-body text-sm text-ritual-red bg-ritual-red/10 border border-ritual-red/20 px-3 py-2">
                     {error}
                 </p>
             )}

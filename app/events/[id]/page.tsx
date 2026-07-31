@@ -6,10 +6,13 @@ import { getEventById } from '@/src/domains/events/data'
 import { deleteEvent } from '@/src/domains/events/actions'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
 import { getEventPhotos } from '@/src/domains/events/photo-actions'
+import { getExpensesForEvent } from '@/src/domains/expenses/data'
+import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
-import { LinkButton, StarRating } from '@/src/core/components/ui'
+import { getExpenseCategory } from '@/src/domains/expenses/categories'
+import { LinkButton } from '@/src/core/components/ui'
 import { DeleteEventButton } from '@/src/domains/events/components'
 import { AttendanceStatusButtons } from '@/src/domains/events/components/AttendanceStatusButtons'
 import { RatingAndReviewForm } from '@/src/domains/events/components/RatingAndReviewForm'
@@ -33,17 +36,22 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   }
 }
 
+function formatARS(amount: number) {
+  return `$${amount.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
+}
+
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = await params
-  const [event, attendance, photos] = await Promise.all([
+  const userId = await getCurrentUserId()
+  const [event, attendance, photos, expenses] = await Promise.all([
     getEventById(id),
     getAttendanceForEvent(id),
     getEventPhotos(id),
+    getExpensesForEvent(id, userId),
   ])
 
   if (!event) notFound()
 
-  // Buscar imagen del artista principal en Spotify
   const mainArtist = event.lineups?.[0]?.artists
   let heroImage: string | null = null
   if (mainArtist && isSpotifyConfigured()) {
@@ -56,104 +64,78 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     : 'Sede por confirmar'
 
   const dateObj = new Date(event.date)
-  const dateLabel = formatDate(dateObj, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
+  const dateLabel = formatDate(dateObj, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const isPast = isPastEvent(event.date)
 
-  return (
-    <main className="min-h-screen bg-neutral-950 text-white font-sans">
-      {/* Hero con imagen de Spotify */}
-      <div className="relative h-72 md:h-96 w-full overflow-hidden bg-neutral-900">
-        {heroImage ? (
-          <Image
-            src={heroImage}
-            alt={mainArtist?.name ?? 'Artista'}
-            fill
-            className="object-cover object-top"
-            priority
-            sizes="100vw"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-950" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />
+  const review = attendance?.review?.trim() || null
+  const reviewVariant = !review ? 'none' : review.length > 220 ? 'long' : 'short'
+  const expensesTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
 
-        {/* Nav sobre la imagen */}
+  return (
+    <main className="min-h-screen bg-ritual-bg text-ritual-bone">
+      {/* Hero */}
+      <div className="relative h-72 md:h-[28rem] w-full overflow-hidden bg-ritual-panel">
+        {heroImage ? (
+          <div className="absolute inset-0 ritual-photo">
+            <Image src={heroImage} alt={mainArtist?.name ?? 'Artista'} fill className="object-cover object-top" priority sizes="100vw" />
+          </div>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-ritual-panel-2 to-ritual-bg" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg via-ritual-bg/60 to-transparent" />
+
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-6">
           <Link
             href={routes.home}
-            className="inline-flex items-center gap-2 text-sm text-zinc-300 hover:text-white transition-colors bg-black/30 backdrop-blur-sm rounded-lg px-3 py-1.5"
+            className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-light-3 hover:text-ritual-bone transition-colors bg-ritual-bg/40 backdrop-blur-sm px-3 py-1.5"
           >
             ← Volver
           </Link>
-          <LinkButton
-            href={routes.events.edit(event.id)}
-            variant="secondary"
-            className="px-4 py-1.5 text-sm bg-black/30 backdrop-blur-sm"
-          >
+          <LinkButton href={routes.events.edit(event.id)} variant="secondary" className="px-4 py-1.5 bg-ritual-bg/40 backdrop-blur-sm">
             Editar
           </LinkButton>
         </div>
 
-        {/* Título sobre la imagen */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-1">
-            {dateLabel}
-          </p>
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-white text-balance">
+        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
+          <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-light-2 mb-1">{dateLabel}</p>
+          <h1 className="font-display text-4xl md:text-7xl leading-[0.9] uppercase text-ritual-bone">
             {event.name || mainArtist?.name || 'Recital'}
           </h1>
         </div>
       </div>
 
-      {/* Contenido */}
       <div className="max-w-3xl mx-auto px-6 md:px-8 py-10 space-y-10">
-
-        {/* Estado de asistencia */}
+        {/* Banda de asistencia */}
         <section>
-          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-3">
+          <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">
             {isPast ? '¿Fuiste?' : '¿Vas a ir?'}
           </p>
-          <AttendanceStatusButtons
-            eventId={event.id}
-            currentStatus={attendance?.status ?? null}
-            isPast={isPast}
-          />
+          <AttendanceStatusButtons eventId={event.id} currentStatus={attendance?.status ?? null} isPast={isPast} />
         </section>
 
-        {/* Info del evento */}
-        <section className="grid sm:grid-cols-2 gap-6 border-t border-white/[0.06] pt-8">
+        {/* Info */}
+        <section className="grid sm:grid-cols-2 gap-6 border-t border-ritual-border-subtle pt-8">
           <div>
-            <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">Sede</p>
-            <p className="text-lg font-semibold text-white">{venueLabel}</p>
-            {event.venues?.country && (
-              <p className="text-sm text-zinc-500 mt-0.5">{event.venues.country}</p>
-            )}
+            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-1">Sede</p>
+            <p className="font-subtitle font-black text-xl uppercase text-ritual-bone">{venueLabel}</p>
+            {event.venues?.country && <p className="font-body text-sm text-ritual-gray-text mt-0.5">{event.venues.country}</p>}
           </div>
           <div>
-            <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">Fecha</p>
-            <p className="text-lg font-semibold text-white">{dateLabel}</p>
+            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-1">Fecha</p>
+            <p className="font-subtitle font-black text-xl uppercase text-ritual-bone">{dateLabel}</p>
           </div>
         </section>
 
-        {/* Lineup */}
+        {/* Lineup — quién tocó */}
         {event.lineups && event.lineups.length > 0 && (
-          <section className="border-t border-white/[0.06] pt-8">
-            <p className="text-xs uppercase tracking-widest text-zinc-500 mb-4">Lineup</p>
+          <section className="border-t border-ritual-border-subtle pt-8">
+            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Quién tocó</p>
             <ul className="flex flex-wrap gap-2">
               {event.lineups.map((row) => (
                 <li key={row.artists.id}>
-                  <span className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/10 text-zinc-200 font-medium px-4 py-2 rounded-lg text-sm">
+                  <span className="inline-flex items-center gap-2 bg-ritual-surface border border-ritual-border text-ritual-gray-light-3 font-dense font-extrabold px-4 py-2 text-sm">
                     {row.artists.name}
-                    {row.artists.genre && (
-                      <span className="text-zinc-600 font-normal text-xs">
-                        {row.artists.genre}
-                      </span>
-                    )}
+                    {row.artists.genre && <span className="font-label text-ritual-gray-mid font-normal text-xs">{row.artists.genre}</span>}
                   </span>
                 </li>
               ))}
@@ -161,41 +143,84 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </section>
         )}
 
-        {/* Galería de fotos */}
-        <section className="border-t border-white/[0.06] pt-8">
-          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-4">
-            Fotos {photos.length > 0 && <span className="text-zinc-700">({photos.length})</span>}
+        {/* El recorte — reseña */}
+        {reviewVariant !== 'none' && (
+          <section className="border-t border-ritual-border-subtle pt-8">
+            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Tu reseña</p>
+            <div
+              className="bg-ritual-paper text-ritual-paper-ink border-l-[3px] border-ritual-paper-red px-6 py-6 md:px-8 md:py-8"
+              style={{ clipPath: 'polygon(0 0, 100% 0, 100% 97%, 98% 100%, 94% 97%, 90% 100%, 86% 97%, 82% 100%, 78% 97%, 74% 100%, 70% 97%, 66% 100%, 62% 97%, 58% 100%, 54% 97%, 50% 100%, 46% 97%, 42% 100%, 38% 97%, 34% 100%, 30% 97%, 26% 100%, 22% 97%, 18% 100%, 14% 97%, 10% 100%, 6% 97%, 2% 100%, 0 97%)' }}
+            >
+              {reviewVariant === 'long' ? (
+                <p className="font-body text-lg leading-relaxed first-letter:font-display first-letter:text-6xl first-letter:text-ritual-paper-red first-letter:float-left first-letter:mr-3 first-letter:leading-[0.8]">
+                  {review}
+                </p>
+              ) : (
+                <p className="font-body italic text-2xl leading-snug">&ldquo;{review}&rdquo;</p>
+              )}
+            </div>
+          </section>
+        )}
+        {reviewVariant === 'none' && attendance?.status === 'went' && (
+          <section className="border-t border-ritual-border-subtle pt-8">
+            <p className="font-body italic text-ritual-gray-text">
+              Todavía no escribiste nada de esta noche — no hace falta, pero si querés, ahí abajo hay lugar.
+            </p>
+          </section>
+        )}
+
+        {/* Fotos */}
+        <section className="border-t border-ritual-border-subtle pt-8">
+          <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">
+            Fotos {photos.length > 0 && <span className="text-ritual-gray-mid">({photos.length})</span>}
           </p>
           <PhotoGallery eventId={event.id} initialPhotos={photos} />
         </section>
 
-        {/* Rating, reseña y notas — visible cuando el status es "went" */}
+        {/* Quiénes fueron — depende de la capa social, todavía sin backend */}
+        <section className="border-t border-ritual-border-subtle pt-8">
+          <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Quiénes fueron</p>
+          <p className="font-body text-sm text-ritual-gray-mid">
+            Próximamente — depende de la capa social (
+            <a href="https://github.com/Lantieridev/Ritual/issues/5" target="_blank" rel="noopener noreferrer" className="text-ritual-red underline underline-offset-4">
+              issue #5
+            </a>
+            ), todavía sin implementar.
+          </p>
+        </section>
+
+        {/* La cuenta de esa noche */}
+        {expenses.length > 0 && (
+          <section className="border-t border-ritual-border-subtle pt-8">
+            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">La cuenta de esa noche</p>
+            <div className="bg-ritual-paper text-ritual-paper-ink px-6 py-6 border-l-[3px] border-ritual-paper-red">
+              <ul className="divide-y divide-ritual-paper-2">
+                {expenses.map((ex) => (
+                  <li key={ex.id} className="flex items-center justify-between py-2 font-label text-sm">
+                    <span>{getExpenseCategory(ex.category).icon} {ex.category}</span>
+                    <span>{formatARS(Number(ex.amount))}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex items-center justify-between pt-3 mt-2 border-t border-dashed border-ritual-paper-2 font-figure text-2xl">
+                <span>TOTAL</span>
+                <span>{formatARS(expensesTotal)}</span>
+              </div>
+              <p className="font-label text-[9px] tracking-[0.1em] uppercase text-ritual-paper-ink/50 mt-3">no se aceptan devoluciones</p>
+            </div>
+          </section>
+        )}
+
+        {/* Rating, reseña y notas — form, solo si fue */}
         {attendance?.status === 'went' && (
-          <section className="border-t border-white/[0.06] pt-8">
-            <p className="text-xs uppercase tracking-widest text-zinc-500 mb-4">Tu memoria del show</p>
-
-            {/* Mostrar rating guardado */}
-            {attendance?.rating && (
-              <StarRating value={attendance.rating} size="xl" className="mb-4" />
-            )}
-
-            {/* Mostrar reseña guardada */}
-            {attendance?.review && (
-              <p className="text-zinc-300 text-sm italic mb-4 border-l-2 border-white/10 pl-4">
-                &quot;{attendance.review}&quot;
-              </p>
-            )}
-
-            {/* Mostrar notas guardadas */}
+          <section className="border-t border-ritual-border-subtle pt-8">
+            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Tu memoria del show</p>
             {attendance?.notes && (
-              <div className="mb-6 rounded-lg bg-white/[0.03] border border-white/[0.06] px-4 py-3">
-                <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-2">Notas / Setlist</p>
-                <pre className="text-sm text-zinc-400 whitespace-pre-wrap font-mono leading-relaxed">
-                  {attendance.notes}
-                </pre>
+              <div className="mb-6 bg-ritual-surface border border-ritual-border-subtle px-4 py-3">
+                <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mb-2">Notas / Setlist</p>
+                <pre className="font-label text-sm text-ritual-gray-text whitespace-pre-wrap leading-relaxed">{attendance.notes}</pre>
               </div>
             )}
-
             <RatingAndReviewForm
               eventId={event.id}
               initialRating={attendance?.rating}
@@ -206,8 +231,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         )}
 
         {/* Zona de peligro */}
-        <section className="border-t border-white/[0.06] pt-8">
-          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-3">Acciones</p>
+        <section className="border-t border-ritual-border-subtle pt-8">
+          <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Acciones</p>
           <DeleteEventButton event={event} deleteEvent={deleteEvent} />
         </section>
       </div>
