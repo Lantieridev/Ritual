@@ -39,7 +39,7 @@ export function StarRating({
                 {[1, 2, 3, 4, 5].map((star) => (
                     <span
                         key={star}
-                        className={`${SIZE_CLASS[size]} ${star <= value ? 'text-white' : 'text-zinc-700'}`}
+                        className={`${SIZE_CLASS[size]} ${star <= value ? 'text-ritual-red' : 'text-ritual-border-2'}`}
                     >
                         ★
                     </span>
@@ -62,7 +62,7 @@ export function StarRating({
                     className={`${SIZE_CLASS[size]} transition-transform hover:scale-110 focus:outline-none`}
                     aria-label={`${star} estrella${star > 1 ? 's' : ''}`}
                 >
-                    <span className={displayValue >= star ? 'text-white' : 'text-zinc-700'}>★</span>
+                    <span className={displayValue >= star ? 'text-ritual-red' : 'text-ritual-border-2'}>★</span>
                 </button>
             ))}
         </div>

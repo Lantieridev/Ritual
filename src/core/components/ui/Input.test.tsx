@@ -19,7 +19,7 @@ describe('Input', () => {
   it('shows the error message and applies error styling', () => {
     render(<Input id="username" error="Usuario obligatorio" />)
     expect(screen.getByText('Usuario obligatorio')).toBeInTheDocument()
-    expect(screen.getByRole('textbox')).toHaveClass('border-red-500')
+    expect(screen.getByRole('textbox')).toHaveClass('border-ritual-red')
   })
 
   it('forwards typing to the underlying input', async () => {

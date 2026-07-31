@@ -10,7 +10,7 @@ export interface PageShellProps {
   children: ReactNode
 }
 
-const TITLE_CLASS = 'text-4xl font-bold text-white tracking-tighter'
+const TITLE_CLASS = 'font-display text-5xl uppercase text-ritual-bone'
 
 /**
  * Wrapper de página: maneja márgenes, ancho máximo y estructura de título.
@@ -26,12 +26,12 @@ export function PageShell({
   children,
 }: PageShellProps) {
   return (
-    <main className="min-h-screen bg-neutral-950 text-white pt-20 pb-16">
+    <main className="min-h-screen bg-ritual-bg text-ritual-bone pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-6 md:px-8">
         {backHref ? (
           <Link
             href={backHref}
-            className="inline-block text-sm text-zinc-500 hover:text-zinc-300 transition-colors pt-8"
+            className="inline-block font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid hover:text-ritual-gray-text transition-colors pt-8"
           >
             {backLabel ?? '← Volver'}
           </Link>
@@ -43,7 +43,7 @@ export function PageShell({
               {title}
             </h1>
             {description != null && description !== '' ? (
-              <p className="text-zinc-400 mt-2 max-w-xl">{description}</p>
+              <p className="font-body text-ritual-gray-text mt-2 max-w-xl">{description}</p>
             ) : null}
           </div>
           {action != null ? (

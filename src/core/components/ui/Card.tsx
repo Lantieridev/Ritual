@@ -13,7 +13,7 @@ interface CardProps {
 export function Card({ children, className = '' }: CardProps) {
   return (
     <div
-      className={`border border-white/10 bg-white/5 rounded-xl p-6 transition-all hover:border-white/20 ${className}`}
+      className={`border border-ritual-border bg-ritual-surface p-6 transition-all hover:border-ritual-border-2 ${className}`}
     >
       {children}
     </div>

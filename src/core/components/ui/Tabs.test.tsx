@@ -29,7 +29,7 @@ describe('Tabs', () => {
   it('visually distinguishes the active tab from the rest', () => {
     render(<Tabs tabs={tabs} activeTab="history" onChange={vi.fn()} />)
 
-    expect(screen.getByRole('button', { name: 'Historial' })).toHaveClass('bg-white/10')
-    expect(screen.getByRole('button', { name: 'Descripción' })).not.toHaveClass('bg-white/10')
+    expect(screen.getByRole('button', { name: 'Historial' })).toHaveClass('bg-ritual-red')
+    expect(screen.getByRole('button', { name: 'Descripción' })).not.toHaveClass('bg-ritual-red')
   })
 })

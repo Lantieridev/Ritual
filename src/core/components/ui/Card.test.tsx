@@ -13,6 +13,6 @@ describe('Card', () => {
     render(<Card className="mt-4">Contenido</Card>)
     const el = screen.getByText('Contenido')
     expect(el).toHaveClass('mt-4')
-    expect(el).toHaveClass('rounded-xl')
+    expect(el).toHaveClass('bg-ritual-surface')
   })
 })

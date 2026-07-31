@@ -16,7 +16,7 @@ interface TabsProps {
 
 export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
     return (
-        <div className={cn('flex space-x-1 rounded-xl bg-white/5 p-1', className)}>
+        <div className={cn('flex gap-1 bg-ritual-surface p-1', className)}>
             {tabs.map((tab) => {
                 const isActive = activeTab === tab.id
                 return (
@@ -24,8 +24,8 @@ export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
                         key={tab.id}
                         onClick={() => onChange(tab.id)}
                         className={cn(
-                            'relative rounded-lg px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-2',
-                            isActive ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                            'relative px-3 py-1.5 font-label text-[10px] tracking-[0.12em] uppercase transition-all focus-visible:outline-2',
+                            isActive ? 'bg-ritual-red text-ritual-panel' : 'text-ritual-gray-text hover:text-ritual-gray-light hover:bg-ritual-surface-high'
                         )}
                     >
                         {tab.label}

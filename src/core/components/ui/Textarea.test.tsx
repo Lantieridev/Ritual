@@ -13,7 +13,7 @@ describe('Textarea', () => {
   it('shows the error message and applies error styling', () => {
     render(<Textarea id="bio" error="Muy larga" />)
     expect(screen.getByText('Muy larga')).toBeInTheDocument()
-    expect(screen.getByRole('textbox')).toHaveClass('border-red-500')
+    expect(screen.getByRole('textbox')).toHaveClass('border-ritual-red')
   })
 
   it('forwards typing to the underlying textarea', async () => {

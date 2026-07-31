@@ -27,7 +27,7 @@ export function ConfirmDeleteButton({ label, confirmMessage, onConfirm }: Confir
             <Button
                 type="button"
                 variant="ghost"
-                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                className="text-ritual-red hover:text-ritual-red-hover hover:bg-ritual-red/10"
                 onClick={() => { setIsConfirming(true); setError(null) }}
             >
                 {label}
@@ -36,10 +36,10 @@ export function ConfirmDeleteButton({ label, confirmMessage, onConfirm }: Confir
     }
 
     return (
-        <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
-            <p className="text-sm text-zinc-300">{confirmMessage}</p>
+        <div className="border border-ritual-border bg-ritual-surface p-4 space-y-3">
+            <p className="font-body text-sm text-ritual-gray-light-3">{confirmMessage}</p>
             {error && (
-                <p role="alert" className="text-sm text-red-400">
+                <p role="alert" className="font-body text-sm text-ritual-red">
                     {error}
                 </p>
             )}
@@ -47,7 +47,7 @@ export function ConfirmDeleteButton({ label, confirmMessage, onConfirm }: Confir
                 <Button
                     type="button"
                     variant="primary"
-                    className="bg-red-600 hover:bg-red-500 text-white"
+                    className=""
                     disabled={isDeleting}
                     onClick={async () => {
                         setIsDeleting(true)

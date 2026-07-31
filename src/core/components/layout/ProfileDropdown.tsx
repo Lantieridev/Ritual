@@ -47,26 +47,26 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
                 onClick={() => setIsOpen(!isOpen)}
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
+                className="flex items-center gap-2 px-2 py-1.5 bg-ritual-surface hover:bg-ritual-surface-high transition-colors border border-ritual-border-subtle"
             >
-                <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shadow-inner">
-                    <span className="text-[10px] font-bold text-white uppercase leading-none">
+                <div className="w-6 h-6 rounded-full bg-ritual-red flex items-center justify-center">
+                    <span className="font-figure text-xs text-ritual-panel uppercase leading-none">
                         {user.email?.[0] ?? 'U'}
                     </span>
                 </div>
-                <span className="text-sm font-medium text-zinc-300 hidden md:block max-w-[100px] truncate">
+                <span className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-light hidden md:block max-w-[100px] truncate">
                     {user.email?.split('@')[0]}
                 </span>
-                <svg className={`w-4 h-4 text-zinc-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={`w-4 h-4 text-ritual-gray-mid transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
 
             {isOpen && (
-                <div role="menu" className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-neutral-900 shadow-2xl py-1 z-50 origin-top-right animate-in fade-in zoom-in-95 duration-200">
-                    <div className="px-4 py-3 border-b border-white/5 mb-1">
-                        <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Conectado como</p>
-                        <p className="text-sm text-white truncate font-medium">{user.email}</p>
+                <div role="menu" className="absolute right-0 mt-2 w-56 border border-ritual-border bg-ritual-panel-2 shadow-2xl py-1 z-50 origin-top-right animate-in fade-in zoom-in-95 duration-200">
+                    <div className="px-4 py-3 border-b border-ritual-border-subtle mb-1">
+                        <p className="font-label text-[9px] text-ritual-gray-mid uppercase tracking-[0.14em]">Conectado como</p>
+                        <p className="font-body text-sm text-ritual-bone truncate">{user.email}</p>
                     </div>
 
                     {menuItems.map((item) => (
@@ -75,21 +75,21 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
                                 href={item.href}
                                 role="menuitem"
                                 onClick={() => setIsOpen(false)}
-                                className="block px-4 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors"
+                                className="block px-4 py-2 font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text hover:bg-ritual-surface hover:text-ritual-bone transition-colors"
                             >
                                 {item.label}
                             </Link>
                             {/* Add border if specified and not last item */}
-                            {item.border && <div className="h-px bg-white/5 my-1 mx-2" />}
+                            {item.border && <div className="h-px bg-ritual-border-subtle my-1 mx-2" />}
                         </div>
                     ))}
 
-                    <div className="pt-1 mt-1 border-t border-white/5 bg-neutral-950/30 rounded-b-xl">
+                    <div className="pt-1 mt-1 border-t border-ritual-border-subtle bg-ritual-bg/30">
                         <button
                             type="button"
                             role="menuitem"
                             onClick={() => signout()}
-                            className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 hover:text-red-300 transition-colors"
+                            className="w-full text-left px-4 py-2 font-label text-[10px] tracking-[0.1em] uppercase text-ritual-red hover:bg-ritual-surface hover:text-ritual-red-hover transition-colors"
                         >
                             Cerrar Sesión
                         </button>

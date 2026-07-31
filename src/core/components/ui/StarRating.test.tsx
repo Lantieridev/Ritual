@@ -14,7 +14,7 @@ describe('StarRating', () => {
   it('lights up exactly the stars up to the given value in read-only mode', () => {
     const { container } = render(<StarRating value={3} />)
     const stars = container.querySelectorAll('span')
-    expect(Array.from(stars).map((s) => s.className.includes('text-white'))).toEqual([
+    expect(Array.from(stars).map((s) => s.className.includes('text-ritual-red'))).toEqual([
       true,
       true,
       true,

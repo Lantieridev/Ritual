@@ -134,7 +134,7 @@ export function Combobox({ id, options, placeholder, excludeIds, onSelect, onCre
                 <ul
                     id={listboxId}
                     role="listbox"
-                    className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-white/15 bg-neutral-900 shadow-xl py-1"
+                    className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto border border-ritual-border bg-ritual-panel-2 shadow-xl py-1"
                 >
                     {rows.map((row, i) => (
                         <li key={row.kind === 'option' ? row.option.id : '__create__'}>
@@ -143,8 +143,8 @@ export function Combobox({ id, options, placeholder, excludeIds, onSelect, onCre
                                 role="option"
                                 aria-selected={i === highlightedIndex}
                                 disabled={row.kind === 'create' && isCreating}
-                                className={`w-full text-left px-3 py-2 text-sm transition-colors ${i === highlightedIndex ? 'bg-white/10 text-white' : 'text-zinc-300'
-                                    } ${row.kind === 'create' ? 'text-emerald-400' : ''}`}
+                                className={`w-full text-left px-3 py-2 font-body text-sm transition-colors ${i === highlightedIndex ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-light-3'
+                                    } ${row.kind === 'create' ? 'text-ritual-red' : ''}`}
                                 onMouseEnter={() => setHighlightedIndex(i)}
                                 onClick={() => (row.kind === 'option' ? selectOption(row.option) : handleCreate())}
                             >
@@ -152,7 +152,7 @@ export function Combobox({ id, options, placeholder, excludeIds, onSelect, onCre
                                     <>
                                         {row.option.label}
                                         {row.option.sublabel && (
-                                            <span className="text-zinc-500"> · {row.option.sublabel}</span>
+                                            <span className="text-ritual-gray-mid"> · {row.option.sublabel}</span>
                                         )}
                                     </>
                                 ) : (
@@ -165,7 +165,7 @@ export function Combobox({ id, options, placeholder, excludeIds, onSelect, onCre
             )}
 
             {createError && (
-                <p role="alert" className="mt-1 text-xs text-red-400">
+                <p role="alert" className="mt-1 font-label text-xs text-ritual-red">
                     {createError}
                 </p>
             )}

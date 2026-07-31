@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 /** Clase base para inputs y selects en formularios (dark, focus sutil). */
 export const inputClass =
-  'w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-white placeholder-zinc-500 focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/20'
+  'w-full border border-ritual-border bg-ritual-surface px-4 py-2.5 font-body text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none focus:ring-1 focus:ring-ritual-red/40'
 
 export interface FormFieldProps {
   label: string
@@ -26,14 +26,14 @@ export function FormField({
     <div>
       <label
         htmlFor={id}
-        className="block text-sm font-medium text-zinc-400 mb-1.5"
+        className="block font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text mb-1.5"
       >
         {label}
-        {required ? <span className="text-red-400"> *</span> : null}
+        {required ? <span className="text-ritual-red"> *</span> : null}
       </label>
       {children}
       {hint != null && hint !== '' ? (
-        <p className="mt-1.5 text-sm text-zinc-500">{hint}</p>
+        <p className="mt-1.5 font-body text-sm text-ritual-gray-mid">{hint}</p>
       ) : null}
     </div>
   )

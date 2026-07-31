@@ -45,14 +45,14 @@ export function Navbar({ user }: NavbarProps) {
     }
 
     return (
-        <header className="fixed top-0 inset-x-0 z-50 h-16 border-b border-white/[0.06] bg-neutral-950/80 backdrop-blur-md">
+        <header className="fixed top-0 inset-x-0 z-50 h-16 border-b border-ritual-border-subtle bg-ritual-panel/90 backdrop-blur-md">
             <div className="max-w-7xl mx-auto h-full px-6 md:px-8 flex items-center justify-between gap-8">
                 {/* Logo */}
                 <Link
                     href={routes.home}
-                    className="text-sm font-bold tracking-[0.2em] uppercase text-white hover:text-zinc-300 transition-colors shrink-0"
+                    className="font-display text-xl tracking-[0.06em] uppercase text-ritual-bone hover:text-ritual-gray-light-3 transition-colors shrink-0"
                 >
-                    RITUAL
+                    RITU<span className="text-ritual-red">AL</span>
                 </Link>
 
                 {/* Nav links — scrollable on mobile with fade */}
@@ -64,21 +64,21 @@ export function Navbar({ user }: NavbarProps) {
                                 <Link
                                     key={href}
                                     href={href}
-                                    className={`relative px-3 py-1.5 text-sm rounded-md transition-colors whitespace-nowrap ${active
-                                        ? 'text-white bg-white/[0.08]'
-                                        : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                                    className={`relative px-3 py-1.5 font-label text-[10px] tracking-[0.16em] uppercase transition-colors whitespace-nowrap ${active
+                                        ? 'text-white bg-ritual-surface-high'
+                                        : 'text-ritual-gray-text hover:text-white hover:bg-ritual-surface'
                                         }`}
                                 >
                                     {label}
                                     {active && (
-                                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />
+                                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-ritual-red" />
                                     )}
                                 </Link>
                             )
                         })}
                     </div>
                     {/* Fade right edge for mobile overflow */}
-                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-neutral-950/80 to-transparent pointer-events-none" />
+                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-ritual-panel to-transparent pointer-events-none" />
                 </nav>
 
                 {/* Auth Section */}
@@ -88,7 +88,7 @@ export function Navbar({ user }: NavbarProps) {
                     ) : (
                         <Link
                             href={routes.login}
-                            className="relative px-4 py-2 text-sm rounded-full bg-white text-neutral-950 hover:bg-zinc-200 transition-colors font-medium"
+                            className="font-figure text-base tracking-wide bg-ritual-red text-ritual-panel px-4 py-2 hover:bg-ritual-red-hover transition-colors"
                         >
                             Ingresar
                         </Link>

@@ -14,7 +14,7 @@ describe('LinkButton', () => {
 
   it('applies the primary variant by default', () => {
     render(<LinkButton href="/events/nuevo">Cargar recital</LinkButton>)
-    expect(screen.getByRole('link')).toHaveClass('bg-white')
+    expect(screen.getByRole('link')).toHaveClass('bg-ritual-red')
   })
 
   it('applies the secondary variant when requested', () => {
