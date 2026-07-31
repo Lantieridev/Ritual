@@ -1,10 +1,18 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { ArtistProfile } from '@/src/domains/artists/components/ArtistProfile'
 import type { ArtistWithEvents } from '@/src/domains/artists/data'
 import type { FutureEvent } from '@/src/core/types'
+
+const wentEvent: ArtistWithEvents['events'][number] = {
+  id: 'e1',
+  name: 'Show pasado',
+  date: '2020-01-01',
+  venues: { name: 'Niceto', city: 'CABA' },
+  event_photos: [],
+  attendance: [{ status: 'went', rating: 5, review: 'Inolvidable' }],
+}
 
 const artist: ArtistWithEvents = {
   id: 'a1',
@@ -12,15 +20,7 @@ const artist: ArtistWithEvents = {
   genre: 'Indie',
   image_url: null,
   spotify_id: null,
-  events: [
-    {
-      id: 'e1',
-      name: 'Show pasado',
-      date: '2020-01-01',
-      venues: { name: 'Niceto', city: 'CABA' },
-      event_photos: [{ storage_path: 'a/b.jpg', caption: 'Buena toma' }],
-    },
-  ],
+  events: [wentEvent],
 }
 
 const baseProps = {
@@ -29,12 +29,15 @@ const baseProps = {
   similarArtists: [{ name: 'Usted Señalemelo' }],
   upcomingEvents: [] as FutureEvent[],
   internalUpcoming: [] as ArtistWithEvents['events'],
-  internalPast: [] as ArtistWithEvents['events'],
+  internalPast: [wentEvent],
+  timesSeen: 1,
+  averageRating: 5,
+  bestNight: { event: wentEvent, rating: 5, review: 'Inolvidable' },
   stats: { listeners: '100K', spotifyFollowers: '50K' },
 }
 
-describe('ArtistProfile — overview tab', () => {
-  it('renders the bio, similar artists, and stats by default', () => {
+describe('ArtistProfile', () => {
+  it('renders the bio, similar artists, and stats', () => {
     render(<ArtistProfile {...baseProps} />)
 
     expect(screen.getByText('Banda de indie pop argentina.')).toBeInTheDocument()
@@ -48,26 +51,39 @@ describe('ArtistProfile — overview tab', () => {
     expect(screen.queryByText('Biografía')).not.toBeInTheDocument()
   })
 
-  it('always shows the shows-seen count, derived from the full events history', () => {
+  it('shows the shows-seen count and average rating in the stats row', () => {
     render(<ArtistProfile {...baseProps} />)
     expect(screen.getByText('Shows vistos')).toBeInTheDocument()
-    expect(screen.getByText('1')).toBeInTheDocument()
-  })
-})
-
-describe('ArtistProfile — history tab', () => {
-  it('switches to the history tab and shows internal past shows', async () => {
-    const past = artist.events
-    render(<ArtistProfile {...baseProps} internalPast={past} />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Historial' }))
-
-    expect(screen.getByText('Historial de shows')).toBeInTheDocument()
-    expect(screen.getByText('Show pasado')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Show pasado/ })).toHaveAttribute('href', '/events/e1')
+    expect(screen.getByText('Tu promedio')).toBeInTheDocument()
+    expect(screen.getByText('5.0')).toBeInTheDocument()
   })
 
-  it('shows external (Last.fm) upcoming shows with a Tickets link', async () => {
+  it('renders the best-night review as a standalone quote', () => {
+    render(<ArtistProfile {...baseProps} />)
+    expect(screen.getByText('“Inolvidable”')).toBeInTheDocument()
+  })
+
+  it('omits the best-night quote when there is no review, even with a rating', () => {
+    render(<ArtistProfile {...baseProps} bestNight={{ event: wentEvent, rating: 5, review: null }} />)
+    expect(screen.queryByText(/Inolvidable/)).not.toBeInTheDocument()
+  })
+
+  it('lists internal upcoming shows as primary cards, linking to their event page', () => {
+    const upcoming: ArtistWithEvents['events'][number] = {
+      id: 'e2',
+      name: null,
+      date: '2099-01-01',
+      venues: { name: 'Movistar Arena', city: 'CABA' },
+      event_photos: [],
+      attendance: [],
+    }
+    render(<ArtistProfile {...baseProps} internalUpcoming={[upcoming]} />)
+
+    expect(screen.getByText('Movistar Arena')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Movistar Arena/ })).toHaveAttribute('href', '/events/e2')
+  })
+
+  it('shows external (Ticketmaster) upcoming shows with a Tickets link', () => {
     const externalEvent: FutureEvent = {
       id: 'ext-1',
       title: 'Show en Gira',
@@ -78,42 +94,26 @@ describe('ArtistProfile — history tab', () => {
     }
     render(<ArtistProfile {...baseProps} upcomingEvents={[externalEvent]} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Historial' }))
-
-    expect(screen.getByText('Show en Gira')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Tickets' })).toHaveAttribute(
-      'href',
-      'https://tickets.example.com'
-    )
+    expect(screen.getByText('Estadio')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Tickets →' })).toHaveAttribute('href', 'https://tickets.example.com')
   })
 
-  it('shows an empty state with a manual-add link when there is no history at all', async () => {
-    render(<ArtistProfile {...baseProps} />)
+  it('lists the venues seen at, deduplicated', () => {
+    const secondNightSameVenue: ArtistWithEvents['events'][number] = {
+      ...wentEvent,
+      id: 'e3',
+      date: '2021-01-01',
+    }
+    render(<ArtistProfile {...baseProps} internalPast={[wentEvent, secondNightSameVenue]} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Historial' }))
-
-    expect(screen.getByText(/No tenés shows de este artista/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Cargar show manualmente/ })).toHaveAttribute(
-      'href',
-      '/events/nuevo'
-    )
-  })
-})
-
-describe('ArtistProfile — photos tab', () => {
-  it('shows an empty state when there are no photos', async () => {
-    render(<ArtistProfile {...baseProps} artist={{ ...artist, events: [] }} />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Fotos' }))
-
-    expect(screen.getByText('No hay fotos cargadas todavía.')).toBeInTheDocument()
+    // 2 filas en "las veces que fuiste" (una por show) + 1 chip deduplicado en "dónde las viste"
+    expect(screen.getAllByText('Niceto')).toHaveLength(3)
   })
 
-  it('collects photos from every event into a single grid', async () => {
-    render(<ArtistProfile {...baseProps} />)
+  it('shows an empty-state prompt with a manual-add link when nothing was ever attended', () => {
+    render(<ArtistProfile {...baseProps} internalPast={[]} timesSeen={0} averageRating={null} bestNight={null} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Fotos' }))
-
-    expect(screen.getByAltText('Buena toma')).toBeInTheDocument()
+    expect(screen.getByText(/Todavía no tenés shows de Bandalos Chinos/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Cargar uno' })).toHaveAttribute('href', '/events/nuevo')
   })
 })

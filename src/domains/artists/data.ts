@@ -8,6 +8,7 @@ export interface ArtistWithEvents extends Artist {
     date: string
     venues: { name: string; city: string | null } | null
     event_photos: Array<{ storage_path: string; caption: string | null }>
+    attendance: Array<{ status: string; rating: number | null; review: string | null }>
   }>
 }
 
@@ -34,7 +35,8 @@ export async function getArtistById(id: string): Promise<ArtistWithEvents | null
         events (
           id, name, date,
           venues ( name, city ),
-          event_photos ( storage_path, caption )
+          event_photos ( storage_path, caption ),
+          attendance!left ( status, rating, review )
         )
       )
     `)

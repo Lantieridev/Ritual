@@ -7,6 +7,12 @@ const MAX_BIO_LENGTH = 500
 const MAX_TAGS = 5
 const MAX_SIMILAR_ARTISTS = 5
 
+export interface BestNight {
+    event: ArtistWithEvents['events'][number]
+    rating: number
+    review: string | null
+}
+
 export interface ArtistEnrichment {
     heroImage: string | null
     tags: string[]
@@ -17,6 +23,12 @@ export interface ArtistEnrichment {
     spotifyUrl: string | null
     internalPast: ArtistWithEvents['events']
     internalUpcoming: ArtistWithEvents['events']
+    /** Shows con status "went" — "veces que fuiste", no todo lo que está en lineups. */
+    timesSeen: number
+    /** Promedio de rating entre los shows calificados; null si ninguno tiene rating todavía. */
+    averageRating: number | null
+    /** El show mejor calificado, para la cita destacada. Null sin ningún rating. */
+    bestNight: BestNight | null
 }
 
 /**
@@ -63,6 +75,18 @@ export function buildArtistEnrichment(
     const internalPast = artist.events.filter((e) => isPastEvent(e.date))
     const internalUpcoming = artist.events.filter((e) => !isPastEvent(e.date))
 
+    const attendedEvents = artist.events.filter((e) => e.attendance?.[0]?.status === 'went')
+    const timesSeen = attendedEvents.length
+
+    const ratedEvents = attendedEvents.filter((e) => e.attendance?.[0]?.rating != null)
+    const averageRating = ratedEvents.length > 0
+        ? ratedEvents.reduce((sum, e) => sum + e.attendance[0].rating!, 0) / ratedEvents.length
+        : null
+
+    const bestNight = ratedEvents.length > 0
+        ? ratedEvents.reduce((best, e) => (e.attendance[0].rating! > best.attendance[0].rating! ? e : best))
+        : null
+
     return {
         heroImage,
         tags,
@@ -73,5 +97,10 @@ export function buildArtistEnrichment(
         spotifyUrl,
         internalPast,
         internalUpcoming,
+        timesSeen,
+        averageRating,
+        bestNight: bestNight
+            ? { event: bestNight, rating: bestNight.attendance[0].rating!, review: bestNight.attendance[0].review }
+            : null,
     }
 }

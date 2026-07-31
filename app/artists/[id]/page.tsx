@@ -60,49 +60,45 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
         spotifyUrl,
         internalPast,
         internalUpcoming,
+        timesSeen,
+        averageRating,
+        bestNight,
     } = buildArtistEnrichment(artist, spotifyArtist, lastfmArtist)
 
     return (
-        <main className="min-h-screen bg-neutral-950 text-white font-sans">
+        <main className="min-h-screen bg-ritual-bg text-ritual-bone">
             {/* Hero */}
-            <div className="relative h-72 md:h-96 w-full overflow-hidden bg-neutral-900">
+            <div className="relative h-80 md:h-[30rem] w-full overflow-hidden bg-ritual-panel">
                 {heroImage ? (
-                    <Image
-                        src={heroImage}
-                        alt={artist.name}
-                        fill
-                        className="object-cover object-top"
-                        priority
-                        sizes="100vw"
-                    />
+                    <div className="absolute inset-0 ritual-photo">
+                        <Image src={heroImage} alt={artist.name} fill className="object-cover object-top" priority sizes="100vw" />
+                    </div>
                 ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-950" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-ritual-panel-2 to-ritual-bg" />
                 )}
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg via-ritual-bg/60 to-transparent" />
 
-                {/* Back nav */}
                 <div className="absolute top-0 left-0 right-0 p-6 z-10">
                     <Link
                         href={routes.artists.list}
-                        className="inline-flex items-center gap-2 text-sm text-zinc-300 hover:text-white transition-colors bg-black/30 backdrop-blur-sm rounded-lg px-3 py-1.5"
+                        className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-light-3 hover:text-ritual-bone transition-colors bg-ritual-bg/40 backdrop-blur-sm px-3 py-1.5"
                     >
                         ← Artistas
                     </Link>
                 </div>
 
-                {/* Nombre + metadata sobre la imagen */}
                 <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 z-10">
-                    <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white mb-3 drop-shadow-lg">
+                    <h1 className="font-display text-5xl md:text-8xl leading-[0.85] uppercase text-ritual-bone">
                         {artist.name}
                     </h1>
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-4 mt-3">
+                        {timesSeen > 0 && (
+                            <span className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-red">
+                                {timesSeen} {timesSeen === 1 ? 'vez' : 'veces'}{averageRating != null && ` · ${averageRating.toFixed(1)} promedio`}
+                            </span>
+                        )}
                         {tags.slice(0, 3).map((tag) => (
-                            <span
-                                key={tag}
-                                className="text-[10px] uppercase tracking-widest text-zinc-300 border border-white/20 rounded-full px-2.5 py-0.5 bg-black/40 backdrop-blur-sm"
-                            >
+                            <span key={tag} className="font-label text-[10px] uppercase tracking-[0.1em] text-ritual-gray-light-2 border border-ritual-border-2 px-2.5 py-0.5">
                                 {tag}
                             </span>
                         ))}
@@ -111,9 +107,7 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
             </div>
 
             {/* Contenido */}
-            <div className="max-w-4xl mx-auto px-6 md:px-8 py-8 space-y-8">
-
-                {/* Acciones Header */}
+            <div className="max-w-4xl mx-auto px-6 md:px-8 py-10 space-y-8">
                 <div className="flex items-center justify-between">
                     <WishlistButton artistId={artist.id} initialInWishlist={inWishlist} />
 
@@ -122,12 +116,9 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
                             href={spotifyUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+                            className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-mid hover:text-ritual-gray-text transition-colors"
                         >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-                            </svg>
-                            Abrir en Spotify
+                            Abrir en Spotify →
                         </a>
                     )}
                 </div>
@@ -139,6 +130,9 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
                     upcomingEvents={upcomingEvents}
                     internalUpcoming={internalUpcoming}
                     internalPast={internalPast}
+                    timesSeen={timesSeen}
+                    averageRating={averageRating}
+                    bestNight={bestNight}
                     stats={{ listeners, spotifyFollowers }}
                 />
             </div>

@@ -58,8 +58,8 @@ describe('buildArtistEnrichment', () => {
   it('splits the artist\'s internal events into past and upcoming', () => {
     const artist = makeArtist({
       events: [
-        { id: 'e1', date: '2020-01-01', name: 'Show viejo' },
-        { id: 'e2', date: '2099-01-01', name: 'Show futuro' },
+        { id: 'e1', date: '2020-01-01', name: 'Show viejo', venues: null, event_photos: [], attendance: [] },
+        { id: 'e2', date: '2099-01-01', name: 'Show futuro', venues: null, event_photos: [], attendance: [] },
       ] as ArtistWithEvents['events'],
     })
 
@@ -67,5 +67,61 @@ describe('buildArtistEnrichment', () => {
 
     expect(result.internalPast.map((e) => e.id)).toEqual(['e1'])
     expect(result.internalUpcoming.map((e) => e.id)).toEqual(['e2'])
+  })
+
+  it('counts only "went" events as timesSeen, not every lineup appearance', () => {
+    const artist = makeArtist({
+      events: [
+        { id: 'e1', date: '2020-01-01', attendance: [{ status: 'went', rating: 4, review: null }] },
+        { id: 'e2', date: '2021-01-01', attendance: [{ status: 'interested', rating: null, review: null }] },
+        { id: 'e3', date: '2022-01-01', attendance: [] },
+      ] as ArtistWithEvents['events'],
+    })
+
+    const result = buildArtistEnrichment(artist, null, null)
+
+    expect(result.timesSeen).toBe(1)
+  })
+
+  it('averages the rating only across rated "went" shows', () => {
+    const artist = makeArtist({
+      events: [
+        { id: 'e1', date: '2020-01-01', attendance: [{ status: 'went', rating: 4, review: null }] },
+        { id: 'e2', date: '2021-01-01', attendance: [{ status: 'went', rating: 2, review: null }] },
+        { id: 'e3', date: '2022-01-01', attendance: [{ status: 'went', rating: null, review: null }] },
+      ] as ArtistWithEvents['events'],
+    })
+
+    const result = buildArtistEnrichment(artist, null, null)
+
+    expect(result.averageRating).toBe(3)
+  })
+
+  it('picks the highest-rated show as bestNight, with its review', () => {
+    const artist = makeArtist({
+      events: [
+        { id: 'e1', date: '2020-01-01', attendance: [{ status: 'went', rating: 3, review: 'Estuvo bien' }] },
+        { id: 'e2', date: '2021-01-01', attendance: [{ status: 'went', rating: 5, review: 'Inolvidable' }] },
+      ] as ArtistWithEvents['events'],
+    })
+
+    const result = buildArtistEnrichment(artist, null, null)
+
+    expect(result.bestNight).toEqual({
+      event: artist.events[1],
+      rating: 5,
+      review: 'Inolvidable',
+    })
+  })
+
+  it('is null for averageRating/bestNight when nothing is rated yet', () => {
+    const artist = makeArtist({
+      events: [{ id: 'e1', name: null, date: '2020-01-01', venues: null, event_photos: [], attendance: [] }] as ArtistWithEvents['events'],
+    })
+
+    const result = buildArtistEnrichment(artist, null, null)
+
+    expect(result.averageRating).toBeNull()
+    expect(result.bestNight).toBeNull()
   })
 })
