@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { getVenues } from '@/src/domains/venues/data'
 import { getArtists } from '@/src/domains/artists/data'
-import { createEvent } from '@/src/domains/events/actions'
+import { insertEvent } from '@/src/domains/events/actions'
+import { setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
+import { insertExpense } from '@/src/domains/expenses/actions'
 import { findOrCreateVenue } from '@/src/domains/venues/actions'
 import { findOrCreateArtist } from '@/src/domains/artists/actions'
 import { routes } from '@/src/core/lib/routes'
@@ -9,13 +11,13 @@ import { EventForm } from '@/src/domains/events/components'
 import { PageShell } from '@/src/core/components/layout'
 
 export const metadata: Metadata = {
-  title: 'Nuevo recital | RITUAL',
-  description: 'Cargá datos y elegí los artistas del lineup.',
+  title: 'Cargar show | RITUAL',
+  description: 'Una sola pantalla: datos del show, y si ya fuiste, puntaje y gasto también.',
 }
 
 /**
- * Página para agregar un recital manualmente (incl. lineup).
- * Server Component: obtiene sedes y artistas; el form llama a createEvent.
+ * Página para cargar un recital manualmente — una sola acción, no un wizard:
+ * datos + lineup + (si ya fue) puntaje/reseña + gasto, todo en el mismo submit.
  */
 export default async function NewEventPage() {
   const [venues, artists] = await Promise.all([getVenues(), getArtists()])
@@ -24,15 +26,18 @@ export default async function NewEventPage() {
     <PageShell
       backHref={routes.home}
       backLabel="← Volver al listado"
-      title="Nuevo recital"
-      description="Cargá datos y elegí los artistas del lineup."
+      title="Cargar show"
+      description="Datos del recital y, si ya fuiste, puntaje y gasto — todo en una sola acción."
     >
       <EventForm
         venues={venues}
         artists={artists}
-        createEvent={createEvent}
+        insertEvent={insertEvent}
         findOrCreateVenue={findOrCreateVenue}
         findOrCreateArtist={findOrCreateArtist}
+        setAttendanceStatus={setAttendanceStatus}
+        saveMemory={saveMemory}
+        insertExpense={insertExpense}
       />
     </PageShell>
   )
