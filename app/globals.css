@@ -1,56 +1,157 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens — rediseño visual de Ritual (handoff 2026-07-31).
+ * Negro, grises y un solo rojo. Sin border-radius salvo círculos.
+ * Fuentes cargadas vía next/font/google en app/layout.tsx, expuestas
+ * acá como variables CSS para que Tailwind genere utilidades desde ellas.
+ */
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --color-ritual-bg: #08080A;
+  --color-ritual-panel: #0B0B0C;
+  --color-ritual-panel-2: #0C0C0F;
+  --color-ritual-surface: #101013;
+  --color-ritual-surface-2: #111114;
+  --color-ritual-surface-high: #17171A;
+  --color-ritual-surface-high-2: #1A1A20;
+  --color-ritual-border-subtle: #15151A;
+  --color-ritual-border-subtle-2: #16161A;
+  --color-ritual-border: #1E1E22;
+  --color-ritual-border-2: #2A2A31;
+  --color-ritual-border-3: #2E2E35;
+  --color-ritual-gray-muted: #3A3A42;
+  --color-ritual-gray-muted-2: #4A4A52;
+  --color-ritual-gray-mid: #5E5E66;
+  --color-ritual-gray-mid-2: #6A6A70;
+  --color-ritual-gray-text: #8A8A90;
+  --color-ritual-gray-text-2: #9A96A0;
+  --color-ritual-gray-light: #A9A5A0;
+  --color-ritual-gray-light-2: #B9B5BE;
+  --color-ritual-gray-light-3: #CFCBC4;
+  --color-ritual-bone: #EDEBE6;
+  --color-ritual-red: #D6202A;
+  --color-ritual-red-hover: #F0464F;
+  --color-ritual-red-dark: #8A2620;
+  --color-ritual-red-dark-2: #7A1E1C;
+  --color-ritual-paper: #EDE9DF;
+  --color-ritual-paper-2: #DCD7CD;
+  --color-ritual-paper-ink: #141210;
+  --color-ritual-paper-red: #C2261C;
+
+  --shadow-ritual-low: 0 14px 28px -18px rgba(0, 0, 0, 0.9);
+  --shadow-ritual-high: 0 34px 70px -30px rgba(0, 0, 0, 0.95);
+
+  --ease-ritual: cubic-bezier(0.16, 0.84, 0.16, 1);
 }
 
-/*
- * Tokens semánticos: nombran la paleta que la app ya usa de hecho —
- * relevada contando clases reales en app/ + src/, no inventada. Antes de
- * esto había 8 variantes de border-white/opacidad, 7 de text-zinc-* y 6 de
- * bg-white/opacidad haciendo el mismo trabajo (borde sutil / texto
- * secundario / superficie de card) sin ningún nombre común.
- *
- * Definidos y listos para adoptar, pero todavía NO migrados en los
- * archivos que usan las clases ad-hoc — esa migración toca visualmente
- * cada pantalla de la app, así que se hace aparte con screenshots reales
- * para verificar que nada se rompió.
- */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ritual-bg: var(--color-ritual-bg);
+  --color-ritual-panel: var(--color-ritual-panel);
+  --color-ritual-panel-2: var(--color-ritual-panel-2);
+  --color-ritual-surface: var(--color-ritual-surface);
+  --color-ritual-surface-2: var(--color-ritual-surface-2);
+  --color-ritual-surface-high: var(--color-ritual-surface-high);
+  --color-ritual-surface-high-2: var(--color-ritual-surface-high-2);
+  --color-ritual-border-subtle: var(--color-ritual-border-subtle);
+  --color-ritual-border-subtle-2: var(--color-ritual-border-subtle-2);
+  --color-ritual-border: var(--color-ritual-border);
+  --color-ritual-border-2: var(--color-ritual-border-2);
+  --color-ritual-border-3: var(--color-ritual-border-3);
+  --color-ritual-gray-muted: var(--color-ritual-gray-muted);
+  --color-ritual-gray-muted-2: var(--color-ritual-gray-muted-2);
+  --color-ritual-gray-mid: var(--color-ritual-gray-mid);
+  --color-ritual-gray-mid-2: var(--color-ritual-gray-mid-2);
+  --color-ritual-gray-text: var(--color-ritual-gray-text);
+  --color-ritual-gray-text-2: var(--color-ritual-gray-text-2);
+  --color-ritual-gray-light: var(--color-ritual-gray-light);
+  --color-ritual-gray-light-2: var(--color-ritual-gray-light-2);
+  --color-ritual-gray-light-3: var(--color-ritual-gray-light-3);
+  --color-ritual-bone: var(--color-ritual-bone);
+  --color-ritual-red: var(--color-ritual-red);
+  --color-ritual-red-hover: var(--color-ritual-red-hover);
+  --color-ritual-red-dark: var(--color-ritual-red-dark);
+  --color-ritual-red-dark-2: var(--color-ritual-red-dark-2);
+  --color-ritual-paper: var(--color-ritual-paper);
+  --color-ritual-paper-2: var(--color-ritual-paper-2);
+  --color-ritual-paper-ink: var(--color-ritual-paper-ink);
+  --color-ritual-paper-red: var(--color-ritual-paper-red);
 
-  /* Superficies, de más al fondo a más elevada. */
-  --color-surface-0: #0a0a0a;       /* neutral-950 — fondo de página */
-  --color-surface-1: rgb(255 255 255 / 0.03); /* card en reposo */
-  --color-surface-2: rgb(255 255 255 / 0.06); /* card hover / elevada */
+  --shadow-ritual-low: var(--shadow-ritual-low);
+  --shadow-ritual-high: var(--shadow-ritual-high);
 
-  /* Bordes, de más sutil a más marcado. */
-  --color-border-subtle: rgb(255 255 255 / 0.08);
-  --color-border-default: rgb(255 255 255 / 0.15);
-  --color-border-strong: rgb(255 255 255 / 0.3);
+  --ease-ritual: var(--ease-ritual);
 
-  /* Texto, de más prominente a más apagado. */
-  --color-text-primary: #ffffff;
-  --color-text-secondary: var(--color-zinc-400);
-  --color-text-muted: var(--color-zinc-500);
-  --color-text-faint: var(--color-zinc-700);
+  --font-sans: var(--font-space-grotesk);
+  --font-display: var(--font-anton);
+  --font-badge: var(--font-archivo-black);
+  --font-dense: var(--font-archivo);
+  --font-subtitle: var(--font-big-shoulders);
+  --font-figure: var(--font-bebas-neue);
+  --font-label: var(--font-space-mono);
+  --font-body: var(--font-space-grotesk);
+
+  /* Todo a 90 grados salvo círculos (rounded-full sigue siendo redondo). */
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
+}
+
+body {
+  background-color: var(--color-ritual-bg);
+  color: var(--color-ritual-bone);
 }
 
 /*
- * `--font-sans` above lives in an `inline` theme block, so Tailwind resolves
- * and inlines it directly into every utility that uses it (e.g. `font-sans`)
- * at build time — it's never emitted as a real, referenceable `:root`
- * variable (confirmed: `var(--font-sans)` here resolved to nothing at
- * runtime). This system-font stack is a genuine fallback for the brief
- * window before Tailwind's own `font-sans` utility (applied explicitly on
- * each page's root element) takes over, not leftover boilerplate.
+ * Tratamiento de foto de la identidad visual: blanco y negro duro + duotono
+ * rojo. Clase opt-in — se aplica pantalla por pantalla al reconstruir cada
+ * una con el nuevo sistema, no globalmente sobre las imágenes existentes.
  */
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.ritual-photo {
+  position: relative;
+}
+
+.ritual-photo img,
+.ritual-photo > :first-child {
+  filter: grayscale(1) contrast(1.3) brightness(0.6);
+}
+
+.ritual-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-ritual-red);
+  mix-blend-mode: color;
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+/*
+ * Grano animado de la identidad visual. Clase opt-in, misma razón que
+ * .ritual-photo — se suma pantalla por pantalla, no de entrada en todo el body.
+ */
+.ritual-grain {
+  position: relative;
+}
+
+.ritual-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: ritual-grain-step 1.3s steps(3) infinite;
+}
+
+@keyframes ritual-grain-step {
+  0% { transform: translate(0, 0); }
+  33% { transform: translate(-1%, 1%); }
+  66% { transform: translate(1%, -1%); }
+  100% { transform: translate(0, 0); }
 }
