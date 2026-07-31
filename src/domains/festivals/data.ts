@@ -23,7 +23,7 @@ export interface Festival {
             id: string
             name: string | null
             date: string
-            lineups: Array<{ artists: { id: string; name: string } }>
+            lineups: Array<{ artists: { id: string; name: string }; stage: string | null; start_time: string | null }>
         }
     }>
     festival_attendance: Array<{
@@ -47,7 +47,7 @@ export async function getFestivals(): Promise<Festival[]> {
                 id, day_label,
                 events (
                     id, name, date,
-                    lineups ( artists ( id, name ) )
+                    lineups ( artists ( id, name ), stage, start_time )
                 )
             ),
             festival_attendance ( status, rating, review )
@@ -76,7 +76,7 @@ export async function getFestivalById(id: string): Promise<Festival | null> {
                 id, day_label,
                 events (
                     id, name, date,
-                    lineups ( artists ( id, name ) )
+                    lineups ( artists ( id, name ), stage, start_time )
                 )
             ),
             festival_attendance ( status, rating, review )

@@ -5,6 +5,7 @@ import { getFestivalById } from '@/src/domains/festivals/data'
 import { routes } from '@/src/core/lib/routes'
 import { safeHref } from '@/src/core/lib/validation'
 import { formatDate } from '@/src/core/lib/utils'
+import { todayDateOnly } from '@/src/core/lib/dates'
 import { FestivalAttendanceButton } from '@/src/domains/festivals/components/FestivalAttendanceButton'
 
 interface FestivalDetailPageProps {
@@ -31,52 +32,56 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
     const attendance = festival.festival_attendance?.[0]
     const location = [festival.city, festival.country].filter(Boolean).join(', ')
 
-    // Agrupar eventos por día
     const eventsByDay = festival.festival_events?.sort((a, b) => {
         const dateA = new Date(a.events?.date ?? '').getTime()
         const dateB = new Date(b.events?.date ?? '').getTime()
         return dateA - dateB
     }) ?? []
 
-    // Todos los artistas del festival
     const allArtists = new Set(
         eventsByDay.flatMap((fe) => fe.events?.lineups?.map((l) => l.artists.name) ?? [])
     )
 
+    const today = todayDateOnly()
+    const todayIndex = eventsByDay.findIndex((fe) => fe.events?.date?.slice(0, 10) === today)
+    const isRunningToday = todayIndex !== -1
+
     return (
-        <main className="min-h-screen bg-neutral-950 text-white font-sans">
+        <main className="min-h-screen bg-ritual-bg text-ritual-bone">
             {/* Hero */}
-            <div className="relative bg-gradient-to-br from-neutral-900 to-neutral-950 border-b border-white/[0.06]">
-                <div className="max-w-3xl mx-auto px-6 md:px-8 py-12">
+            <div className="relative bg-ritual-panel border-b border-ritual-border-subtle">
+                <div className="max-w-3xl mx-auto px-6 md:px-8 py-14">
                     <Link
                         href={routes.festivals.list}
-                        className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-6"
+                        className="inline-flex items-center gap-2 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid hover:text-ritual-gray-text transition-colors mb-8"
                     >
                         ← Festivales
                     </Link>
 
                     <div className="flex flex-col sm:flex-row sm:items-start gap-6">
                         <div className="flex-1 min-w-0">
+                            {isRunningToday && (
+                                <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-red mb-2">
+                                    Día {todayIndex + 1} de {Math.max(1, eventsByDay.length)} · en curso
+                                </p>
+                            )}
                             <div className="flex items-center gap-3 flex-wrap mb-2">
-                                <span className="text-3xl">🎪</span>
                                 {festival.edition && (
-                                    <span className="text-xs text-zinc-500 border border-white/10 rounded-full px-2.5 py-0.5">
+                                    <span className="font-label text-[10px] uppercase tracking-[0.1em] text-ritual-gray-text border border-ritual-border px-2.5 py-0.5">
                                         {festival.edition}
                                     </span>
                                 )}
                             </div>
-                            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-3">
+                            <h1 className="font-display text-5xl md:text-7xl leading-[0.85] uppercase text-ritual-bone mb-3">
                                 {festival.name}
                             </h1>
-                            <div className="flex flex-wrap gap-4 text-sm text-zinc-400">
+                            <div className="flex flex-wrap gap-4 font-label text-xs text-ritual-gray-text">
                                 <span>
-                                    📅 {formatDate(start)}
-                                    {end && end.getTime() !== start.getTime() && (
-                                        <> — {formatDate(end, { day: 'numeric', month: 'long' })}</>
-                                    )}
+                                    {formatDate(start)}
+                                    {end && end.getTime() !== start.getTime() && <> — {formatDate(end, { day: 'numeric', month: 'long' })}</>}
                                 </span>
-                                {location && <span>📍 {location}</span>}
-                                {allArtists.size > 0 && <span>🎵 {allArtists.size} artistas</span>}
+                                {location && <span>{location}</span>}
+                                {allArtists.size > 0 && <span>{allArtists.size} artistas</span>}
                             </div>
                         </div>
 
@@ -90,71 +95,71 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
 
             {/* Contenido */}
             <div className="max-w-3xl mx-auto px-6 md:px-8 py-10 space-y-10">
-
-                {/* Stats */}
                 <div className="grid grid-cols-3 gap-4">
                     {[
                         { label: 'Días', value: Math.max(1, eventsByDay.length) },
                         { label: 'Artistas', value: allArtists.size },
                         { label: 'Rating', value: attendance?.rating ? `${attendance.rating}/5` : '—' },
                     ].map(({ label, value }) => (
-                        <div key={label} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 text-center">
-                            <p className="text-2xl font-bold text-white tabular-nums">{value}</p>
-                            <p className="text-[10px] uppercase tracking-widest text-zinc-600 mt-1">{label}</p>
+                        <div key={label} className="border border-ritual-border bg-ritual-surface p-4 text-center">
+                            <p className="font-display text-2xl text-ritual-bone tabular-nums">{value}</p>
+                            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-1">{label}</p>
                         </div>
                     ))}
                 </div>
 
-                {/* Notas */}
                 {festival.notes && (
                     <section>
-                        <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3">Notas</h2>
-                        <p className="text-sm text-zinc-400 leading-relaxed whitespace-pre-wrap">{festival.notes}</p>
+                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Notas</h2>
+                        <p className="font-body text-sm text-ritual-gray-light-3 leading-relaxed whitespace-pre-wrap">{festival.notes}</p>
                     </section>
                 )}
 
-                {/* Reseña */}
                 {attendance?.review && (
-                    <section>
-                        <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3">Tu reseña</h2>
-                        <p className="text-sm text-zinc-400 leading-relaxed whitespace-pre-wrap">{attendance.review}</p>
+                    <section className="border-l-[3px] border-ritual-red pl-6">
+                        <p className="font-body italic text-xl text-ritual-bone leading-snug">&ldquo;{attendance.review}&rdquo;</p>
                     </section>
                 )}
 
-                {/* Días / Eventos */}
                 {eventsByDay.length > 0 && (
                     <section>
-                        <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5">Días del festival</h2>
+                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-5">Días del festival</h2>
                         <div className="space-y-4">
-                            {eventsByDay.map((fe) => {
+                            {eventsByDay.map((fe, i) => {
                                 const ev = fe.events
                                 if (!ev) return null
                                 const date = new Date(ev.date)
-                                const artists = ev.lineups?.map((l) => l.artists.name) ?? []
+                                const lineup = [...(ev.lineups ?? [])].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
+                                const isToday = i === todayIndex
 
                                 return (
-                                    <div key={fe.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-5">
-                                        <div className="flex items-start justify-between gap-4">
+                                    <div key={fe.id} className={`border p-5 ${isToday ? 'border-ritual-red' : 'border-ritual-border'} bg-ritual-surface`}>
+                                        <div className="flex items-start justify-between gap-4 mb-2">
                                             <div>
                                                 {fe.day_label && (
-                                                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{fe.day_label}</p>
+                                                    <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mb-1">{fe.day_label}</p>
                                                 )}
-                                                <p className="font-semibold text-white">
+                                                <p className="font-subtitle font-black uppercase text-ritual-bone">
                                                     {formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' })}
                                                 </p>
-                                                {artists.length > 0 && (
-                                                    <p className="text-sm text-zinc-500 mt-1 truncate">
-                                                        {artists.slice(0, 5).join(' · ')}{artists.length > 5 ? ` +${artists.length - 5}` : ''}
-                                                    </p>
-                                                )}
                                             </div>
                                             <Link
                                                 href={routes.events.detail(ev.id)}
-                                                className="shrink-0 text-xs border border-white/15 text-zinc-400 hover:text-white hover:border-white/30 px-3 py-1.5 rounded-lg transition-colors"
+                                                className="shrink-0 font-label text-[10px] tracking-[0.1em] uppercase border border-ritual-border text-ritual-gray-text hover:text-ritual-bone hover:border-ritual-border-2 px-3 py-1.5 transition-colors"
                                             >
                                                 Ver día →
                                             </Link>
                                         </div>
+                                        {lineup.length > 0 && (
+                                            <ul className="mt-3 space-y-1">
+                                                {lineup.map((l, li) => (
+                                                    <li key={li} className="flex items-center justify-between font-label text-xs text-ritual-gray-text">
+                                                        <span>{l.artists.name}{l.stage && <span className="text-ritual-gray-mid"> · {l.stage}</span>}</span>
+                                                        {l.start_time && <span className="text-ritual-gray-mid">{l.start_time}</span>}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
                                     </div>
                                 )
                             })}
@@ -162,16 +167,15 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                     </section>
                 )}
 
-                {/* Website */}
                 {safeHref(festival.website) && (
-                    <section className="border-t border-white/[0.06] pt-6">
+                    <section className="border-t border-ritual-border-subtle pt-6">
                         <a
                             href={safeHref(festival.website)!}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+                            className="inline-flex items-center gap-2 font-label text-xs text-ritual-gray-text hover:text-ritual-bone transition-colors"
                         >
-                            🌐 Sitio oficial del festival →
+                            Sitio oficial del festival →
                         </a>
                     </section>
                 )}

@@ -63,7 +63,7 @@ const festival: Festival = {
         id: 'e1',
         name: 'Show día 1',
         date: '2026-02-01',
-        lineups: [{ artists: { id: 'a1', name: 'Bandalos Chinos' } }],
+        lineups: [{ artists: { id: 'a1', name: 'Bandalos Chinos' }, stage: null, start_time: null }],
       },
     },
   ],

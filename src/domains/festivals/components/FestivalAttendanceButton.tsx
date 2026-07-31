@@ -53,13 +53,13 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
                 disabled={isPending}
                 aria-haspopup="menu"
                 aria-expanded={open}
-                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all disabled:opacity-50 ${status === 'went'
-                        ? 'border-white/20 bg-white text-neutral-950'
+                className={`inline-flex items-center gap-2 border px-4 py-2.5 font-label text-[10px] tracking-[0.1em] uppercase transition-all disabled:opacity-50 ${status === 'went'
+                        ? 'border-ritual-red bg-ritual-red text-ritual-panel'
                         : status === 'going'
-                            ? 'border-white/20 bg-white/10 text-white'
+                            ? 'border-ritual-border-2 bg-ritual-surface-high text-ritual-bone'
                             : status === 'interested'
-                                ? 'border-white/15 bg-white/[0.06] text-zinc-300'
-                                : 'border-white/15 bg-white/[0.04] text-zinc-500 hover:text-zinc-300 hover:border-white/25'
+                                ? 'border-ritual-border bg-ritual-surface text-ritual-gray-light-3'
+                                : 'border-ritual-border bg-ritual-surface text-ritual-gray-mid hover:text-ritual-gray-text hover:border-ritual-border-2'
                     }`}
             >
                 {isPending ? (
@@ -76,7 +76,7 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
             {open && (
                 <>
                     <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-                    <div role="menu" className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl border border-white/10 bg-neutral-900 shadow-xl overflow-hidden">
+                    <div role="menu" className="absolute right-0 top-full mt-1 z-20 w-44 border border-ritual-border bg-ritual-panel-2 shadow-xl overflow-hidden">
                         {OPTIONS.map((opt) => (
                             <button
                                 key={opt.value}
@@ -84,12 +84,11 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
                                 role="menuitemradio"
                                 aria-checked={status === opt.value}
                                 onClick={() => handleSelect(opt.value)}
-                                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors hover:bg-white/5 ${status === opt.value ? 'text-white font-semibold' : 'text-zinc-400'
+                                className={`w-full flex items-center gap-2.5 px-4 py-2.5 font-label text-[10px] tracking-[0.1em] uppercase transition-colors hover:bg-ritual-surface ${status === opt.value ? 'text-ritual-bone' : 'text-ritual-gray-mid'
                                     }`}
                             >
-                                <span>{opt.emoji}</span>
                                 {opt.label}
-                                {status === opt.value && <span className="ml-auto text-xs">✓</span>}
+                                {status === opt.value && <span className="ml-auto text-ritual-red">✓</span>}
                             </button>
                         ))}
                     </div>
@@ -97,7 +96,7 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
             )}
 
             {error && (
-                <p role="alert" className="absolute right-0 top-full mt-1 w-56 text-xs text-red-400">
+                <p role="alert" className="absolute right-0 top-full mt-1 w-56 font-label text-xs text-ritual-red">
                     {error}
                 </p>
             )}
