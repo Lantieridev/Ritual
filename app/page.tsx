@@ -1,244 +1,234 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getEventsWithAttendance } from '@/src/domains/events/data'
-import { buildHomeFeed, type HomeFilter } from '@/src/domains/events/home-view'
+import { buildHomeFeed, buildHomeHeroState } from '@/src/domains/events/home-view'
+import { HomeHero } from '@/src/domains/events/components/HomeHero'
+import { getFestivals } from '@/src/domains/festivals/data'
+import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
+import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
-import { isPastEvent, eventYear } from '@/src/core/lib/dates'
+import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
-import { LinkButton, StarRating } from '@/src/core/components/ui'
-import { Hero } from '@/src/core/components/home'
-import { EmptyState } from '@/src/core/components/ui/EmptyState'
+import { StarRating } from '@/src/core/components/ui'
+import {
+  isTicketmasterConfigured,
+  searchTicketmasterEvents,
+} from '@/src/core/lib/ticketmaster'
+import {
+  isSpotifyConfigured,
+  searchSpotifyArtist,
+  getBestSpotifyImage,
+} from '@/src/core/lib/spotify'
+import type { FutureEvent } from '@/src/core/types'
 
 export const metadata: Metadata = {
   title: 'RITUAL — Tu historial de recitales',
   description: 'Registrá, recordá y revivé cada show que fuiste. Tu archivo musical personal.',
 }
 
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  interested: { label: 'Me interesa', className: 'bg-zinc-800 text-zinc-400 border-zinc-700' },
-  going: { label: 'Voy', className: 'bg-white/10 text-zinc-200 border-white/20' },
-  went: { label: 'Fui ✓', className: 'bg-white text-neutral-950 border-white' },
+interface NearbyCard {
+  artistName: string
+  event: FutureEvent
+  image: string | null
 }
 
-interface PageProps {
-  searchParams: Promise<{ filter?: string }>
+/**
+ * "Cerca tuyo": shows futuros de tus artistas en wishlist, vía Ticketmaster.
+ * Acotado a los primeros 6 artistas de la wishlist para no disparar
+ * demasiadas llamadas externas en cada carga de Home — si la wishlist crece
+ * mucho esto conviene moverlo a un fetch client-side diferido.
+ */
+async function getNearbyShows(): Promise<NearbyCard[]> {
+  if (!isTicketmasterConfigured()) return []
+
+  const artistIds = await getWishlistArtistIds()
+  if (artistIds.length === 0) return []
+
+  const supabase = await createClient()
+  const { data: artists } = await supabase
+    .from('artists')
+    .select('id, name')
+    .in('id', artistIds.slice(0, 6))
+
+  const results = await Promise.allSettled(
+    (artists ?? []).map(async (artist) => {
+      const { events } = await searchTicketmasterEvents({ keyword: artist.name })
+      return events.slice(0, 2).map((event) => ({ artistName: artist.name, event }))
+    })
+  )
+
+  const candidates = results
+    .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
+    .sort((a, b) => new Date(a.event.datetime).getTime() - new Date(b.event.datetime).getTime())
+    .slice(0, 4)
+
+  const withImages = await Promise.all(
+    candidates.map(async (c) => {
+      if (!isSpotifyConfigured()) return { ...c, image: null }
+      const { artist } = await searchSpotifyArtist(c.artistName)
+      return { ...c, image: artist ? getBestSpotifyImage(artist.images) : null }
+    })
+  )
+
+  return withImages
 }
 
-export default async function HomePage({ searchParams }: PageProps) {
-  const { filter: rawFilter } = await searchParams
-  const filter = (rawFilter as HomeFilter) ?? 'all'
-
-  const allEvents = await getEventsWithAttendance()
+export default async function HomePage() {
+  const [allEvents, festivals] = await Promise.all([getEventsWithAttendance(), getFestivals()])
   const now = new Date()
 
-  const { nextShow, events, byYear, years } = buildHomeFeed(allEvents, filter, now)
-  const currentYear = now.getFullYear()
-  const hasData = allEvents.length > 0
+  const { nextShow, byYear, years } = buildHomeFeed(allEvents, 'went', now)
+  const heroState = buildHomeHeroState(nextShow, festivals, now)
 
-  const FILTERS: { value: HomeFilter; label: string }[] = [
-    { value: 'all', label: 'Todos' },
-    { value: 'upcoming', label: 'Próximos' },
-    { value: 'past', label: 'Pasados' },
-    { value: 'went', label: 'Fui ✓' },
-    { value: 'interested', label: 'Me interesa' },
-    { value: 'going', label: 'Voy' },
-  ]
+  const heroEvent = heroState.kind === 'show-today' ? heroState.event : heroState.kind === 'normal' ? heroState.nextShow : undefined
+  const heroHeadliner = heroEvent?.lineups?.[0]?.artists.name ?? heroEvent?.name ?? null
+  const heroImage =
+    heroHeadliner && isSpotifyConfigured()
+      ? await searchSpotifyArtist(heroHeadliner).then(({ artist }) => (artist ? getBestSpotifyImage(artist.images) : null))
+      : null
+
+  const [nearbyShows, upcomingFestivals] = await Promise.all([
+    getNearbyShows(),
+    Promise.resolve(
+      festivals
+        .filter((f) => !isPastEvent(f.end_date ?? f.start_date, now))
+        .filter((f) => !(heroState.kind === 'festival' && f.id === heroState.festival.id))
+        .slice(0, 4)
+    ),
+  ])
+
+  const hasArchive = byYear && years.length > 0
 
   return (
     <>
-      {/* El hero full-viewport es para la primera visita / estado vacío —
-          un usuario recurrente con shows cargados no necesita el pitch de
-          marketing en cada visita, entra directo al feed. */}
-      {!hasData && <Hero />}
+      <HomeHero state={heroState} backgroundImage={heroImage} />
 
-      <section
-        id="recitales"
-        className={`max-w-4xl mx-auto px-6 md:px-8 pb-16 ${hasData ? 'pt-28' : 'py-16'}`}
-      >
-
-        {/* Banner: próximo show */}
-        {nextShow && filter === 'all' && (
-          <Link
-            href={routes.events.detail(nextShow.id)}
-            className="group flex items-center gap-4 mb-10 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.05] px-5 py-4 transition-colors"
-          >
-            <div className="shrink-0 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-lg">
-              🎟️
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-0.5">Próximo show</p>
-              <p className="font-semibold text-white truncate">
-                {nextShow.name || nextShow.lineups?.map((l) => l.artists.name).join(', ') || 'Recital'}
+      {nearbyShows.length > 0 && (
+        <section className="min-h-screen flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-bg">
+          <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
+            <div>
+              <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red uppercase">
+                Cerca tuyo · próximos 90 días
               </p>
-              {nextShow.venues && (
-                <p className="text-xs text-zinc-500 truncate">
-                  {formatDate(nextShow.date)}
-                  {' · '}
-                  {[nextShow.venues.name, nextShow.venues.city].filter(Boolean).join(', ')}
-                </p>
-              )}
+              <h2 className="font-display text-[7vh] leading-[0.9] uppercase text-ritual-bone mt-2">
+                Los que no<br />te perderías
+              </h2>
             </div>
-            <span className="text-zinc-600 group-hover:text-zinc-300 transition-colors shrink-0">→</span>
-          </Link>
-        )}
-
-        {/* Header de sección */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <h2 className="text-xl font-bold tracking-tight text-white">
-            Mis recitales
-            {allEvents.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-zinc-600">
-                {filter === 'all' ? allEvents.length : events.length} {filter === 'all' ? 'en total' : 'resultados'}
-              </span>
-            )}
-          </h2>
-          <LinkButton href={routes.events.new} variant="secondary" className="px-4 py-2 text-sm self-start sm:self-auto">
-            + Cargar a mano
-          </LinkButton>
-        </div>
-
-        {/* Filtros */}
-        {allEvents.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-10">
-            {FILTERS.map(({ value, label }) => (
+            <p className="font-body italic text-ritual-gray-text max-w-xs text-right">
+              Elegidos de tu wishlist.
+            </p>
+          </div>
+          <div className="flex gap-3 h-[52vh] overflow-x-auto">
+            {nearbyShows.map(({ artistName, event, image }, i) => (
               <Link
-                key={value}
-                href={value === 'all' ? '/' : `/?filter=${value}`}
-                scroll={false}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${filter === value
-                  ? 'bg-white text-neutral-950 font-semibold'
-                  : 'border border-white/10 text-zinc-500 hover:text-zinc-300 hover:border-white/20'
-                  }`}
+                key={`${event.id || event.title}-${i}`}
+                href={routes.events.new}
+                className="group relative shrink-0 basis-64 hover:basis-96 transition-[flex-basis] duration-500 overflow-hidden bg-ritual-surface"
               >
-                {label}
+                {image && (
+                  <div
+                    className="absolute inset-0 ritual-photo"
+                    style={{ backgroundImage: `url(${image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg via-transparent to-transparent" />
+                <div className="relative flex flex-col justify-end h-full p-4">
+                  <p className="font-display text-3xl leading-[0.88] uppercase text-ritual-bone">{artistName}</p>
+                  <p className="font-subtitle font-bold text-sm uppercase text-ritual-gray-light-3 mt-1">
+                    {event.venue.name}
+                  </p>
+                  <p className="font-label text-[10px] text-ritual-gray-light-2 mt-1">
+                    {formatDate(event.datetime, { day: 'numeric', month: 'short' })}
+                  </p>
+                </div>
               </Link>
             ))}
           </div>
-        )}
+        </section>
+      )}
 
-        {/* Empty state */}
-        {events.length === 0 && (
-          <EmptyState
-            title={filter === 'all' ? 'Todavía no hay recitales' : 'No hay recitales con este filtro'}
-            description={
-              filter === 'all'
-                ? 'Buscá shows en Ticketmaster o Setlist.fm, o cargá uno a mano.'
-                : filter === 'went'
-                  ? 'Marcá shows como "Fui" en el detalle del evento.'
-                  : filter === 'going'
-                    ? 'Marcá shows futuros como "Voy a ir" para verlos acá.'
-                    : filter === 'interested'
-                      ? 'Marcá shows futuros como "Me interesa" para seguirlos.'
-                      : 'Probá con otro filtro o agregá más recitales.'
-            }
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-9 w-9 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
-              </svg>
-            }
-          >
-            {filter === 'all' && (
-              <div className="flex flex-wrap gap-3 justify-center mt-6">
-                <LinkButton href={routes.events.search} variant="primary" className="px-5 py-2.5 text-sm">
-                  Buscar shows
-                </LinkButton>
-                <LinkButton href={routes.events.new} variant="secondary" className="px-5 py-2.5 text-sm">
-                  + Cargar a mano
-                </LinkButton>
-              </div>
-            )}
-            {filter !== 'all' && (
-              <Link
-                href="/"
-                scroll={false}
-                className="mt-6 block text-sm text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-4"
-              >
-                Ver todos los recitales
-              </Link>
-            )}
-          </EmptyState>
-        )}
+      {upcomingFestivals.length > 0 && (
+        <section className="min-h-screen flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-panel">
+          <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red uppercase">Se vienen · festivales</p>
+          <h2 className="font-display text-[7vh] leading-[0.9] uppercase text-ritual-bone mt-2 mb-10">
+            Las romerías<br />del año
+          </h2>
+          <ul className="divide-y divide-ritual-border-subtle">
+            {upcomingFestivals.map((f) => {
+              const days = Math.max(0, Math.ceil((new Date(f.start_date).getTime() - now.getTime()) / 86400000))
+              return (
+                <li key={f.id}>
+                  <Link
+                    href={routes.festivals.detail(f.id)}
+                    className="group flex items-center gap-6 py-6"
+                  >
+                    <div className="w-16 shrink-0">
+                      <p className="font-figure text-2xl text-ritual-red leading-none">{days}d</p>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-display text-3xl uppercase text-ritual-bone truncate">
+                        {f.name} {f.edition && <span className="text-ritual-red">{f.edition}</span>}
+                      </p>
+                      <p className="font-label text-[10px] text-ritual-gray-text mt-1">
+                        {[f.city, f.country].filter(Boolean).join(', ')}
+                      </p>
+                    </div>
+                    <span className="font-label text-[10px] tracking-[0.16em] text-ritual-red uppercase opacity-0 group-hover:opacity-100 transition-opacity">
+                      Ver →
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
 
-        {/* Timeline agrupado por año */}
-        {events.length > 0 && (
-          <div className="space-y-12">
+      <section className="px-6 md:px-10 py-20 bg-ritual-bg">
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
+          <div>
+            <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red uppercase">Tu archivo</p>
+            <h2 className="font-display text-5xl uppercase text-ritual-bone mt-2">
+              {allEvents.filter((e) => e.attendance?.[0]?.status === 'went').length} talones
+            </h2>
+          </div>
+          <p className="font-body italic text-ritual-gray-text max-w-xs text-right">
+            Acá el scroll se suelta: la ceremonia terminó, ahora es catálogo.
+          </p>
+        </div>
+
+        {!hasArchive ? (
+          <p className="font-body text-ritual-gray-text">
+            Marcá shows como &quot;Fui&quot; para verlos acá.{' '}
+            <Link href={routes.events.search} className="text-ritual-red underline underline-offset-4">
+              Buscá shows
+            </Link>
+            .
+          </p>
+        ) : (
+          <div className="space-y-10">
             {years.map((year) => (
               <div key={year}>
-                {/* Separador de año */}
-                <div className="flex items-center gap-4 mb-6">
-                  <span className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-600">
-                    {year}
-                  </span>
-                  <div className="flex-1 h-px bg-white/[0.06]" />
-                  <span className="text-xs text-zinc-700">
-                    {byYear[year].length} show{byYear[year].length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-
-                {/* Lista de eventos del año */}
-                <ul className="divide-y divide-white/[0.04]">
+                <p className="font-label text-[10px] tracking-[0.14em] text-ritual-gray-mid uppercase mb-3">{year}</p>
+                <ul className="divide-y divide-ritual-border-subtle">
                   {byYear[year].map((ev) => {
-                    const dateObj = new Date(ev.date)
-                    const evYear = eventYear(ev.date)
-                    const isPast = isPastEvent(ev.date, now)
-                    const userAttendance = ev.attendance?.[0]
-                    const status = userAttendance?.status
-                    const venueLabel = ev.venues
-                      ? [ev.venues.name, ev.venues.city].filter(Boolean).join(', ')
-                      : null
                     const artists = ev.lineups?.map((l) => l.artists.name) ?? []
-
+                    const rating = ev.attendance?.[0]?.rating
                     return (
                       <li key={ev.id}>
-                        <Link
-                          href={routes.events.detail(ev.id)}
-                          className="group flex items-start gap-5 py-4 hover:bg-white/[0.02] -mx-3 px-3 rounded-lg transition-colors"
-                        >
-                          {/* Fecha */}
-                          <div className="w-14 shrink-0 text-center pt-0.5">
-                            <p className="text-xs font-bold text-zinc-500 uppercase">
-                              {formatDate(dateObj, { month: 'short' })}
+                        <Link href={routes.events.detail(ev.id)} className="group flex items-center gap-4 py-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-dense font-extrabold text-ritual-bone truncate">
+                              {ev.name || artists[0] || 'Recital'}
                             </p>
-                            <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                              {dateObj.getDate()}
+                            <p className="font-label text-[10px] text-ritual-gray-text mt-0.5 truncate">
+                              {ev.venues?.name}
                             </p>
-                            {evYear !== currentYear && (
-                              <p className="text-[10px] text-zinc-700 mt-0.5">{evYear}</p>
-                            )}
                           </div>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start gap-2 flex-wrap">
-                              <p className={`font-semibold truncate ${isPast ? 'text-white' : 'text-zinc-100'}`}>
-                                {ev.name || artists[0] || 'Recital'}
-                              </p>
-                              {status && STATUS_BADGE[status] && (
-                                <span className={`inline-block text-[10px] font-semibold uppercase tracking-widest border rounded px-1.5 py-0.5 shrink-0 ${STATUS_BADGE[status].className}`}>
-                                  {STATUS_BADGE[status].label}
-                                </span>
-                              )}
-                            </div>
-                            {venueLabel && (
-                              <p className="text-sm text-zinc-500 mt-0.5 truncate">
-                                📍 {venueLabel}
-                              </p>
-                            )}
-                            {artists.length > 1 && (
-                              <p className="text-xs text-zinc-600 mt-1 truncate">
-                                {artists.slice(0, 3).join(' · ')}{artists.length > 3 ? ` +${artists.length - 3}` : ''}
-                              </p>
-                            )}
-                            {/* Rating si existe */}
-                            {userAttendance?.rating && (
-                              <StarRating value={userAttendance.rating} size="xs" className="mt-1.5" />
-                            )}
-                          </div>
-
-                          {/* Flecha */}
-                          <div className="shrink-0 text-zinc-700 group-hover:text-zinc-400 transition-colors pt-1">
-                            →
-                          </div>
+                          {rating && <StarRating value={rating} size="xs" />}
+                          <span className="font-label text-[9px] tracking-[0.16em] text-ritual-red uppercase opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            Ver →
+                          </span>
                         </Link>
                       </li>
                     )
@@ -248,6 +238,15 @@ export default async function HomePage({ searchParams }: PageProps) {
             ))}
           </div>
         )}
+
+        <div className="mt-10">
+          <Link
+            href={routes.events.new}
+            className="font-label text-[10px] tracking-[0.16em] text-ritual-gray-text uppercase border border-ritual-border px-6 py-3 inline-block"
+          >
+            + Cargar a mano
+          </Link>
+        </div>
       </section>
     </>
   )

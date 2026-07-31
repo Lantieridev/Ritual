@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildHomeFeed } from '@/src/domains/events/home-view'
+import { buildHomeFeed, buildHomeHeroState, type FestivalForHero } from '@/src/domains/events/home-view'
 import type { EventWithAttendance } from '@/src/domains/events/data'
 
 // 2026-06-15 12:00 hora local — punto de referencia fijo para "ahora".
@@ -69,5 +69,78 @@ describe('buildHomeFeed', () => {
 
     expect(years).toEqual(['2026', '2025', '2024'])
     expect(byYear['2024']).toHaveLength(1)
+  })
+})
+
+function makeFestival(overrides: Partial<FestivalForHero> & { id: string; start_date: string }): FestivalForHero {
+  return {
+    name: 'Cosquín Rock',
+    end_date: null,
+    festival_attendance: [],
+    ...overrides,
+  }
+}
+
+describe('buildHomeHeroState', () => {
+  it('picks a festival running today that the user is going to, over the next-show fallback', () => {
+    const festival = makeFestival({
+      id: 'f1',
+      start_date: '2026-06-14',
+      end_date: '2026-06-16',
+      festival_attendance: [{ status: 'going' }],
+    })
+    const nextShow = { id: 'e1', date: '2026-07-01' } as EventWithAttendance
+
+    const state = buildHomeHeroState(nextShow, [festival], NOW)
+
+    expect(state).toEqual({ kind: 'festival', festival })
+  })
+
+  it('ignores a running festival the user has no attendance on', () => {
+    const festival = makeFestival({
+      id: 'f1',
+      start_date: '2026-06-14',
+      end_date: '2026-06-16',
+      festival_attendance: [],
+    })
+
+    const state = buildHomeHeroState(undefined, [festival], NOW)
+
+    expect(state.kind).not.toBe('festival')
+  })
+
+  it('ignores a festival that already ended', () => {
+    const festival = makeFestival({
+      id: 'f1',
+      start_date: '2026-06-01',
+      end_date: '2026-06-10',
+      festival_attendance: [{ status: 'going' }],
+    })
+
+    const state = buildHomeHeroState(undefined, [festival], NOW)
+
+    expect(state.kind).not.toBe('festival')
+  })
+
+  it('falls back to show-today when the next show is today and no festival is running', () => {
+    const todayShow = { id: 'e1', date: '2026-06-15' } as EventWithAttendance
+
+    const state = buildHomeHeroState(todayShow, [], NOW)
+
+    expect(state).toEqual({ kind: 'show-today', event: todayShow })
+  })
+
+  it('falls back to normal with the days-until countdown when nothing is happening today', () => {
+    const futureShow = { id: 'e1', date: '2026-06-20' } as EventWithAttendance
+
+    const state = buildHomeHeroState(futureShow, [], NOW)
+
+    expect(state).toEqual({ kind: 'normal', nextShow: futureShow, daysUntil: 5 })
+  })
+
+  it('is normal with a null countdown when there is no next show at all', () => {
+    const state = buildHomeHeroState(undefined, [], NOW)
+
+    expect(state).toEqual({ kind: 'normal', nextShow: undefined, daysUntil: null })
   })
 })

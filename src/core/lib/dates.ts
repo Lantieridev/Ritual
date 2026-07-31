@@ -75,6 +75,21 @@ export function isUpcomingEvent(dateStr: string, reference: Date = new Date()): 
     return !isPastEvent(dateStr, reference)
 }
 
+function toUTCMidnight(dateOnly: string): number {
+    const [y, m, d] = dateOnly.split('-').map(Number)
+    return Date.UTC(y, m - 1, d)
+}
+
+/**
+ * Whole calendar days between now and dateStr, in the app's timezone.
+ * 0 for today, negative for the past. Used for countdown displays.
+ */
+export function daysUntil(dateStr: string, reference: Date = new Date()): number {
+    const targetMs = toUTCMidnight(toDateOnly(dateStr))
+    const todayMs = toUTCMidnight(todayDateOnly(reference))
+    return Math.round((targetMs - todayMs) / 86400000)
+}
+
 /**
  * Picks the nearest upcoming event date from a list, independent of the
  * list's own sort order (don't rely on .find() over a descending-sorted

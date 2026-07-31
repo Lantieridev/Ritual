@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isPastEvent, isUpcomingEvent, nearestUpcoming, todayDateOnly, eventYear, eventMonth } from './dates'
+import { isPastEvent, isUpcomingEvent, nearestUpcoming, todayDateOnly, eventYear, eventMonth, daysUntil } from './dates'
 
 // Regression tests for a timezone bug: a date-only string like "2026-07-21"
 // parses as UTC midnight, which is 2026-07-20T21:00 in Argentina (UTC-3).
@@ -90,6 +90,28 @@ describe('eventMonth', () => {
 // The homepage's "próximo show" used to call .find() over a descending-sorted
 // array and return the FARTHEST future match instead of the nearest one
 // whenever 2+ shows were marked "Voy".
+
+describe('daysUntil', () => {
+  const now = new Date('2026-07-21T15:00:00Z') // 2026-07-21 12:00 ART
+
+  it('is 0 for a show happening today', () => {
+    expect(daysUntil('2026-07-21', now)).toBe(0)
+  })
+
+  it('counts whole calendar days to a future date', () => {
+    expect(daysUntil('2026-07-24', now)).toBe(3)
+  })
+
+  it('is negative for a past date', () => {
+    expect(daysUntil('2026-07-18', now)).toBe(-3)
+  })
+
+  it('anchors to the Argentina calendar day right after UTC midnight, not the server day', () => {
+    // 2026-07-21T01:00:00Z is still 2026-07-20 22:00 ART.
+    const justAfterUtcMidnight = new Date('2026-07-21T01:00:00Z')
+    expect(daysUntil('2026-07-21', justAfterUtcMidnight)).toBe(1)
+  })
+})
 
 describe('nearestUpcoming', () => {
   const now = new Date('2026-07-21T15:00:00Z')

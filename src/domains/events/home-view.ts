@@ -1,4 +1,4 @@
-import { isPastEvent, eventYear } from '@/src/core/lib/dates'
+import { isPastEvent, eventYear, daysUntil } from '@/src/core/lib/dates'
 import { nearestUpcoming } from '@/src/core/lib/dates'
 import type { EventWithAttendance } from '@/src/domains/events/data'
 
@@ -53,4 +53,47 @@ export function buildHomeFeed(
     const years = Object.keys(byYear).sort((a, b) => Number(b) - Number(a))
 
     return { nextShow, events, byYear, years }
+}
+
+/**
+ * Narrow shape of a festival for hero-state purposes — deliberately not the
+ * full `Festival` type from the festivals domain, so this file doesn't take
+ * a hard dependency on that domain's shape for what's really just "is one
+ * running right now, and is the user going".
+ */
+export interface FestivalForHero {
+    id: string
+    name: string
+    start_date: string
+    end_date: string | null
+    festival_attendance: Array<{ status: string }>
+}
+
+export type HomeHeroState =
+    | { kind: 'festival'; festival: FestivalForHero }
+    | { kind: 'show-today'; event: EventWithAttendance }
+    | { kind: 'normal'; nextShow: EventWithAttendance | undefined; daysUntil: number | null }
+
+/**
+ * Which of the Home hero's three states applies, in priority order: a
+ * festival the user is attending that's running right now beats a solo show
+ * happening today, which beats the generic countdown-to-next-show view.
+ */
+export function buildHomeHeroState(
+    nextShow: EventWithAttendance | undefined,
+    festivals: FestivalForHero[],
+    now: Date = new Date()
+): HomeHeroState {
+    const liveFestival = festivals.find((f) => {
+        const attending = f.festival_attendance.some((a) => a.status === 'going' || a.status === 'interested')
+        if (!attending) return false
+        return daysUntil(f.start_date, now) <= 0 && daysUntil(f.end_date ?? f.start_date, now) >= 0
+    })
+    if (liveFestival) return { kind: 'festival', festival: liveFestival }
+
+    if (nextShow && daysUntil(nextShow.date, now) === 0) {
+        return { kind: 'show-today', event: nextShow }
+    }
+
+    return { kind: 'normal', nextShow, daysUntil: nextShow ? daysUntil(nextShow.date, now) : null }
 }
