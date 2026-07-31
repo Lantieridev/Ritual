@@ -7,6 +7,7 @@ export interface VenueWithEvents extends Venue {
     name: string | null
     date: string
     lineups: Array<{ artists: { name: string } }>
+    attendance: Array<{ status: string }>
   }>
 }
 
@@ -31,7 +32,8 @@ export async function getVenueById(id: string): Promise<VenueWithEvents | null> 
       id, name, city, country, address, lat, lng,
       events (
         id, name, date,
-        lineups ( artists ( name ) )
+        lineups ( artists ( name ) ),
+        attendance!left ( status )
       )
     `)
     .eq('id', id)
