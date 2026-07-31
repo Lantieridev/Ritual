@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Ticket LFDAA Papel — Baradero 07/12/2024</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d0d0e; }
+  three-d-stage:not(:defined) { visibility: hidden; }
+  three-d-stage { display: block; width: 100vw; height: 100vh; }
+  #hud {
+    position: fixed; left: 16px; top: 14px; z-index: 5;
+    font: 500 11px/1.6 "Roboto Mono", ui-monospace, monospace;
+    letter-spacing: 0.09em; text-transform: uppercase;
+    color: rgba(232, 230, 226, 0.62);
+    display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+  }
+  #hud b { color: rgba(255, 255, 255, 0.92); font-weight: 600; }
+  #swap {
+    font: 600 11px/1 "Roboto Mono", ui-monospace, monospace;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.92);
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 2px; padding: 9px 14px; cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease;
+  }
+  #swap:hover { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.42); }
+  three-d-stage::part(toolbar){display:none !important}
+  #hud{display:none !important}
+  #hud{display:none !important}
+  three-d-stage::part(toolbar),three-d-stage::part(hint){display:none !important}
+  three-d-stage button,three-d-stage .toolbar,three-d-stage .hint{display:none !important}
+</style>
+</head>
+<body>
+
+<three-d-stage name="ticket-lfdaa-baradero" background="#0d0d0e" hide-toolbar></three-d-stage>
+<script src="three-d-stage.js"></script>
+<script type="module">
+/* ─────────────────────────────────────────────────────────────────────────────
+   TICKET LOS FUNDAMENTALISTAS DEL AIRE ACONDICIONADO · BARADERO 07-12-2024
+   Layout, proporciones y troquelado tomados de la foto de referencia.
+   VARIANT = 'paper' → papel térmico mate impreso | 'iron' → hierro forjado
+   ──────────────────────────────────────────────────────────────────────────── */
+let VARIANT = 'paper';   // pieza dedicada: un solo material, un solo export
+
+
+const Q = new URLSearchParams(location.search);
+const P = {
+  a1:    Q.get('a1')    || 'LOS FUNDAMENTALISTAS',
+  a2:    Q.get('a2')    || 'DEL AIRE ACONDICIONADO',
+  venue: Q.get('venue') || 'Predio Vista Brava',
+  addr:  Q.get('addr')  || 'Ruta 41 km 8 · Baradero · Buenos Aires',
+  when:  Q.get('when')  || 'SÁBADO 07 DICIEMBRE 20:30 HS',
+  seat:  Q.get('seat')  || 'CAMPO GENERAL · SIN NUMERAR',
+  seatS: Q.get('seatS') || 'Campo General',
+  date:  Q.get('date')  || '07-12-2024',
+  rz:    parseFloat(Q.get('rz') || '0'),
+  rx0:   parseFloat(Q.get('rx0') || '0'),
+  ry0:   parseFloat(Q.get('ry0') || '0'),
+  zoom:  parseFloat(Q.get('zoom') || '0.20'),
+  react: parseFloat(Q.get('react') || '1')
+};
+
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+try {
+  await Promise.all([
+    document.fonts.load('700 100px "Archivo Narrow"'),
+    document.fonts.load('600 100px "Archivo Narrow"'),
+    document.fonts.load('400 100px "Archivo Narrow"'),
+    document.fonts.load('500 100px "Roboto Mono"')
+  ]);
+} catch (e) {}
+
+/* ============================ geometría real (m) ============================
+   Ticket rectangular tipo boletería: 62 × 152 mm.
+   Línea de micro-perforación transversal al eje largo: separa el talón.
+   ========================================================================== */
+const W = 0.062, H = 0.152;
+const T_PAPER = 0.00028, T_IRON = 0.00040;   // chapa fina, no lingote
+const CORNER = 0.0018;
+const PERF_Y = -H / 2 + 0.040;        // línea de troquelado (talón inferior)
+const PERF_R = 0.00042;               // radio de micro-agujero
+const PERF_STEP = 0.00185;            // paso del troquelado
+const hw = W / 2, hh = H / 2;
+
+/* textura: 1 px ≈ 0.06 mm */
+const PX = 900, PY = Math.round(PX * H / W);
+const toX = (x) => (x + hw) / W * PX;
+const toY = (y) => (hh - y) / H * PY;
+const S = PX / W;                      // px por metro
+const newCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+const ctxOf = (c) => c.getContext('2d');
+
+/* ============================ ruido ============================ */
+function hash(x, y) { const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return n - Math.floor(n); }
+function vnoise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
+  return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * (1 - u) * v + d * u * v;
+}
+function fbm(x, y, oct = 4) {
+  let s = 0, a = 0.5, f = 1;
+  for (let i = 0; i < oct; i++) { s += a * vnoise(x * f, y * f); f *= 2.03; a *= 0.5; }
+  return s;
+}
+// ruido celular: da al óxido bordes de escama, no manchas de camuflaje
+function worley(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  let best = 9;
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const cx = xi + i, cy = yi + j;
+    const px = cx + hash(cx, cy), py = cy + hash(cx + 31, cy - 17);
+    const d = Math.hypot(x - px, y - py);
+    if (d < best) best = d;
+  }
+  return Math.min(best, 1);
+}
+const clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+const sstep = (e0, e1, x) => { const t = clamp01((x - e0) / (e1 - e0)); return t * t * (3 - 2 * t); };
+let seed = 20241207;
+const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+
+/* ============================ artwork impreso ============================
+   Dos capas: FRENTE y DORSO. Se dibujan en tinta plana (sin relieve) para
+   la variante papel; la variante hierro las reinterpreta como bajorrelieve.
+   ======================================================================== */
+const INK = '#15171c', INK_SOFT = '#3d434e', LOGO_BLUE = '#8f1f1a', TINT = '#dfe6f0';
+
+function setFont(c, weight, sizeMm, mono) {
+  c.font = `${weight} ${Math.round(sizeMm / 1000 * S)}px ${mono ? '"Roboto Mono"' : '"Archivo Narrow"'}`;
+}
+/* texto rotado 90° (se lee de abajo hacia arriba, como en la foto) */
+function runLen(c, txt, weight, sizeMm, mono, track) {
+  setFont(c, weight, sizeMm, mono);
+  const tr = track / 1000 * S;
+  let w = 0;
+  for (const ch of [...txt]) w += c.measureText(ch).width + tr;
+  return (w - tr) / S;
+}
+function vtext(c, txt, xm, ym, weight, sizeMm, { mono = false, track = 0, color = INK, align = 'left', fit = 0 } = {}) {
+  if (fit > 0) {
+    const run = runLen(c, txt, weight, sizeMm, mono, track);
+    if (run > fit) sizeMm *= fit / run;
+  }
+  c.save();
+  c.translate(toX(xm), toY(ym));
+  c.rotate(-Math.PI / 2);
+  setFont(c, weight, sizeMm, mono);
+  c.fillStyle = color;
+  c.textBaseline = 'alphabetic';
+  const chars = [...txt];
+  const tr = track / 1000 * S;
+  let w = 0;
+  for (const ch of chars) w += c.measureText(ch).width + tr;
+  w -= tr;
+  let cx = align === 'right' ? -w : align === 'center' ? -w / 2 : 0;
+  for (const ch of chars) { c.fillText(ch, cx, 0); cx += c.measureText(ch).width + tr; }
+  c.restore();
+  return w / S;
+}
+/* texto horizontal */
+function htext(c, txt, xm, ym, weight, sizeMm, { mono = false, track = 0, color = INK, align = 'left' } = {}) {
+  c.save();
+  setFont(c, weight, sizeMm, mono);
+  c.fillStyle = color;
+  c.textBaseline = 'alphabetic';
+  const chars = [...txt];
+  const tr = track / 1000 * S;
+  let w = 0;
+  for (const ch of chars) w += c.measureText(ch).width + tr;
+  w -= tr;
+  let cx = toX(xm) + (align === 'right' ? -w : align === 'center' ? -w / 2 : 0);
+  for (const ch of chars) { c.fillText(ch, cx, toY(ym)); cx += c.measureText(ch).width + tr; }
+  c.restore();
+  return w / S;
+}
+function dashed(c, x0, y0, x1, y1, dash, gap, wMm, color = INK_SOFT) {
+  c.save();
+  c.strokeStyle = color;
+  c.lineWidth = Math.max(1, wMm / 1000 * S);
+  c.setLineDash([dash / 1000 * S, gap / 1000 * S]);
+  c.beginPath(); c.moveTo(toX(x0), toY(y0)); c.lineTo(toX(x1), toY(y1)); c.stroke();
+  c.restore();
+}
+/* QR procedural: módulos + los tres ojos de posición */
+function qr(c, xm, ym, sizeMm, mods = 25) {
+  const px = toX(xm), py = toY(ym), sz = sizeMm / 1000 * S, m = sz / mods;
+  c.save();
+  c.fillStyle = INK;
+  const solid = (mx, my, mw, mh) => c.fillRect(px + mx * m, py + my * m, mw * m + 0.6, mh * m + 0.6);
+  for (let j = 0; j < mods; j++) for (let i = 0; i < mods; i++) {
+    const inEye = (i < 8 && j < 8) || (i > mods - 9 && j < 8) || (i < 8 && j > mods - 9);
+    if (inEye) continue;
+    if (hash(i * 3.7 + 0.5, j * 5.1 + 0.5) > 0.52) solid(i, j, 1, 1);
+  }
+  for (const [ex, ey] of [[0, 0], [mods - 7, 0], [0, mods - 7]]) {
+    solid(ex, ey, 7, 1); solid(ex, ey + 6, 7, 1);
+    solid(ex, ey, 1, 7); solid(ex + 6, ey, 1, 7);
+    solid(ex + 2, ey + 2, 3, 3);
+  }
+  c.restore();
+}
+/* código de barras 1D (Interleaved 2/5 look) */
+function barcode(c, xm, ym, lenMm, hMm, vertical) {
+  c.save();
+  c.fillStyle = INK;
+  const len = lenMm / 1000 * S, thick = hMm / 1000 * S;
+  let p = 0, i = 0;
+  while (p < len - 2) {
+    const w = (hash(i * 7.3, 1.7) > 0.55 ? 1.35 : 0.55) / 1000 * S;
+    if (i % 2 === 0) {
+      if (vertical) c.fillRect(toX(xm), toY(ym) - p - w, thick, w);
+      else c.fillRect(toX(xm) + p, toY(ym), w, thick);
+    }
+    p += w + 0.45 / 1000 * S; i++;
+  }
+  c.restore();
+}
+/* párrafo de condiciones: tipografía diminuta real, muy tenue */
+function microParagraph(c, xm, ym, wMm, lines, sizeMm, leadMm) {
+  c.save();
+  c.translate(toX(xm), toY(ym));
+  c.rotate(-Math.PI / 2);
+  c.fillStyle = 'rgba(58,64,76,0.9)';
+  setFont(c, 400, sizeMm, false);
+  const wordPool = ['Entradas', 'no', 'se', 'aceptan', 'devoluciones', 'ni', 'cambios', 'el', 'organizador',
+    'reserva', 'derecho', 'de', 'admisión', 'y', 'permanencia', 'la', 'presente', 'es', 'válida', 'para',
+    'una', 'sola', 'persona', 'menores', 'de', 'edad', 'acompañados', 'prohibido', 'ingresar', 'con',
+    'bebidas', 'envases', 'consultá', 'términos', 'condiciones', 'en', 'ritual.ar'];
+  let wi = 3;
+  for (let l = 0; l < lines; l++) {
+    let x = 0, y = l * (leadMm / 1000 * S);
+    const limit = wMm / 1000 * S;
+    while (x < limit) {
+      const word = wordPool[wi++ % wordPool.length];
+      const ww = c.measureText(word).width;
+      if (x + ww > limit) break;
+      c.fillText(word, x, y);
+      x += ww + c.measureText(' ').width;
+    }
+  }
+  c.restore();
+}
+
+/* ---------------------------- FRENTE ---------------------------- */
+const frontC = newCanvas(PX, PY), f = ctxOf(frontC);
+f.fillStyle = '#ffffff'; f.fillRect(0, 0, PX, PY);
+// bandas de fondo tramadas en celeste, como el original
+f.fillStyle = TINT;
+f.fillRect(0, toY(hh - 0.036), PX, toY(PERF_Y) - toY(hh - 0.036));
+// cabecera: QR + logo + series
+qr(f, -0.0155, hh - 0.005, 21, 25);
+vtext(f, 'RITUAL', 0.0270, hh - 0.0325, 700, 5.4, { track: 0.35, color: LOGO_BLUE, fit: 0.0285 });
+vtext(f, '.ar', 0.0270, hh - 0.0075, 600, 3.0, { color: LOGO_BLUE, fit: 0.0055 });
+vtext(f, '4983485VMYQGT6', -0.0250, hh - 0.0335, 500, 2.5, { mono: true, track: 0.15, color: INK_SOFT, fit: 0.029 });
+vtext(f, '280542026', -0.0205, hh - 0.0335, 500, 2.5, { mono: true, track: 0.15, color: INK_SOFT, fit: 0.029 });
+dashed(f, -hw, hh - 0.036, hw, hh - 0.036, 1.4, 1.1, 0.22);
+
+// cuerpo principal — todo rotado 90°
+const BODY_Y = PERF_Y + 0.012, BODY_FIT = (hh - 0.038) - BODY_Y, STUB_Y = -hh + 0.0055, STUB_FIT = (PERF_Y - 0.0025) - STUB_Y;
+vtext(f, P.venue, 0.0225, BODY_Y, 600, 4.6, { color: INK, fit: BODY_FIT });
+vtext(f, P.addr, 0.0166, BODY_Y, 400, 2.9, { color: INK_SOFT, fit: BODY_FIT });
+vtext(f, P.a1, -0.0010, BODY_Y, 700, 7.0, { track: 0.08, fit: BODY_FIT });
+vtext(f, P.a2, 0.0090, BODY_Y, 700, 7.0, { track: 0.08, fit: BODY_FIT });
+vtext(f, P.when, -0.0125, BODY_Y, 600, 4.4, { track: 0.05, fit: BODY_FIT });
+vtext(f, P.seat, -0.0205, BODY_Y, 400, 3.6, { track: 0.05, color: INK_SOFT, fit: BODY_FIT });
+vtext(f, 'ORD. 0666-13', -0.0265, BODY_Y, 500, 2.6, { mono: true, track: 0.12, color: INK_SOFT, fit: BODY_FIT });
+
+// talón inferior
+vtext(f, P.when, 0.0275, STUB_Y, 600, 3.2, { track: 0.04, fit: STUB_FIT });
+vtext(f, P.a1, 0.0215, STUB_Y, 700, 3.6, { track: 0.05, fit: STUB_FIT });
+vtext(f, P.seatS, 0.0155, STUB_Y, 400, 2.8, { color: INK_SOFT, fit: STUB_FIT });
+qr(f, -0.0125, -hh + 0.0365, 12, 21);
+vtext(f, '4983485VMYQGT6', -0.0225, STUB_Y, 500, 2.4, { mono: true, track: 0.14, color: INK_SOFT, fit: STUB_FIT });
+vtext(f, '280542026', -0.0185, STUB_Y, 500, 2.4, { mono: true, track: 0.14, color: INK_SOFT, fit: STUB_FIT });
+vtext(f, P.date, -0.0265, STUB_Y, 500, 2.4, { mono: true, track: 0.14, color: INK_SOFT, fit: STUB_FIT });
+
+/* ---------------------------- DORSO ---------------------------- */
+const backC = newCanvas(PX, PY), b = ctxOf(backC);
+b.fillStyle = '#ffffff'; b.fillRect(0, 0, PX, PY);
+vtext(b, 'RITUAL', 0.0275, hh - 0.0295, 700, 5.2, { track: 0.35, color: LOGO_BLUE, fit: 0.0255 });
+vtext(b, '.ar', 0.0275, hh - 0.0055, 600, 3.0, { color: LOGO_BLUE, fit: 0.0035 });
+vtext(b, 'Adquirí tus entradas en', 0.0205, hh - 0.0295, 400, 3.4, { color: INK_SOFT, fit: 0.026 });
+// dos bloques de código de barras 1D + número de serie
+barcode(b, 0.0175, hh - 0.0385, 26, 8.0, true);
+vtext(b, '021067 34', 0.0135, hh - 0.0385, 600, 4.6, { mono: true, track: 0.2 });
+barcode(b, 0.0005, hh - 0.0385, 26, 8.0, true);
+vtext(b, '021067 34', -0.0035, hh - 0.0385, 600, 4.6, { mono: true, track: 0.2 });
+dashed(b, -hw, hh - 0.043, hw, hh - 0.043, 1.4, 1.1, 0.22);
+// condiciones de venta, rotadas
+microParagraph(b, 0.0270, PERF_Y + 0.006, 64, 22, 2.0, 2.5);
+dashed(b, -hw, PERF_Y, hw, PERF_Y, 1.2, 1.0, 0.2);
+vtext(b, 'www.ritual.ar', 0.0275, -hh + 0.006, 600, 3.4, { color: INK_SOFT, fit: 0.032 });
+vtext(b, '021067 34', 0.0195, -hh + 0.006, 600, 4.2, { mono: true, track: 0.18, fit: 0.032 });
+vtext(b, '/ritual', 0.0105, -hh + 0.006, 400, 3.0, { color: INK_SOFT, fit: 0.032 });
+
+/* ============================ mapas PBR ============================ */
+function build(variant) {
+  const iron = variant === 'iron';
+  const albedoF = newCanvas(PX, PY), albedoB = newCanvas(PX, PY);
+  const roughF = newCanvas(PX, PY), normF = newCanvas(PX, PY), emisF = newCanvas(PX, PY);
+  const metalF = newCanvas(PX, PY), roughB = newCanvas(PX, PY), normB = newCanvas(PX, PY);
+  const aF = ctxOf(albedoF).createImageData(PX, PY);
+  const aB = ctxOf(albedoB).createImageData(PX, PY);
+  const rF = ctxOf(roughF).createImageData(PX, PY);
+  const rB = ctxOf(roughB).createImageData(PX, PY);
+  const mF = ctxOf(metalF).createImageData(PX, PY);
+  const eF = ctxOf(emisF).createImageData(PX, PY);
+  const height = new Float32Array(PX * PY);
+  const heightB = new Float32Array(PX * PY);
+  const inkF = ctxOf(frontC).getImageData(0, 0, PX, PY).data;
+  const inkB = ctxOf(backC).getImageData(0, 0, PX, PY).data;
+
+  for (let j = 0; j < PY; j++) {
+    for (let i = 0; i < PX; i++) {
+      const k = j * PX + i, o = k * 4;
+      const nx = i / PX, ny = j / PY;
+      const u = nx * 7, v = ny * 17;
+      // máscara de tinta: 1 = tinta densa (el artwork está sobre blanco)
+      const lumF = (inkF[o] * 0.299 + inkF[o + 1] * 0.587 + inkF[o + 2] * 0.114) / 255;
+      const lumB = (inkB[o] * 0.299 + inkB[o + 1] * 0.587 + inkB[o + 2] * 0.114) / 255;
+      const inkMaskF = clamp01(1 - lumF);
+      const inkMaskB = clamp01(1 - lumB);
+      const edge = clamp01(Math.min(nx, 1 - nx) * 9) * clamp01(Math.min(ny, 1 - ny) * 26);
+
+      if (!iron) {
+        /* ── PAPEL TÉRMICO ── */
+        const fiber = fbm(u * 34, v * 34, 3);
+        const crease = fbm(u * 1.7, v * 2.6, 3);
+        const foldA = Math.exp(-Math.pow((ny - 0.415) / 0.016, 2));    // doblez de bolsillo
+        const foldB = Math.exp(-Math.pow((ny - 0.735) / 0.010, 2));
+        const foldC = Math.exp(-Math.pow((nx - 0.66) / 0.020, 2)) * sstep(0.05, 0.45, ny);
+        const soil = sstep(0.42, 0.88, fbm(u * 3 + 21, v * 3, 4)) * (1 - edge * 0.42)
+                   + sstep(0.62, 0.98, fbm(u * 9 + 5, v * 9 + 3, 3)) * 0.5;
+        const pore = fbm(u * 120, v * 120, 2);
+        const yellow = 0.055 + soil * 0.13;
+
+        for (const [src, dst] of [[inkF, aF], [inkB, aB]]) {
+          const R = src[o] / 255, G = src[o + 1] / 255, B = src[o + 2] / 255;
+          const paper = 0.93 - fiber * 0.06 - pore * 0.035 - soil * 0.16 + crease * 0.02;
+          dst.data[o]     = clamp01(R * paper) * 255;
+          dst.data[o + 1] = clamp01(G * (paper - yellow * 0.35)) * 255;
+          dst.data[o + 2] = clamp01(B * (paper - yellow)) * 255;
+          dst.data[o + 3] = 255;
+        }
+        const rough = 0.90 + fiber * 0.08 + pore * 0.06 - inkMaskF * 0.12 - (foldA + foldB) * 0.06 - soil * 0.05;
+        rF.data[o] = rF.data[o + 1] = rF.data[o + 2] = clamp01(rough) * 255;
+        rB.data[o] = rB.data[o + 1] = rB.data[o + 2] = clamp01(rough) * 255;
+        mF.data[o] = mF.data[o + 1] = mF.data[o + 2] = 0;
+        rF.data[o + 3] = rB.data[o + 3] = mF.data[o + 3] = 255;
+        // relieve: fibra + arrugas suaves. La tinta NO tiene relieve.
+        heightB[k] = fiber * 0.075 + pore * 0.045 + crease * 0.30
+                   + (foldA * -0.55 + foldB * 0.42 + foldC * 0.30);
+        height[k] = fiber * 0.075 + pore * 0.045 + crease * 0.30
+                  + (foldA * -0.55 + foldB * 0.42 + foldC * 0.30)
+                  + (1 - edge) * 0.12 * crease;
+        eF.data[o] = eF.data[o + 1] = eF.data[o + 2] = 0; eF.data[o + 3] = 255;
+      } else {
+        /* ── CHAPA DE HIERRO OXIDADA ──
+           Dos regímenes PBR opuestos: acero cepillado (metalness 1, roughness bajo)
+           donde el metal está sano, y óxido 100% mate y dieléctrico donde comió. */
+        const grain  = fbm(u * 26, v * 26, 3);
+        const micro  = fbm(u * 120, v * 120, 2);
+        // cepillado longitudinal: estrías finas a lo largo de la chapa
+        const brush  = fbm(u * 3.0 + 12, v * 320, 2);
+        // frente de corrosión: celdas + detalle fino + escurrido vertical
+        // dominio deformado: rompe la regularidad de las celdas (nada de lunares)
+        const wx1 = nx * 9 + fbm(u * 2.2, v * 2.2, 3) * 5.5;
+        const wy1 = ny * 21 + fbm(u * 2.2 + 17, v * 2.2 + 9, 3) * 6.5;
+        const c1 = 1 - sstep(0.05, 0.62, worley(wx1, wy1));
+        const c2 = 1 - sstep(0.02, 0.40, worley(wx1 * 2.7 + 31, wy1 * 2.7 + 13));
+        const detail = fbm(u * 15 + 60, v * 15 + 30, 4);
+        // escurrido vertical desde los focos de corrosión
+        const drip = sstep(0.62, 0.98, fbm(u * 26 + 90, v * 1.6 + 40, 3)) * sstep(0.08, 0.6, ny);
+        // dónde puede haber óxido: cantos, troquelado y algunas zonas amplias
+        const perfBand = Math.exp(-Math.pow((ny - (hh - PERF_Y) / H) / 0.045, 2));
+        const field = clamp01(sstep(0.46, 0.86, fbm(u * 1.5 + 5, v * 2.0, 4)) * 1.15
+                            + (1 - edge) * 0.75 + perfBand * 0.35);
+        let ox = clamp01((c1 * 0.75 + c2 * 0.45 * detail + drip * 0.35) * field * 1.35 - 0.12);
+        const oxide = sstep(0.20, 0.62, ox);              // óxido superficial
+        const oxideHard = sstep(0.55, 0.92, ox);          // costra hinchada
+        const clean = 1 - sstep(0.05, 0.35, ox);          // acero sano
+
+        const STEEL = [0x66, 0x66, 0x68], OX = [0x7e, 0x43, 0x1e], OX_D = [0x42, 0x20, 0x0f],
+              CRUST = [0x2c, 0x1c, 0x12];
+        let c = STEEL.map((cc) => cc * (0.88 + brush * 0.26 + grain * 0.10));
+        c = c.map((cc, n) => cc + (OX[n] - cc) * oxide * 0.90);
+        c = c.map((cc, n) => cc + (OX_D[n] - cc) * oxideHard * 0.75);
+        c = c.map((cc, n) => cc + (CRUST[n] - cc) * sstep(0.80, 1.0, ox) * 0.55);
+        c = c.map((cc) => cc * (0.94 + micro * 0.10));
+        c = c.map((cc) => cc * (1 - inkMaskF * 0.42));     // fondo del bajorrelieve
+        aF.data[o] = c[0]; aF.data[o + 1] = c[1]; aF.data[o + 2] = c[2]; aF.data[o + 3] = 255;
+
+        // dorso: misma chapa, distinto patrón, y bastante más claro para que se lea
+        const oxB = clamp01(oxide * 0.85 + drip * 0.28);
+        let cb = STEEL.map((cc) => cc * (1.02 + brush * 0.22 + grain * 0.08));
+        cb = cb.map((cc, n) => cc + (OX[n] - cc) * oxB * 0.85);
+        cb = cb.map((cc, n) => cc + (OX_D[n] - cc) * sstep(0.6, 0.95, oxB) * 0.6);
+        cb = cb.map((cc) => cc * (1 - clamp01(1 - lumB) * 0.40));
+        aB.data[o] = cb[0]; aB.data[o + 1] = cb[1]; aB.data[o + 2] = cb[2]; aB.data[o + 3] = 255;
+
+        // ROUGHNESS: acero cepillado 0.18–0.34 · óxido 0.92–1.0
+        const steelRough = 0.30 + brush * 0.20 + micro * 0.07;
+        const rustRough  = 0.90 + detail * 0.10;
+        const rough  = steelRough + (rustRough - steelRough) * sstep(0.05, 0.45, ox) + inkMaskF * 0.05;
+        const roughB = steelRough * 0.95 + (rustRough - steelRough) * sstep(0.05, 0.45, oxB);
+        rF.data[o] = rF.data[o + 1] = rF.data[o + 2] = clamp01(rough) * 255;
+        rB.data[o] = rB.data[o + 1] = rB.data[o + 2] = clamp01(roughB) * 255;
+        rF.data[o + 3] = rB.data[o + 3] = 255;
+
+        // METALNESS: 1 en el acero, casi 0 en la costra de óxido
+        const metal = clamp01(1.0 - sstep(0.10, 0.55, ox) * 0.94 - oxideHard * 0.06);
+        mF.data[o] = mF.data[o + 1] = mF.data[o + 2] = metal * 255;
+        mF.data[o + 3] = 255;
+
+        // relieve: costra levantada, estrías del cepillado y texto hundido
+        const relief = grain * 0.04 + micro * 0.02 + brush * 0.05
+                     + oxide * 0.10 + oxideHard * 0.16 + clean * -0.02;
+        height[k] = relief - inkMaskF * 0.95;
+        heightB[k] = relief * 0.8 - inkMaskB * 0.95;
+        eF.data[o] = eF.data[o + 1] = eF.data[o + 2] = 0; eF.data[o + 3] = 255;
+      }
+    }
+  }
+  ctxOf(albedoF).putImageData(aF, 0, 0);
+  ctxOf(albedoB).putImageData(aB, 0, 0);
+  ctxOf(roughF).putImageData(rF, 0, 0);
+  ctxOf(roughB).putImageData(rB, 0, 0);
+  ctxOf(metalF).putImageData(mF, 0, 0);
+  ctxOf(emisF).putImageData(eF, 0, 0);
+
+  // labio del troquelado: cada agujero deja un reborde y un hundimiento
+  {
+    const rp = PERF_R / W * PX, cyp = toY(PERF_Y), lip = iron ? 0.55 : 0.95;
+    for (let hx = -hw + 0.0026; hx <= hw - 0.0026; hx += PERF_STEP) {
+      const cxp = toX(hx), rad = rp * 3.2;
+      for (let j = Math.max(0, Math.floor(cyp - rad)); j < Math.min(PY, cyp + rad); j++)
+        for (let i = Math.max(0, Math.floor(cxp - rad)); i < Math.min(PX, cxp + rad); i++) {
+          const d = Math.hypot(i - cxp, j - cyp) / rp;
+          if (d > 3.2) continue;
+          height[j * PX + i] += lip * (d < 1.15 ? -0.9 : 0.45 * Math.exp(-Math.pow((d - 1.6) / 0.85, 2)));
+        }
+    }
+  }
+
+  // normal maps: uno por cara. El del dorso se escribe espejado en X.
+  const strength = iron ? 3.4 : 2.3;
+  function normalMapFrom(src, canvas, mirror) {
+    const img = ctxOf(canvas).createImageData(PX, PY);
+    for (let j = 0; j < PY; j++) for (let i = 0; i < PX; i++) {
+      const l = src[j * PX + Math.max(0, i - 1)], r2 = src[j * PX + Math.min(PX - 1, i + 1)];
+      const t = src[Math.max(0, j - 1) * PX + i], d = src[Math.min(PY - 1, j + 1) * PX + i];
+      let x = (l - r2) * strength, y = (d - t) * strength, z = 1;
+      const len = Math.hypot(x, y, z); x /= len; y /= len; z /= len;
+      if (mirror) x = -x;
+      const o = (j * PX + (mirror ? PX - 1 - i : i)) * 4;
+      img.data[o] = (x * 0.5 + 0.5) * 255;
+      img.data[o + 1] = (y * 0.5 + 0.5) * 255;
+      img.data[o + 2] = (z * 0.5 + 0.5) * 255;
+      img.data[o + 3] = 255;
+    }
+    ctxOf(canvas).putImageData(img, 0, 0);
+  }
+  normalMapFrom(height, normF, false);
+  normalMapFrom(heightB, normB, true);
+
+  // la tapa trasera se ve desde atrás: sus mapas van espejados en X
+  function mirrored(src) {
+    const c = newCanvas(PX, PY), x = ctxOf(c);
+    x.translate(PX, 0); x.scale(-1, 1); x.drawImage(src, 0, 0);
+    return c;
+  }
+  return {
+    albedoF, albedoB: mirrored(albedoB), roughF, roughB: mirrored(roughB),
+    metalF, metalB: mirrored(metalF), normF, normB, emisF
+  };
+}
+
+function tex(canvas, srgb) {
+  const t = new THREE.CanvasTexture(canvas);
+  t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.anisotropy = 16;
+  t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  t.repeat.set(1 / W, 1 / H);          // UV en espacio-objeto (Shape/Extrude)
+  t.offset.set(0.5, 0.5);
+  t.needsUpdate = true;
+  return t;
+}
+
+/* ============================ contorno + troquelado ============================ */
+function ticketShape() {
+  const s = new THREE.Shape();
+  const r = CORNER;
+  s.moveTo(-hw + r, -hh);
+  s.lineTo(hw - r, -hh);
+  s.quadraticCurveTo(hw, -hh, hw, -hh + r);
+  s.lineTo(hw, hh - r);
+  s.quadraticCurveTo(hw, hh, hw - r, hh);
+  s.lineTo(-hw + r, hh);
+  s.quadraticCurveTo(-hw, hh, -hw, hh - r);
+  s.lineTo(-hw, -hh + r);
+  s.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
+  s.closePath();
+  // micro-perforaciones: geometría real, transversales al eje largo
+  for (let x = -hw + 0.0026; x <= hw - 0.0026; x += PERF_STEP) {
+    const p = new THREE.Path();
+    p.absarc(x, PERF_Y, PERF_R, 0, Math.PI * 2, false);
+    s.holes.push(p);
+  }
+  return s;
+}
+const SHAPE = ticketShape();
+
+/* ============================ montaje ============================ */
+const sc = stage._scene, renderer = stage._renderer, camera = stage._camera, controls = stage._controls;
+if (stage._ground) stage._ground.visible = false;
+sc.traverse((o) => { if (o.isLight) o.intensity = 0; });
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+const envC = newCanvas(512, 256), ex = ctxOf(envC);
+function paintEnv(iron) {
+  const gr = ex.createLinearGradient(0, 0, 0, 256);
+  if (iron) { gr.addColorStop(0, '#161a22'); gr.addColorStop(0.6, '#080909'); gr.addColorStop(1, '#040404'); }
+  else { gr.addColorStop(0, '#aab3c2'); gr.addColorStop(0.55, '#4b5058'); gr.addColorStop(1, '#1c1e22'); }
+  ex.fillStyle = gr; ex.fillRect(0, 0, 512, 256);
+  const blob = (x, y, r, col) => {
+    const g = ex.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ex.fillStyle = g; ex.fillRect(x - r, y - r, r * 2, r * 2);
+  };
+  blob(140, 46, iron ? 150 : 170, iron ? 'rgba(206,222,255,0.95)' : 'rgba(255,252,246,1)');
+  blob(360, 90, 120, iron ? 'rgba(150,170,205,0.55)' : 'rgba(190,205,230,0.6)');
+  if (iron) {
+    blob(60, 130, 90, 'rgba(120,140,175,0.30)');
+    blob(255, 205, 105, 'rgba(18,22,30,0.9)');
+    // paneles de estudio: dan reflejos definidos sobre el acero cepillado
+    ex.fillStyle = 'rgba(226,236,255,0.92)'; ex.fillRect(28, 18, 120, 34);
+    ex.fillStyle = 'rgba(196,212,240,0.55)'; ex.fillRect(300, 96, 150, 16);
+    ex.fillStyle = 'rgba(255,214,170,0.30)'; ex.fillRect(180, 150, 90, 12);
+  }
+  if (iron) blob(410, 170, 130, 'rgba(150,60,30,0.16)');
+}
+const pmrem = new THREE.PMREMGenerator(renderer);
+let envRT = null;
+function applyEnv(iron) {
+  paintEnv(iron);
+  const t = new THREE.CanvasTexture(envC);
+  t.mapping = THREE.EquirectangularReflectionMapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  if (envRT) envRT.dispose();
+  envRT = pmrem.fromEquirectangular(t);
+  sc.environment = envRT.texture;
+  t.dispose();
+}
+
+const key = new THREE.DirectionalLight(0xffffff, 1);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.bias = -0.0002;
+sc.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 1);
+sc.add(fill);
+const rim = new THREE.DirectionalLight(0xffffff, 1);
+sc.add(rim);
+const raso = new THREE.PointLight(0xffffff, 1, 0.55, 2);   // luz rasante
+sc.add(raso);
+const raso2 = new THREE.DirectionalLight(0xffffff, 1);     // segundo ángulo casi tangente
+sc.add(raso2);
+const rasoB = new THREE.PointLight(0xffffff, 1, 0.5, 2);   // rasante del dorso
+sc.add(rasoB);
+const backKey = new THREE.DirectionalLight(0xffffff, 1);   // key trasera: el dorso deja de estar ciego
+sc.add(backKey);
+
+function refine(geo, maxEdge, maxDepth) {
+  const pos = geo.attributes.position, uv = geo.attributes.uv;
+  const V = (i) => ({ x: pos.getX(i), y: pos.getY(i), z: pos.getZ(i), u: uv.getX(i), v: uv.getY(i) });
+  const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2, u: (a.u + b.u) / 2, v: (a.v + b.v) / 2 });
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+  function split(list, a, b, c, d) {
+    if (d < maxDepth && Math.max(dist(a, b), dist(b, c), dist(c, a)) > maxEdge) {
+      const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a);
+      split(list, a, ab, ca, d + 1); split(list, ab, b, bc, d + 1);
+      split(list, ca, bc, c, d + 1); split(list, ab, bc, ca, d + 1);
+    } else list.push(a, b, c);
+  }
+  const buckets = new Map();
+  for (const g of geo.groups) {
+    if (!buckets.has(g.materialIndex)) buckets.set(g.materialIndex, []);
+    const list = buckets.get(g.materialIndex);
+    for (let i = g.start; i < g.start + g.count; i += 3) split(list, V(i), V(i + 1), V(i + 2), 0);
+  }
+  let total = 0;
+  for (const l of buckets.values()) total += l.length;
+  const P = new Float32Array(total * 3), U = new Float32Array(total * 2);
+  const out = new THREE.BufferGeometry();
+  let n = 0;
+  for (const [m, list] of [...buckets.entries()].sort((a, b) => a[0] - b[0])) {
+    out.addGroup(n, list.length, m);
+    for (const p of list) {
+      P[n * 3] = p.x; P[n * 3 + 1] = p.y; P[n * 3 + 2] = p.z;
+      U[n * 2] = p.u; U[n * 2 + 1] = p.v;
+      n++;
+    }
+  }
+  out.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  out.setAttribute('uv', new THREE.BufferAttribute(U, 2));
+  geo.dispose();
+  return out;
+}
+
+let group = null;
+function mount(variant) {
+  const iron = variant === 'iron';
+  const maps = build(variant);
+  const th = iron ? T_IRON : T_PAPER;
+
+  let bodyGeo = new THREE.ExtrudeGeometry(SHAPE, {
+    depth: th, bevelEnabled: false, bevelThickness: 0, bevelSize: 0, curveSegments: 12
+  });
+  // ExtrudeGeometry emite [tapas, cantos]: separo la tapa trasera (z=0) de la
+  // delantera (z=depth) para darles materiales propios. Sin superficies
+  // coplanares no hay z-fighting ni sangrado del frente en el dorso.
+  {
+    const g0 = bodyGeo.groups[0], g1 = bodyGeo.groups[1];
+    const lid = g0.count / 2;
+    bodyGeo.clearGroups();
+    bodyGeo.addGroup(g0.start, lid, 0);          // dorso
+    bodyGeo.addGroup(g0.start + lid, lid, 1);    // frente
+    bodyGeo.addGroup(g1.start, g1.count, 2);     // canto
+  }
+  bodyGeo.translate(0, 0, -th / 2);
+  // La triangulación de la tapa es Delaunay: densa junto al troquelado y con
+  // astillas de 150 mm en el resto. Al alabear, esas astillas se vuelven
+  // facetas planas. Subdivido hasta que ninguna arista pase de 2 mm.
+  bodyGeo = refine(bodyGeo, 0.002, 4);
+
+  // alabeo: la lámina nunca es un plano perfecto
+  const warp = iron ? 0.0026 : 0.0034;
+  function curl(geo, mirror) {
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i);
+      const wx = mirror ? -x : x;
+      const tx = wx / hw, ty = y / hh;
+      const d = warp * (tx * tx * 0.95 + 0.30 * Math.sin(ty * 2.3 + 0.7) * (0.35 + 0.65 * tx * tx)
+                        + 0.18 * Math.sin(ty * 5.1) * tx);
+      p.setZ(i, p.getZ(i) + (mirror ? -d : d));
+    }
+    p.needsUpdate = true;
+    geo.computeVertexNormals();
+  }
+  curl(bodyGeo, false);
+
+  const ns = iron ? 1.05 : 0.95;
+  const common = {
+    normalMap: tex(maps.normF, false),
+    roughnessMap: tex(maps.roughF, false),
+    normalScale: new THREE.Vector2(ns, ns)
+  };
+  const faceFront = iron
+    ? new THREE.MeshStandardMaterial({
+        name: 'chapa_hierro_frente', map: tex(maps.albedoF, true), ...common,
+        metalnessMap: tex(maps.metalF, false),
+        metalness: 1.0, roughness: 1.0, envMapIntensity: 1.1, side: THREE.FrontSide
+      })
+    : new THREE.MeshStandardMaterial({
+        name: 'papel_termico_frente', map: tex(maps.albedoF, true), ...common,
+        metalness: 0.0, roughness: 1.0, side: THREE.FrontSide
+      });
+  const faceBack = new THREE.MeshStandardMaterial({
+    name: iron ? 'chapa_hierro_dorso' : 'papel_termico_dorso',
+    map: tex(maps.albedoB, true),
+    normalMap: tex(maps.normB, false),
+    roughnessMap: tex(maps.roughB, false),
+    normalScale: new THREE.Vector2(ns, ns),
+    metalnessMap: iron ? tex(maps.metalB, false) : null,
+    metalness: iron ? 1.0 : 0.0, roughness: 1.0,
+    envMapIntensity: iron ? 1.1 : 1.0,
+    side: THREE.FrontSide
+  });
+  const edge = new THREE.MeshStandardMaterial({
+    name: iron ? 'canto_hierro' : 'canto_papel',
+    color: iron ? 0x6a6560 : 0xdad4c8,
+    metalness: iron ? 1.0 : 0.0,
+    roughness: iron ? 0.5 : 0.95
+  });
+
+  const g = new THREE.Group();
+  g.name = iron ? 'ticket_hierro_forjado' : 'ticket_papel_termico';
+  const body = new THREE.Mesh(bodyGeo, [faceBack, faceFront, edge]);
+  body.name = 'cuerpo_ticket';
+  body.castShadow = true;
+  body.receiveShadow = true;
+  g.add(body);
+
+  if (group) { sc.remove(group); group.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); }
+  group = g;
+
+  // luces por variante
+  if (iron) {
+    key.color.set(0xdfe7f5); key.intensity = 4.2; key.position.set(0.10, 0.22, 0.30);
+    fill.color.set(0x9fb2d0); fill.intensity = 1.5; fill.position.set(-0.20, 0.05, 0.30);
+    rim.color.set(0x7d94c8); rim.intensity = 1.7; rim.position.set(-0.16, 0.10, -0.24);
+    raso.color.set(0xffd9b4); raso.intensity = 0.055; raso.position.set(-0.058, 0.03, 0.020);
+    raso2.color.set(0xbcd0ee); raso2.intensity = 2.1; raso2.position.set(0.26, -0.06, 0.030);
+    rasoB.color.set(0xd6e2f7); rasoB.intensity = 0.060; rasoB.position.set(0.048, -0.015, -0.016);
+    backKey.color.set(0xd8e4f8); backKey.intensity = 3.6; backKey.position.set(-0.16, 0.14, -0.34);
+    sc.environmentIntensity = 1.7;
+    renderer.toneMappingExposure = 1.0;
+    stage.setAttribute('background', '#0b0b0c');
+  } else {
+    key.color.set(0xfff4e6); key.intensity = 2.2; key.position.set(0.12, 0.26, 0.20);
+    fill.color.set(0xc9d6ea); fill.intensity = 0.75; fill.position.set(-0.22, 0.04, 0.18);
+    rim.color.set(0xbfcada); rim.intensity = 0.55; rim.position.set(-0.10, 0.16, -0.22);
+    raso.color.set(0xfff0dc); raso.intensity = 0.026; raso.position.set(-0.050, 0.015, 0.022);
+    raso2.color.set(0xffffff); raso2.intensity = 1.1; raso2.position.set(0.24, -0.05, 0.035);
+    rasoB.color.set(0xffffff); rasoB.intensity = 0.020; rasoB.position.set(0.045, -0.02, -0.022);
+    backKey.color.set(0xe8eef8); backKey.intensity = 1.4; backKey.position.set(-0.16, 0.14, -0.28);
+    sc.environmentIntensity = 0.95;
+    renderer.toneMappingExposure = 1.0;
+    stage.setAttribute('background', '#111114');
+  }
+  applyEnv(iron);
+
+  g.rotation.set(0, 0, 0);
+  stage.setObject(g);
+  requestAnimationFrame(() => { camera.position.set(0, 0, P.zoom); controls.target.set(0, 0, 0); controls.update(); });
+
+  stage.setAttribute('name', iron ? 'ticket-hierro-baradero' : 'ticket-papel-baradero');
+  try { parent.postMessage({ type:'ritual-ready' }, '*'); } catch (e) {}
+}
+
+mount(VARIANT);
+
+/* parallax: la rotación sigue al cursor (clave para leer los reflejos) */
+let tRX = 0, tRY = 0, cRX = 0, cRY = 0, idle = performance.now();
+addEventListener('pointermove', (e) => {
+  tRY = ((e.clientX / innerWidth) - 0.5) * 0.85;
+  tRX = ((e.clientY / innerHeight) - 0.5) * 0.42;
+  idle = performance.now();
+});
+let __ioPaused = false;
+try {
+  const __io = new IntersectionObserver((es) => { __ioPaused = !es[0].isIntersecting; }, { threshold: 0 });
+  __io.observe(document.documentElement);
+} catch (e) {}
+document.addEventListener('visibilitychange', () => { if (document.hidden) __ioPaused = true; });
+
+(function follow() {
+  requestAnimationFrame(follow);
+  if (!group || __ioPaused) return;
+  const t = (performance.now() - idle) / 1000;
+  const drift = t > 2.5 ? Math.sin(performance.now() / 4200) * 0.16 : 0;   // deriva al quedar quieto
+  cRX += (tRX * P.react - cRX) * 0.055;
+  cRY += (tRY * P.react + drift * P.react - cRY) * 0.055;
+  group.rotation.x = P.rx0 + cRX;
+  group.rotation.y = P.ry0 + cRY;
+  group.rotation.z = P.rz + cRY * 0.06;
+})();
+
+function swap() {
+  VARIANT = VARIANT === 'iron' ? 'paper' : 'iron';
+  mount(VARIANT);
+}
+// pieza de un solo material: sin conmutador
+</script>
+<script>
+(function(){
+  function nuke(){
+    var st = document.querySelector('three-d-stage');
+    if(!st || !st.shadowRoot) return;
+    var sr = st.shadowRoot;
+    if(!sr.querySelector('style[data-nohud]')){
+      var e = document.createElement('style');
+      e.setAttribute('data-nohud','');
+      e.textContent = 'button,.toolbar,.bar,.hint,.help,.tip,.hud,.overlay,.caption,.label,.footer,[class*=toolbar],[class*=hint],[class*=hud],[class*=caption]{display:none !important}';
+      sr.appendChild(e);
+    }
+  }
+  new MutationObserver(nuke).observe(document.documentElement,{childList:true,subtree:true});
+  addEventListener('load',nuke); setTimeout(nuke,300); setTimeout(nuke,1200); setTimeout(nuke,2500);
+})();
+</script>
+</body>
+</html>
