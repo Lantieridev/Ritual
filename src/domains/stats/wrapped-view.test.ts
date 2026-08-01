@@ -78,4 +78,23 @@ describe('buildWrappedSummary', () => {
 
     expect(summary.availableYears).toEqual([2026, 2024])
   })
+
+  it('picks the highest-rated show of the year as bestNight', () => {
+    const events = [
+      makeEvent({ id: 'e1', date: '2026-03-01', attendance: [{ id: 'a1', status: 'went', user_id: 'u1', rating: 3, review: null }] }),
+      makeEvent({ id: 'e2', date: '2026-07-01', attendance: [{ id: 'a2', status: 'went', user_id: 'u1', rating: 5, review: null }] }),
+    ]
+
+    const summary = buildWrappedSummary(events, emptyLifetimeStats(), 2026)
+
+    expect(summary.bestNight?.id).toBe('e2')
+  })
+
+  it('is null for bestNight when nothing that year has a rating', () => {
+    const events = [makeEvent({ id: 'e1', date: '2026-03-01', attendance: [att('a1', 'went')] })]
+
+    const summary = buildWrappedSummary(events, emptyLifetimeStats(), 2026)
+
+    expect(summary.bestNight).toBeNull()
+  })
 })

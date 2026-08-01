@@ -3,10 +3,13 @@ import Link from 'next/link'
 import { getPersonalStats } from '@/src/domains/stats/data'
 import { buildWrappedSummary } from '@/src/domains/stats/wrapped-view'
 import { getEventsWithAttendance } from '@/src/domains/events/data'
+import { getExpensesSummary } from '@/src/domains/expenses/data'
+import { getProfile } from '@/src/domains/auth/data'
+import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
 import { parseYearParam } from '@/src/core/lib/validation'
 import { formatDate } from '@/src/core/lib/utils'
-import { StarRating } from '@/src/core/components/ui'
+import { WrappedStories, type WrappedSlide } from '@/src/domains/stats/components/WrappedStories'
 
 export const metadata: Metadata = {
     title: 'Tu Wrapped | RITUAL',
@@ -17,59 +20,56 @@ interface PageProps {
     searchParams: Promise<{ year?: string }>
 }
 
+function formatARS(amount: number) {
+    return `$${amount.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
+}
+
 export default async function WrappedPage({ searchParams }: PageProps) {
     const { year: yearParam } = await searchParams
     const currentYear = new Date().getFullYear()
     const selectedYear = parseYearParam(yearParam, currentYear)
 
-    const [stats, allEvents] = await Promise.all([
+    const userId = await getCurrentUserId()
+    const [stats, allEvents, expensesSummary, profile] = await Promise.all([
         getPersonalStats(),
         getEventsWithAttendance(),
+        getExpensesSummary(userId),
+        getProfile(userId ?? undefined),
     ])
 
     const {
         attendedThisYear,
         uniqueArtists,
         uniqueVenues,
-        totalRated,
         topArtists: topArtistsThisYear,
         topVenues: topVenuesThisYear,
-        avgRating: avgRatingThisYear,
-        busiestMonth,
+        bestNight,
         availableYears,
         hasData,
     } = buildWrappedSummary(allEvents, stats, selectedYear)
 
-    return (
-        <main className="min-h-screen bg-neutral-950 text-white font-sans">
-            <div className="max-w-2xl mx-auto px-6 md:px-8 py-16">
+    const spentThisYear = expensesSummary.byYear[String(selectedYear)] ?? 0
+    const handle = profile?.username || 'vos'
 
-                {/* Header */}
+    return (
+        <main className="min-h-screen bg-ritual-bg text-ritual-bone">
+            <div className="max-w-2xl mx-auto px-6 md:px-8 py-16">
                 <div className="mb-10">
-                    <Link
-                        href={routes.stats}
-                        className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-4 inline-block"
-                    >
-                        ← Stats
+                    <Link href={routes.stats} className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid hover:text-ritual-gray-text transition-colors mb-4 inline-block">
+                        ← Números
                     </Link>
                     <div className="flex items-end gap-4 flex-wrap">
-                        <div>
-                            <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Tu resumen</p>
-                            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-                                {selectedYear} <span className="text-zinc-600">Wrapped</span>
-                            </h1>
-                        </div>
-                        {/* Selector de año */}
+                        <h1 className="font-display text-5xl uppercase text-ritual-bone">
+                            {selectedYear} <span className="text-ritual-gray-mid">Wrapped</span>
+                        </h1>
                         {availableYears.length > 1 && (
                             <div className="flex gap-1.5 flex-wrap ml-auto">
                                 {availableYears.map((y) => (
                                     <Link
                                         key={y}
                                         href={`/wrapped?year=${y}`}
-                                        className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${y === selectedYear
-                                            ? 'bg-white text-neutral-950 font-semibold'
-                                            : 'border border-white/10 text-zinc-500 hover:text-zinc-300'
-                                            }`}
+                                        aria-current={y === selectedYear ? 'page' : undefined}
+                                        className={`px-3 py-1.5 font-label text-xs ${y === selectedYear ? 'bg-ritual-red text-ritual-panel' : 'border border-ritual-border text-ritual-gray-mid hover:text-ritual-gray-text'}`}
                                     >
                                         {y}
                                     </Link>
@@ -81,154 +81,191 @@ export default async function WrappedPage({ searchParams }: PageProps) {
 
                 {!hasData ? (
                     <div className="py-20 text-center">
-                        <p className="text-zinc-500 text-lg mb-2">Sin shows en {selectedYear}</p>
-                        <p className="text-zinc-700 text-sm">
-                            Marcá shows como &quot;Fui&quot; para verlos en tu Wrapped.
-                        </p>
-                        <Link
-                            href={routes.home}
-                            className="inline-block mt-6 text-sm text-zinc-400 hover:text-white transition-colors underline underline-offset-4"
-                        >
+                        <p className="font-body text-ritual-gray-mid text-lg mb-2">Sin shows en {selectedYear}</p>
+                        <p className="font-label text-xs text-ritual-gray-mid uppercase tracking-[0.1em]">Marcá shows como &quot;Fui&quot; para verlos acá.</p>
+                        <Link href={routes.home} className="inline-block mt-6 font-label text-xs text-ritual-red uppercase tracking-[0.1em] underline underline-offset-4">
                             Ver mis recitales →
                         </Link>
                     </div>
                 ) : (
-                    <div className="space-y-8">
+                    <>
+                        <WrappedStories
+                            handle={handle}
+                            slides={buildSlides({
+                                selectedYear,
+                                showCount: attendedThisYear.length,
+                                topArtist: topArtistsThisYear[0] ?? null,
+                                bestNight,
+                                uniqueVenues,
+                                spentThisYear,
+                            })}
+                        />
 
-                        {/* Hero stat */}
-                        <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-8 text-center">
-                            <p className="text-7xl font-bold text-white tabular-nums mb-2">
-                                {attendedThisYear.length}
-                            </p>
-                            <p className="text-zinc-400 text-lg">
-                                show{attendedThisYear.length !== 1 ? 's' : ''} en {selectedYear}
-                            </p>
-                            {avgRatingThisYear && (
-                                <div className="flex justify-center items-center gap-1 mt-3">
-                                    <StarRating value={Math.round(parseFloat(avgRatingThisYear))} size="lg" />
-                                    <span className="text-zinc-500 text-sm ml-1 self-center">{avgRatingThisYear} promedio</span>
-                                </div>
+                        {/* Versión de escritorio con el mismo lenguaje: resumen en línea, no la historia */}
+                        <div className="mt-12 space-y-8">
+                            <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <StatBox label="Shows" value={attendedThisYear.length} />
+                                <StatBox label="Artistas únicos" value={uniqueArtists} />
+                                <StatBox label="Venues distintos" value={uniqueVenues} />
+                                <StatBox label="Gastado" value={formatARS(spentThisYear)} />
+                            </section>
+
+                            {topArtistsThisYear.length > 0 && (
+                                <section>
+                                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-5">Tus artistas del año</h2>
+                                    <ol className="space-y-3">
+                                        {topArtistsThisYear.map(([name, count], i) => (
+                                            <li key={name} className="flex items-center gap-4">
+                                                <span className="font-figure text-xl text-ritual-gray-mid w-6 shrink-0">{i + 1}</span>
+                                                <p className="flex-1 font-dense font-extrabold text-ritual-bone truncate">{name}</p>
+                                                <span className="font-label text-xs text-ritual-gray-mid shrink-0">{count} show{count !== 1 ? 's' : ''}</span>
+                                            </li>
+                                        ))}
+                                    </ol>
+                                </section>
                             )}
-                        </div>
 
-                        {/* Grid de stats */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {([
-                                { label: 'Artistas únicos', value: uniqueArtists },
-                                { label: 'Venues distintos', value: uniqueVenues },
-                                { label: 'Shows con rating', value: totalRated },
-                                ...(busiestMonth ? [{ label: 'Mes más activo', value: busiestMonth }] : []),
-                                { label: 'Shows en total (histórico)', value: stats.showsAttended },
-                                { label: 'Artistas únicos (histórico)', value: stats.uniqueArtists },
-                            ] as { label: string; value: string | number }[]).map(({ label, value }) => (
-                                <div key={label} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
-                                    <p className="text-2xl font-bold text-white tabular-nums">{value}</p>
-                                    <p className="text-[10px] uppercase tracking-widest text-zinc-600 mt-1 leading-tight">{label}</p>
-                                </div>
-                            ))}
-                        </div>
+                            {topVenuesThisYear.length > 0 && (
+                                <section>
+                                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-5">Tus venues del año</h2>
+                                    <ol className="space-y-3">
+                                        {topVenuesThisYear.map(([name, count], i) => (
+                                            <li key={name} className="flex items-center gap-4">
+                                                <span className="font-figure text-xl text-ritual-gray-mid w-6 shrink-0">{i + 1}</span>
+                                                <p className="flex-1 font-dense font-extrabold text-ritual-bone truncate">{name}</p>
+                                                <span className="font-label text-xs text-ritual-gray-mid shrink-0">{count}×</span>
+                                            </li>
+                                        ))}
+                                    </ol>
+                                </section>
+                            )}
 
-                        {/* Top artistas */}
-                        {topArtistsThisYear.length > 0 && (
-                            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
-                                <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5">
-                                    Tus artistas del año
-                                </h2>
-                                <ol className="space-y-3">
-                                    {topArtistsThisYear.map(([name, count], i) => (
-                                        <li key={name} className="flex items-center gap-4">
-                                            <span className="text-2xl font-bold text-zinc-700 tabular-nums w-6 shrink-0">
-                                                {i + 1}
-                                            </span>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-semibold text-white truncate">{name}</p>
-                                                <div className="mt-1 h-1 bg-white/[0.06] rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-white rounded-full transition-all"
-                                                        style={{ width: `${(count / topArtistsThisYear[0][1]) * 100}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <span className="text-sm text-zinc-500 shrink-0">
-                                                {count} show{count !== 1 ? 's' : ''}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ol>
-                            </section>
-                        )}
-
-                        {/* Top venues */}
-                        {topVenuesThisYear.length > 0 && (
-                            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
-                                <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5">
-                                    Tus venues del año
-                                </h2>
-                                <ol className="space-y-3">
-                                    {topVenuesThisYear.map(([name, count], i) => (
-                                        <li key={name} className="flex items-center gap-4">
-                                            <span className="text-2xl font-bold text-zinc-700 tabular-nums w-6 shrink-0">
-                                                {i + 1}
-                                            </span>
-                                            <p className="flex-1 font-semibold text-white truncate">{name}</p>
-                                            <span className="text-sm text-zinc-500 shrink-0">
-                                                {count}×
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ol>
-                            </section>
-                        )}
-
-                        {/* Timeline del año */}
-                        <section>
-                            <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-5">
-                                Todos los shows de {selectedYear}
-                            </h2>
-                            <ul className="divide-y divide-white/[0.04]">
-                                {attendedThisYear
-                                    .map((ev) => {
+                            <section>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-5">Todos los shows de {selectedYear}</h2>
+                                <ul className="divide-y divide-ritual-border-subtle">
+                                    {attendedThisYear.map((ev) => {
                                         const date = new Date(ev.date)
                                         const artists = ev.lineups?.map((l) => l.artists.name) ?? []
-                                        const rating = ev.attendance?.[0]?.rating
-
                                         return (
                                             <li key={ev.id}>
-                                                <Link
-                                                    href={routes.events.detail(ev.id)}
-                                                    className="group flex items-center gap-4 py-3 hover:bg-white/[0.02] -mx-3 px-3 rounded-lg transition-colors"
-                                                >
+                                                <Link href={routes.events.detail(ev.id)} className="flex items-center gap-4 py-3">
                                                     <div className="w-10 shrink-0 text-center">
-                                                        <p className="text-[10px] font-bold text-zinc-600 uppercase">
-                                                            {formatDate(date, { month: 'short' })}
-                                                        </p>
-                                                        <p className="text-lg font-bold text-white leading-none">
-                                                            {date.getDate()}
-                                                        </p>
+                                                        <p className="font-label text-[9px] font-bold text-ritual-gray-mid uppercase">{formatDate(date, { month: 'short' })}</p>
+                                                        <p className="font-display text-lg text-ritual-bone leading-none">{date.getDate()}</p>
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-semibold text-white truncate text-sm">
-                                                            {ev.name || artists[0] || 'Recital'}
-                                                        </p>
-                                                        {ev.venues && (
-                                                            <p className="text-xs text-zinc-600 truncate">
-                                                                {ev.venues.name}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                    {rating && (
-                                                        <StarRating value={rating} size="xs" className="shrink-0" />
-                                                    )}
-                                                    <span className="text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0 text-sm">→</span>
+                                                    <p className="flex-1 font-dense font-extrabold text-ritual-bone truncate text-sm">{ev.name || artists[0] || 'Recital'}</p>
                                                 </Link>
                                             </li>
                                         )
                                     })}
-                            </ul>
-                        </section>
-                    </div>
+                                </ul>
+                            </section>
+                        </div>
+                    </>
                 )}
             </div>
         </main>
     )
+}
+
+function StatBox({ label, value }: { label: string; value: string | number }) {
+    return (
+        <div className="border border-ritual-border bg-ritual-surface p-4">
+            <p className="font-display text-2xl text-ritual-bone truncate">{value}</p>
+            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-1">{label}</p>
+        </div>
+    )
+}
+
+function buildSlides(data: {
+    selectedYear: number
+    showCount: number
+    topArtist: readonly [string, number] | null
+    bestNight: Awaited<ReturnType<typeof getEventsWithAttendance>>[number] | null
+    uniqueVenues: number
+    spentThisYear: number
+}): WrappedSlide[] {
+    const slides: WrappedSlide[] = [
+        {
+            kind: 'cover',
+            content: (
+                <div className="text-center">
+                    <p className="font-label text-[10px] tracking-[0.3em] uppercase text-ritual-red mb-3">Tu resumen</p>
+                    <p className="font-display text-8xl text-ritual-bone leading-none">{data.selectedYear}</p>
+                </div>
+            ),
+        },
+        {
+            kind: 'shows',
+            content: (
+                <div className="text-center">
+                    <p className="font-display text-9xl text-ritual-bone leading-none">{data.showCount}</p>
+                    <p className="font-label text-xs tracking-[0.2em] uppercase text-ritual-gray-light-3 mt-4">
+                        show{data.showCount !== 1 ? 's' : ''} en {data.selectedYear}
+                    </p>
+                </div>
+            ),
+        },
+    ]
+
+    if (data.topArtist) {
+        slides.push({
+            kind: 'artist',
+            content: (
+                <div className="text-center">
+                    <p className="font-label text-[10px] tracking-[0.3em] uppercase text-ritual-red mb-3">Tu banda del año</p>
+                    <p className="font-display text-5xl uppercase text-ritual-bone leading-[0.9]">{data.topArtist[0]}</p>
+                    <p className="font-label text-xs text-ritual-gray-mid mt-4">{data.topArtist[1]} show{data.topArtist[1] !== 1 ? 's' : ''}</p>
+                </div>
+            ),
+        })
+    }
+
+    if (data.bestNight) {
+        const artists = data.bestNight.lineups?.map((l) => l.artists.name) ?? []
+        slides.push({
+            kind: 'bestNight',
+            content: (
+                <div className="text-center">
+                    <p className="font-label text-[10px] tracking-[0.3em] uppercase text-ritual-red mb-3">La mejor noche</p>
+                    <p className="font-display text-4xl uppercase text-ritual-bone leading-[0.9]">{data.bestNight.name || artists[0] || 'Recital'}</p>
+                    {data.bestNight.venues && <p className="font-label text-xs text-ritual-gray-mid mt-4">{data.bestNight.venues.name}</p>}
+                </div>
+            ),
+        })
+    }
+
+    slides.push({
+        kind: 'venues',
+        content: (
+            <div className="text-center">
+                <p className="font-display text-9xl text-ritual-bone leading-none">{data.uniqueVenues}</p>
+                <p className="font-label text-xs tracking-[0.2em] uppercase text-ritual-gray-light-3 mt-4">
+                    sede{data.uniqueVenues !== 1 ? 's' : ''} distinta{data.uniqueVenues !== 1 ? 's' : ''}
+                </p>
+            </div>
+        ),
+    })
+
+    slides.push({
+        kind: 'expenses',
+        content: (
+            <div className="text-center bg-ritual-red text-ritual-panel -m-8 p-8 w-full h-full flex flex-col items-center justify-center">
+                <p className="font-label text-[10px] tracking-[0.3em] uppercase mb-3">Lo que gastaste</p>
+                <p className="font-display text-6xl leading-none">{formatARS(data.spentThisYear)}</p>
+            </div>
+        ),
+    })
+
+    slides.push({
+        kind: 'closing',
+        content: (
+            <div className="text-center">
+                <p className="font-display text-4xl uppercase text-ritual-bone leading-[0.9]">Ritual</p>
+                <p className="font-label text-xs text-ritual-gray-mid mt-4">Nos vemos el año que viene.</p>
+            </div>
+        ),
+    })
+
+    return slides
 }

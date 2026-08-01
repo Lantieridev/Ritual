@@ -16,6 +16,8 @@ export interface WrappedSummary {
     busiestMonth: string | null
     availableYears: number[]
     hasData: boolean
+    /** El show mejor calificado del año, para la placa de "la mejor noche". Null sin ningún rating. */
+    bestNight: EventWithAttendance | null
 }
 
 /**
@@ -55,6 +57,11 @@ export function buildWrappedSummary(
         .map(Number)
         .sort((a, b) => b - a)
 
+    const ratedThisYear = attendedThisYear.filter((ev) => ev.attendance?.[0]?.rating != null)
+    const bestNight = ratedThisYear.length > 0
+        ? ratedThisYear.reduce((best, ev) => (ev.attendance![0].rating! > best.attendance![0].rating! ? ev : best))
+        : null
+
     return {
         attendedThisYear,
         uniqueArtists: agg.uniqueArtists,
@@ -66,5 +73,6 @@ export function buildWrappedSummary(
         busiestMonth,
         availableYears,
         hasData: attendedThisYear.length > 0,
+        bestNight,
     }
 }
