@@ -6,7 +6,7 @@ import { formatDate } from '@/src/core/lib/utils'
 import { StarRating } from '@/src/core/components/ui'
 
 export const metadata: Metadata = {
-    title: 'Mis estadísticas | RITUAL',
+    title: 'Números | RITUAL',
     description: 'Tu historial musical en números: shows, artistas, ciudades y más.',
 }
 
@@ -15,113 +15,81 @@ export default async function StatsPage() {
 
     const years = Object.keys(stats.showsByYear).sort((a, b) => Number(b) - Number(a))
     const maxShowsInYear = Math.max(...Object.values(stats.showsByYear), 1)
+    const recordYear = years.find((y) => stats.showsByYear[y] === maxShowsInYear)
+    const currentYear = String(new Date().getFullYear())
 
     const hasData = stats.totalShows > 0
 
     return (
-        <main className="min-h-screen bg-neutral-950 text-white font-sans">
+        <main className="min-h-screen bg-ritual-bg text-ritual-bone">
             <div className="max-w-4xl mx-auto px-6 md:px-8 py-16">
-
-                {/* Header */}
                 <div className="mb-12 flex items-start justify-between gap-4 flex-wrap">
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-600 mb-2">
-                            Tu perfil musical
-                        </p>
-                        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
-                            Estadísticas
-                        </h1>
-                    </div>
+                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid">Tu perfil musical</p>
                     <Link
                         href={routes.wrapped}
-                        className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-zinc-300 hover:border-white/30 hover:text-white hover:bg-white/5 transition-colors mt-1"
+                        className="font-label text-[10px] tracking-[0.14em] uppercase border border-ritual-border px-4 py-2 text-ritual-gray-text hover:text-ritual-bone hover:border-ritual-border-2 transition-colors"
                     >
-                        🎵 Ver Wrapped
+                        Ver Wrapped →
                     </Link>
                 </div>
 
                 {!hasData ? (
                     <div className="flex flex-col items-center gap-5 py-24 text-center">
-                        <div className="text-6xl">📊</div>
-                        <div>
-                            <p className="text-lg font-semibold text-zinc-300 mb-1">Todavía no hay datos</p>
-                            <p className="text-sm text-zinc-600">Agregá recitales para ver tus estadísticas.</p>
-                        </div>
-                        <Link
-                            href={routes.events.search}
-                            className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-zinc-100 transition-colors"
-                        >
+                        <h1 className="font-display text-4xl uppercase text-ritual-bone">Todavía no hay datos</h1>
+                        <p className="font-body text-sm text-ritual-gray-mid">Agregá recitales para ver tus números.</p>
+                        <Link href={routes.events.search} className="font-label text-[10px] tracking-[0.14em] uppercase bg-ritual-red text-ritual-panel px-6 py-3">
                             Buscar shows
                         </Link>
                     </div>
                 ) : (
-                    <div className="space-y-12">
-
-                        {/* KPIs principales */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                                { label: 'Shows en total', value: stats.totalShows },
-                                { label: 'Fui', value: stats.showsAttended },
-                                { label: 'Voy a ir', value: stats.showsGoing },
-                                { label: 'Me interesa', value: stats.showsInterested },
-                            ].map(({ label, value }) => (
-                                <div
-                                    key={label}
-                                    className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5"
-                                >
-                                    <p className="text-3xl md:text-4xl font-bold text-white tabular-nums">{value}</p>
-                                    <p className="text-xs uppercase tracking-widest text-zinc-500 mt-1">{label}</p>
-                                </div>
-                            ))}
+                    <div className="space-y-14">
+                        {/* Titular de tapa */}
+                        <div>
+                            <h1 className="font-display leading-[0.8] text-ritual-bone" style={{ fontSize: 'min(28vw, 190px)' }}>
+                                {stats.totalShows}
+                            </h1>
+                            <div className="flex flex-wrap gap-x-8 gap-y-2 mt-4 font-label text-xs tracking-[0.1em] uppercase text-ritual-gray-text">
+                                <span>{stats.showsAttended} fui</span>
+                                <span>{stats.showsGoing} voy a ir</span>
+                                <span>{stats.showsInterested} me interesa</span>
+                                <span>{stats.uniqueArtists} artistas únicos</span>
+                                <span>{stats.uniqueVenues} venues únicos</span>
+                                <span>{stats.uniqueCities.length} ciudades</span>
+                                {stats.uniqueCountries.length > 0 && <span>{stats.uniqueCountries.length} países</span>}
+                            </div>
                         </div>
 
-                        {/* Fila: artistas / venues / ciudades / países */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                                { label: 'Artistas únicos', value: stats.uniqueArtists },
-                                { label: 'Venues únicos', value: stats.uniqueVenues },
-                                { label: 'Ciudades', value: stats.uniqueCities.length },
-                                { label: 'Países', value: stats.uniqueCountries.length },
-                            ].map(({ label, value }) => (
-                                <div key={label} className="rounded-xl border border-white/[0.06] p-5">
-                                    <p className="text-2xl font-bold text-white tabular-nums">{value}</p>
-                                    <p className="text-xs uppercase tracking-widest text-zinc-600 mt-1">{label}</p>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Rating promedio */}
                         {stats.averageRating !== null && (
-                            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 flex items-center gap-6">
+                            <div className="flex items-center gap-6">
+                                <p className="font-display text-6xl text-ritual-bone tabular-nums">{stats.averageRating}</p>
                                 <div>
-                                    <p className="text-5xl font-bold text-white tabular-nums">{stats.averageRating}</p>
-                                    <StarRating value={Math.round(stats.averageRating)} size="lg" className="mt-2" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-semibold text-zinc-300">Rating promedio</p>
-                                    <p className="text-xs text-zinc-600 mt-0.5">Basado en {stats.totalRated} show{stats.totalRated !== 1 ? 's' : ''} calificado{stats.totalRated !== 1 ? 's' : ''}</p>
+                                    <StarRating value={Math.round(stats.averageRating)} size="lg" />
+                                    <p className="font-label text-[10px] text-ritual-gray-mid mt-1 uppercase tracking-[0.1em]">
+                                        Promedio sobre {stats.totalRated} show{stats.totalRated !== 1 ? 's' : ''} calificado{stats.totalRated !== 1 ? 's' : ''}
+                                    </p>
                                 </div>
                             </div>
                         )}
 
-                        {/* Shows por año — barchart horizontal */}
                         {years.length > 0 && (
                             <section>
-                                <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-6">Shows por año</h2>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-6">Shows por año</h2>
                                 <div className="space-y-3">
                                     {years.map((year) => {
                                         const count = stats.showsByYear[year]
                                         const pct = (count / maxShowsInYear) * 100
+                                        const isRecord = year === recordYear
+                                        const isCurrent = year === currentYear
                                         return (
                                             <div key={year} className="flex items-center gap-4">
-                                                <span className="w-12 text-right text-sm font-semibold text-zinc-400 shrink-0">{year}</span>
-                                                <div className="flex-1 h-7 bg-white/[0.04] rounded-lg overflow-hidden">
+                                                <span className="w-12 text-right font-label text-xs text-ritual-gray-text shrink-0">{year}</span>
+                                                <div className="flex-1 h-6 bg-ritual-surface overflow-hidden">
                                                     <div
-                                                        className="h-full bg-white/80 rounded-lg transition-all"
+                                                        className={`h-full transition-all ${isCurrent ? 'bg-ritual-red' : isRecord ? 'bg-ritual-bone' : 'bg-ritual-border-2'}`}
                                                         style={{ width: `${pct}%` }}
                                                     />
                                                 </div>
-                                                <span className="w-8 text-sm font-bold text-white tabular-nums shrink-0">{count}</span>
+                                                <span className="w-8 font-figure text-lg text-ritual-bone tabular-nums shrink-0">{count}</span>
                                             </div>
                                         )
                                     })}
@@ -129,16 +97,15 @@ export default async function StatsPage() {
                             </section>
                         )}
 
-                        {/* Top artistas */}
                         {stats.topArtists.length > 0 && (
                             <section>
-                                <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-6">Artistas más vistos</h2>
-                                <ul className="divide-y divide-white/[0.05]">
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-6">Artistas más vistos</h2>
+                                <ul className="divide-y divide-ritual-border-subtle">
                                     {stats.topArtists.map((a, i) => (
                                         <li key={a.name} className="flex items-center gap-4 py-3">
-                                            <span className="text-xs font-bold text-zinc-700 w-5 text-right shrink-0">{i + 1}</span>
-                                            <span className="flex-1 font-semibold text-white">{a.name}</span>
-                                            <span className="text-sm text-zinc-500 shrink-0">
+                                            <span className="font-figure text-lg text-ritual-gray-mid w-6 text-right shrink-0">{i + 1}</span>
+                                            <span className="flex-1 font-dense font-extrabold text-ritual-bone">{a.name}</span>
+                                            <span className="font-label text-xs text-ritual-gray-mid shrink-0">
                                                 {a.count} show{a.count !== 1 ? 's' : ''}
                                             </span>
                                         </li>
@@ -147,19 +114,18 @@ export default async function StatsPage() {
                             </section>
                         )}
 
-                        {/* Top venues */}
                         {stats.topVenues.length > 0 && (
                             <section>
-                                <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-6">Venues más visitados</h2>
-                                <ul className="divide-y divide-white/[0.05]">
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-6">Venues más visitados</h2>
+                                <ul className="divide-y divide-ritual-border-subtle">
                                     {stats.topVenues.map((v, i) => (
                                         <li key={v.name} className="flex items-center gap-4 py-3">
-                                            <span className="text-xs font-bold text-zinc-700 w-5 text-right shrink-0">{i + 1}</span>
+                                            <span className="font-figure text-lg text-ritual-gray-mid w-6 text-right shrink-0">{i + 1}</span>
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-semibold text-white truncate">{v.name}</p>
-                                                {v.city && <p className="text-xs text-zinc-600">{v.city}</p>}
+                                                <p className="font-dense font-extrabold text-ritual-bone truncate">{v.name}</p>
+                                                {v.city && <p className="font-label text-[10px] text-ritual-gray-mid">{v.city}</p>}
                                             </div>
-                                            <span className="text-sm text-zinc-500 shrink-0">
+                                            <span className="font-label text-xs text-ritual-gray-mid shrink-0">
                                                 {v.count} show{v.count !== 1 ? 's' : ''}
                                             </span>
                                         </li>
@@ -168,16 +134,12 @@ export default async function StatsPage() {
                             </section>
                         )}
 
-                        {/* Ciudades visitadas */}
                         {stats.uniqueCities.length > 0 && (
                             <section>
-                                <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-4">Ciudades</h2>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Ciudades</h2>
                                 <div className="flex flex-wrap gap-2">
                                     {stats.uniqueCities.sort().map((city) => (
-                                        <span
-                                            key={city}
-                                            className="inline-block text-sm text-zinc-400 border border-white/[0.08] rounded-lg px-3 py-1.5"
-                                        >
+                                        <span key={city} className="font-label text-xs text-ritual-gray-text border border-ritual-border px-3 py-1.5">
                                             {city}
                                         </span>
                                     ))}
@@ -185,39 +147,29 @@ export default async function StatsPage() {
                             </section>
                         )}
 
-                        {/* Actividad reciente */}
                         {stats.recentActivity.length > 0 && (
                             <section>
-                                <h2 className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-6">Últimos shows</h2>
-                                <ul className="divide-y divide-white/[0.05]">
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-6">Últimos shows</h2>
+                                <ul className="divide-y divide-ritual-border-subtle">
                                     {stats.recentActivity.map((ev) => {
                                         const dateObj = new Date(ev.date)
                                         return (
                                             <li key={ev.id}>
-                                                <Link
-                                                    href={routes.events.detail(ev.id)}
-                                                    className="flex items-center gap-4 py-3 hover:bg-white/[0.02] -mx-3 px-3 rounded-lg transition-colors group"
-                                                >
+                                                <Link href={routes.events.detail(ev.id)} className="group flex items-center gap-4 py-3">
                                                     <div className="w-12 shrink-0 text-center">
-                                                        <p className="text-[10px] font-bold text-zinc-600 uppercase">
-                                                            {formatDate(dateObj, { month: 'short' })}
-                                                        </p>
-                                                        <p className="text-lg font-bold text-white leading-none">
-                                                            {dateObj.getDate()}
-                                                        </p>
+                                                        <p className="font-label text-[9px] font-bold text-ritual-gray-mid uppercase">{formatDate(dateObj, { month: 'short' })}</p>
+                                                        <p className="font-display text-xl text-ritual-bone leading-none">{dateObj.getDate()}</p>
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="font-semibold text-white truncate">{ev.name || 'Recital'}</p>
+                                                        <p className="font-dense font-extrabold text-ritual-bone truncate">{ev.name || 'Recital'}</p>
                                                         {ev.venueName && (
-                                                            <p className="text-xs text-zinc-600 truncate">
+                                                            <p className="font-label text-[10px] text-ritual-gray-mid truncate">
                                                                 {[ev.venueName, ev.venueCity].filter(Boolean).join(', ')}
                                                             </p>
                                                         )}
                                                     </div>
-                                                    {ev.rating && (
-                                                        <StarRating value={ev.rating} size="xs" className="shrink-0" />
-                                                    )}
-                                                    <span className="text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0">→</span>
+                                                    {ev.rating && <StarRating value={ev.rating} size="xs" className="shrink-0" />}
+                                                    <span className="font-label text-[9px] tracking-[0.1em] uppercase text-ritual-red opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Ver →</span>
                                                 </Link>
                                             </li>
                                         )
@@ -225,7 +177,6 @@ export default async function StatsPage() {
                                 </ul>
                             </section>
                         )}
-
                     </div>
                 )}
             </div>
