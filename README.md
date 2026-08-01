@@ -90,7 +90,7 @@ flowchart TB
     Browser["Browser\n(Client Components)"]
 
     subgraph NextApp["Next.js App Router"]
-        Middleware["middleware.ts\n(auth guard + cookie refresh)"]
+        Middleware["proxy.ts\n(auth guard + cookie refresh)"]
         Routes["app/\n(rutas y páginas)"]
         Domains["src/domains/\nartists · events · expenses\nfestivals · venues · auth · stats"]
         Core["src/core/\nUI base · auth · tipos · lib"]

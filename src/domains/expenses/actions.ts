@@ -15,7 +15,7 @@ async function requireUserId() {
   const id = await getCurrentUserId()
   if (!id) {
     return {
-      error: 'Iniciá sesión para registrar gastos. En desarrollo podés setear RITUAL_DEV_USER_ID en .env.local con tu user id de Supabase Auth.' as const,
+      error: 'Iniciá sesión para registrar gastos.' as const,
     }
   }
   return { userId: id } as const
