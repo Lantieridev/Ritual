@@ -9,10 +9,9 @@ describe('Footer', () => {
     expect(screen.getByText(new RegExp(String(new Date().getFullYear())))).toBeInTheDocument()
   })
 
-  it('renders links to search, artists, and venues', () => {
+  it('renders links to search and the collection', () => {
     render(<Footer />)
     expect(screen.getByRole('link', { name: 'Buscar' })).toHaveAttribute('href', '/buscar')
-    expect(screen.getByRole('link', { name: 'Artistas' })).toHaveAttribute('href', '/artists')
-    expect(screen.getByRole('link', { name: 'Sedes' })).toHaveAttribute('href', '/venues')
+    expect(screen.getByRole('link', { name: 'Colección' })).toHaveAttribute('href', '/coleccion')
   })
 })

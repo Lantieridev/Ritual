@@ -44,8 +44,7 @@ describe('Navbar', () => {
     expect(screen.queryByRole('link', { name: 'Wishlist' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Gastos' })).not.toBeInTheDocument()
     // El catálogo compartido sigue visible sin sesión.
-    expect(screen.getByRole('link', { name: 'Artistas' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Sedes' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Colección' })).toBeInTheDocument()
   })
 
   it('shows Wishlist/Gastos once there is a logged-in user', () => {

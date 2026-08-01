@@ -3,8 +3,7 @@ import { routes } from '@/src/core/lib/routes'
 
 const FOOTER_LINKS = [
     { label: 'Buscar', href: routes.events.search },
-    { label: 'Artistas', href: routes.artists.list },
-    { label: 'Sedes', href: routes.venues.list },
+    { label: 'Colección', href: routes.collection },
 ]
 
 /**

@@ -10,6 +10,8 @@ export const routes = {
   wishlist: '/wishlist',
   search: '/search',
   wrapped: '/wrapped',
+  /** Unifica los catálogos de artistas/sedes/festivales en pestañas. */
+  collection: '/coleccion',
 
   artists: {
     list: '/artists',

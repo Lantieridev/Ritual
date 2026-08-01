@@ -6,17 +6,15 @@ import { routes } from '@/src/core/lib/routes'
 
 import { ProfileDropdown } from './ProfileDropdown'
 
-// Artistas y Sedes son el catálogo compartido: cualquiera puede navegarlo,
-// con o sin sesión. Wishlist y Gastos son datos propios de una cuenta —
-// mostrarlos a un visitante sin sesión solo lleva a una pantalla vacía o a
-// un aviso de "iniciá sesión", así que quedan aparte y solo se agregan al
-// menú cuando hay un usuario logueado.
+// Colección (artistas/sedes/festivales) es el catálogo compartido: cualquiera
+// puede navegarlo, con o sin sesión. Wishlist y Gastos son datos propios de
+// una cuenta — mostrarlos a un visitante sin sesión solo lleva a una
+// pantalla vacía o a un aviso de "iniciá sesión", así que quedan aparte y
+// solo se agregan al menú cuando hay un usuario logueado.
 const PUBLIC_NAV_LINKS = [
     { label: 'Inicio', href: routes.home },
     { label: 'Buscar', href: routes.events.search },
-    { label: 'Artistas', href: routes.artists.list },
-    { label: 'Sedes', href: routes.venues.list },
-    { label: 'Festivales', href: routes.festivals.list },
+    { label: 'Colección', href: routes.collection },
     { label: 'Stats', href: routes.stats },
 ]
 
@@ -64,6 +62,7 @@ export function Navbar({ user }: NavbarProps) {
                                 <Link
                                     key={href}
                                     href={href}
+                                    aria-current={active ? 'page' : undefined}
                                     className={`relative px-3 py-1.5 font-label text-[10px] tracking-[0.16em] uppercase transition-colors whitespace-nowrap ${active
                                         ? 'text-white bg-ritual-surface-high'
                                         : 'text-ritual-gray-text hover:text-white hover:bg-ritual-surface'
