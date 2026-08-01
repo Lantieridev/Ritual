@@ -18,13 +18,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 <input
                     ref={ref}
                     className={twMerge(
-                        "w-full bg-ritual-surface border border-ritual-border px-4 py-2 font-body text-ritual-bone placeholder:text-ritual-gray-mid focus:outline-none focus:ring-2 focus:ring-ritual-red/40 disabled:opacity-50 transition-colors",
+                        "w-full bg-ritual-surface border border-ritual-border px-4 py-2 font-body text-ritual-bone placeholder:text-ritual-gray-text focus:outline-none focus:ring-2 focus:ring-ritual-red/40 disabled:opacity-50 transition-colors",
                         error && "border-ritual-red focus:ring-ritual-red/30",
                         className
                     )}
                     {...props}
                 />
-                {error && <p className="font-label text-xs text-ritual-red">{error}</p>}
+                {error && <p className="font-label text-xs text-ritual-red-hover">{error}</p>}
             </div>
         )
     }

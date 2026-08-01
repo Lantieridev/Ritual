@@ -53,7 +53,7 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                 <div className="max-w-3xl mx-auto px-6 md:px-8 py-14">
                     <Link
                         href={routes.festivals.list}
-                        className="inline-flex items-center gap-2 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid hover:text-ritual-gray-text transition-colors mb-8"
+                        className="inline-flex items-center gap-2 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text hover:text-ritual-gray-text transition-colors mb-8"
                     >
                         ← Festivales
                     </Link>
@@ -61,7 +61,7 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                     <div className="flex flex-col sm:flex-row sm:items-start gap-6">
                         <div className="flex-1 min-w-0">
                             {isRunningToday && (
-                                <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-red mb-2">
+                                <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-red-hover mb-2">
                                     Día {todayIndex + 1} de {Math.max(1, eventsByDay.length)} · en curso
                                 </p>
                             )}
@@ -103,14 +103,14 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                     ].map(({ label, value }) => (
                         <div key={label} className="border border-ritual-border bg-ritual-surface p-4 text-center">
                             <p className="font-display text-2xl text-ritual-bone tabular-nums">{value}</p>
-                            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-1">{label}</p>
+                            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-text mt-1">{label}</p>
                         </div>
                     ))}
                 </div>
 
                 {festival.notes && (
                     <section>
-                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Notas</h2>
+                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-3">Notas</h2>
                         <p className="font-body text-sm text-ritual-gray-light-3 leading-relaxed whitespace-pre-wrap">{festival.notes}</p>
                     </section>
                 )}
@@ -123,7 +123,7 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
 
                 {eventsByDay.length > 0 && (
                     <section>
-                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-5">Días del festival</h2>
+                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-5">Días del festival</h2>
                         <div className="space-y-4">
                             {eventsByDay.map((fe, i) => {
                                 const ev = fe.events
@@ -137,7 +137,7 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                                         <div className="flex items-start justify-between gap-4 mb-2">
                                             <div>
                                                 {fe.day_label && (
-                                                    <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mb-1">{fe.day_label}</p>
+                                                    <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-text mb-1">{fe.day_label}</p>
                                                 )}
                                                 <p className="font-subtitle font-black uppercase text-ritual-bone">
                                                     {formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -154,8 +154,8 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                                             <ul className="mt-3 space-y-1">
                                                 {lineup.map((l, li) => (
                                                     <li key={li} className="flex items-center justify-between font-label text-xs text-ritual-gray-text">
-                                                        <span>{l.artists.name}{l.stage && <span className="text-ritual-gray-mid"> · {l.stage}</span>}</span>
-                                                        {l.start_time && <span className="text-ritual-gray-mid">{l.start_time}</span>}
+                                                        <span>{l.artists.name}{l.stage && <span className="text-ritual-gray-text"> · {l.stage}</span>}</span>
+                                                        {l.start_time && <span className="text-ritual-gray-text">{l.start_time}</span>}
                                                     </li>
                                                 ))}
                                             </ul>

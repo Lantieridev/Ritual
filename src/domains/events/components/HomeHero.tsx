@@ -24,7 +24,7 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
   if (state.kind === 'festival') {
     return (
       <section className="relative min-h-screen flex flex-col justify-center px-6 md:px-10 pt-16 overflow-hidden bg-ritual-panel">
-        <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red uppercase">
+        <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">
           Está pasando ahora
         </p>
         <h1 className="font-display text-[13vh] leading-[0.82] uppercase text-ritual-bone mt-2">
@@ -38,7 +38,7 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
         </p>
         <Link
           href={routes.festivals.detail(state.festival.id)}
-          className="font-figure text-lg tracking-wider bg-ritual-red text-ritual-panel px-6 py-3 mt-8 w-fit"
+          className="font-figure text-lg tracking-wider bg-ritual-red text-ritual-bone px-6 py-3 mt-8 w-fit"
         >
           VER EL FESTIVAL
         </Link>
@@ -51,12 +51,12 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
   if (!event) {
     return (
       <section className="relative min-h-screen flex flex-col justify-center items-start px-6 md:px-10 pt-16 bg-ritual-panel">
-        <p className="font-label text-[10px] tracking-[0.32em] text-ritual-gray-mid uppercase">Tu archivo</p>
+        <p className="font-label text-[10px] tracking-[0.32em] text-ritual-gray-text uppercase">Tu archivo</p>
         <h1 className="font-display text-[9vh] leading-[0.82] uppercase text-ritual-bone mt-2">
           Todavía no hay<br />ningún talón
         </h1>
         <div className="flex gap-3 mt-8">
-          <Link href={routes.events.search} className="font-figure text-lg tracking-wider bg-ritual-red text-ritual-panel px-6 py-3">
+          <Link href={routes.events.search} className="font-figure text-lg tracking-wider bg-ritual-red text-ritual-bone px-6 py-3">
             BUSCAR SHOWS
           </Link>
           <Link href={routes.events.new} className="font-label text-[10px] tracking-[0.14em] text-ritual-gray-text uppercase border border-ritual-border px-6 py-3">
@@ -86,7 +86,7 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
       <div className="relative flex flex-col justify-end min-h-screen px-6 md:px-10 pb-16 pt-24">
         {days !== null && days > 0 && (
           <div
-            className="font-display leading-none text-ritual-red"
+            className="font-display leading-none text-ritual-red-hover"
             style={{ fontSize: '20vh', WebkitTextStroke: '2px #D6202A', color: 'transparent' }}
           >
             {days}
@@ -94,7 +94,7 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
         )}
 
         {days === 0 && (
-          <span className="font-label text-[11px] tracking-[0.32em] bg-ritual-red text-ritual-panel px-3 py-1.5 w-fit uppercase font-bold">
+          <span className="font-label text-[11px] tracking-[0.32em] bg-ritual-red text-ritual-bone px-3 py-1.5 w-fit uppercase font-bold">
             es hoy
           </span>
         )}
@@ -112,7 +112,7 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="font-figure text-xl tracking-wider bg-ritual-red text-ritual-panel px-8 py-3.5"
+            className="font-figure text-xl tracking-wider bg-ritual-red text-ritual-bone px-8 py-3.5"
           >
             ABRIR MI ENTRADA
           </button>
@@ -142,7 +142,7 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
             />
           </div>
           <div className="text-ritual-bone">
-            <p className="font-label text-[10px] tracking-[0.16em] text-ritual-red uppercase mb-2">Entrada válida</p>
+            <p className="font-label text-[10px] tracking-[0.16em] text-ritual-red-hover uppercase mb-2">Entrada válida</p>
             <p className="font-display text-4xl uppercase">{headliner}</p>
             <p className="font-subtitle font-black uppercase text-ritual-gray-light-3 mt-1">
               {venueName}{venueLocation && ` · ${venueLocation}`}

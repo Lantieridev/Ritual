@@ -45,7 +45,7 @@ export function ArtistProfile({
             {/* Próximas funciones — lo que se viene va primero */}
             {(internalUpcoming.length > 0 || upcomingEvents.length > 0) && (
                 <section>
-                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Próximas funciones</h2>
+                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Próximas funciones</h2>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {internalUpcoming.map((ev) => (
                             <Link
@@ -53,9 +53,9 @@ export function ArtistProfile({
                                 href={routes.events.detail(ev.id)}
                                 className="block border border-ritual-border bg-ritual-surface p-5 hover:border-ritual-border-2 transition-colors"
                             >
-                                <p className="font-display text-4xl uppercase text-ritual-red">{formatDate(ev.date, { day: 'numeric', month: 'short' })}</p>
+                                <p className="font-display text-4xl uppercase text-ritual-red-hover">{formatDate(ev.date, { day: 'numeric', month: 'short' })}</p>
                                 <p className="font-subtitle font-black uppercase text-ritual-bone mt-2">{ev.venues?.name ?? 'Sede por confirmar'}</p>
-                                {ev.venues?.city && <p className="font-label text-xs text-ritual-gray-mid mt-1">{ev.venues.city}</p>}
+                                {ev.venues?.city && <p className="font-label text-xs text-ritual-gray-text mt-1">{ev.venues.city}</p>}
                             </Link>
                         ))}
                         {upcomingEvents.slice(0, 3 - internalUpcoming.length).map((ev) => (
@@ -63,9 +63,9 @@ export function ArtistProfile({
                                 <p className="font-display text-4xl uppercase text-ritual-gray-text">{formatDate(ev.datetime, { day: 'numeric', month: 'short' })}</p>
                                 <p className="font-subtitle font-black uppercase text-ritual-gray-light-3 mt-2">{ev.venue.name}</p>
                                 <div className="flex items-center justify-between mt-1">
-                                    <p className="font-label text-xs text-ritual-gray-mid">{[ev.venue.city, ev.venue.country].filter(Boolean).join(', ')}</p>
+                                    <p className="font-label text-xs text-ritual-gray-text">{[ev.venue.city, ev.venue.country].filter(Boolean).join(', ')}</p>
                                     {ev.url && (
-                                        <a href={ev.url} target="_blank" rel="noopener noreferrer" className="font-label text-[10px] text-ritual-red uppercase tracking-[0.1em]">
+                                        <a href={ev.url} target="_blank" rel="noopener noreferrer" className="font-label text-[10px] text-ritual-red-hover uppercase tracking-[0.1em]">
                                             Tickets →
                                         </a>
                                     )}
@@ -80,7 +80,7 @@ export function ArtistProfile({
             {bestNight?.review && (
                 <section className="border-l-[3px] border-ritual-red pl-6">
                     <p className="font-body italic text-2xl md:text-3xl leading-snug text-ritual-bone">&ldquo;{bestNight.review}&rdquo;</p>
-                    <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-3">
+                    <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text mt-3">
                         {formatDate(bestNight.event.date, { day: 'numeric', month: 'long', year: 'numeric' })}
                         {bestNight.event.venues && ` · ${bestNight.event.venues.name}`}
                     </p>
@@ -90,7 +90,7 @@ export function ArtistProfile({
             {/* Bio */}
             {bio && (
                 <section>
-                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Biografía</h2>
+                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Biografía</h2>
                     <p className="font-body text-sm text-ritual-gray-light-3 leading-relaxed whitespace-pre-line">{bio}</p>
                 </section>
             )}
@@ -98,7 +98,7 @@ export function ArtistProfile({
             {/* Las veces que fuiste */}
             {recentNights.length > 0 && (
                 <section>
-                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">
+                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">
                         Las {timesSeen} {timesSeen === 1 ? 'vez' : 'veces'} que fuiste
                     </h2>
                     <ul className="divide-y divide-ritual-border-subtle">
@@ -108,7 +108,7 @@ export function ArtistProfile({
                             return (
                                 <li key={ev.id}>
                                     <Link href={routes.events.detail(ev.id)} className="flex items-center gap-4 py-3">
-                                        <span className="font-figure text-2xl text-ritual-gray-mid w-16 shrink-0">{new Date(ev.date).getFullYear()}</span>
+                                        <span className="font-figure text-2xl text-ritual-gray-text w-16 shrink-0">{new Date(ev.date).getFullYear()}</span>
                                         <div className="flex-1 min-w-0">
                                             <p className={`font-subtitle font-black uppercase truncate ${isBest ? 'text-ritual-bone' : 'text-ritual-gray-light-3'}`}>
                                                 {ev.venues?.name ?? 'Recital'}
@@ -127,7 +127,7 @@ export function ArtistProfile({
             <div className="grid sm:grid-cols-2 gap-10">
                 {venuesSeenAt.length > 0 && (
                     <section>
-                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Dónde las viste</h2>
+                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Dónde las viste</h2>
                         <div className="flex flex-wrap gap-2">
                             {venuesSeenAt.map((name) => (
                                 <span key={name} className="font-label text-xs text-ritual-gray-text border border-ritual-border px-3 py-1.5">{name}</span>
@@ -137,7 +137,7 @@ export function ArtistProfile({
                 )}
                 {similarArtists.length > 0 && (
                     <section>
-                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Del mismo palo</h2>
+                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Del mismo palo</h2>
                         <div className="flex flex-wrap gap-2">
                             {similarArtists.map((similar) => (
                                 <span key={similar.name} className="font-label text-xs text-ritual-gray-text border border-ritual-border px-3 py-1.5">{similar.name}</span>
@@ -158,9 +158,9 @@ export function ArtistProfile({
             )}
 
             {timesSeen === 0 && (
-                <p className="font-body text-sm text-ritual-gray-mid">
+                <p className="font-body text-sm text-ritual-gray-text">
                     Todavía no tenés shows de {artist.name} en tu archivo.{' '}
-                    <Link href={routes.events.new} className="text-ritual-red underline underline-offset-4">Cargar uno</Link>.
+                    <Link href={routes.events.new} className="text-ritual-red-hover underline underline-offset-4">Cargar uno</Link>.
                 </p>
             )}
         </div>
@@ -171,7 +171,7 @@ function StatBox({ label, value }: { label: string, value: string | number }) {
     return (
         <div className="border border-ritual-border bg-ritual-surface p-4 text-center">
             <p className="font-display text-3xl text-ritual-bone tabular-nums truncate">{value}</p>
-            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-1 truncate">{label}</p>
+            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-text mt-1 truncate">{label}</p>
         </div>
     )
 }

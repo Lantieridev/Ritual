@@ -59,7 +59,7 @@ export function ExpenseForm({ events, createExpense, expense, updateExpense }: E
   return (
     <form onSubmit={handleSubmit} className="max-w-xl space-y-6">
       {error && (
-        <div role="alert" className="bg-ritual-red/10 border border-ritual-red/30 text-ritual-red px-4 py-3 font-body text-sm">
+        <div role="alert" className="bg-ritual-red/10 border border-ritual-red/30 text-ritual-red-hover px-4 py-3 font-body text-sm">
           {error}
         </div>
       )}

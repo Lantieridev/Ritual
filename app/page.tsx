@@ -107,7 +107,7 @@ export default async function HomePage() {
         <section className="min-h-screen flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-bg">
           <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
             <div>
-              <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red uppercase">
+              <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">
                 Cerca tuyo · próximos 90 días
               </p>
               <h2 className="font-display text-[7vh] leading-[0.9] uppercase text-ritual-bone mt-2">
@@ -149,7 +149,7 @@ export default async function HomePage() {
 
       {upcomingFestivals.length > 0 && (
         <section className="min-h-screen flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-panel">
-          <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red uppercase">Se vienen · festivales</p>
+          <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">Se vienen · festivales</p>
           <h2 className="font-display text-[7vh] leading-[0.9] uppercase text-ritual-bone mt-2 mb-10">
             Las romerías<br />del año
           </h2>
@@ -163,17 +163,17 @@ export default async function HomePage() {
                     className="group flex items-center gap-6 py-6"
                   >
                     <div className="w-16 shrink-0">
-                      <p className="font-figure text-2xl text-ritual-red leading-none">{days}d</p>
+                      <p className="font-figure text-2xl text-ritual-red-hover leading-none">{days}d</p>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-display text-3xl uppercase text-ritual-bone truncate">
-                        {f.name} {f.edition && <span className="text-ritual-red">{f.edition}</span>}
+                        {f.name} {f.edition && <span className="text-ritual-red-hover">{f.edition}</span>}
                       </p>
                       <p className="font-label text-[10px] text-ritual-gray-text mt-1">
                         {[f.city, f.country].filter(Boolean).join(', ')}
                       </p>
                     </div>
-                    <span className="font-label text-[10px] tracking-[0.16em] text-ritual-red uppercase opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="font-label text-[10px] tracking-[0.16em] text-ritual-red-hover uppercase opacity-0 group-hover:opacity-100 transition-opacity">
                       Ver →
                     </span>
                   </Link>
@@ -187,7 +187,7 @@ export default async function HomePage() {
       <section className="px-6 md:px-10 py-20 bg-ritual-bg">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
           <div>
-            <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red uppercase">Tu archivo</p>
+            <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">Tu archivo</p>
             <h2 className="font-display text-5xl uppercase text-ritual-bone mt-2">
               {allEvents.filter((e) => e.attendance?.[0]?.status === 'went').length} talones
             </h2>
@@ -200,7 +200,7 @@ export default async function HomePage() {
         {!hasArchive ? (
           <p className="font-body text-ritual-gray-text">
             Marcá shows como &quot;Fui&quot; para verlos acá.{' '}
-            <Link href={routes.events.search} className="text-ritual-red underline underline-offset-4">
+            <Link href={routes.events.search} className="text-ritual-red-hover underline underline-offset-4">
               Buscá shows
             </Link>
             .
@@ -209,7 +209,7 @@ export default async function HomePage() {
           <div className="space-y-10">
             {years.map((year) => (
               <div key={year}>
-                <p className="font-label text-[10px] tracking-[0.14em] text-ritual-gray-mid uppercase mb-3">{year}</p>
+                <p className="font-label text-[10px] tracking-[0.14em] text-ritual-gray-text uppercase mb-3">{year}</p>
                 <ul className="divide-y divide-ritual-border-subtle">
                   {byYear[year].map((ev) => {
                     const artists = ev.lineups?.map((l) => l.artists.name) ?? []
@@ -226,7 +226,7 @@ export default async function HomePage() {
                             </p>
                           </div>
                           {rating && <StarRating value={rating} size="xs" />}
-                          <span className="font-label text-[9px] tracking-[0.16em] text-ritual-red uppercase opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          <span className="font-label text-[9px] tracking-[0.16em] text-ritual-red-hover uppercase opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                             Ver →
                           </span>
                         </Link>

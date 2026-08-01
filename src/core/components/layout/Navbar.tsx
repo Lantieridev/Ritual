@@ -50,7 +50,7 @@ export function Navbar({ user }: NavbarProps) {
                     href={routes.home}
                     className="font-display text-xl tracking-[0.06em] uppercase text-ritual-bone hover:text-ritual-gray-light-3 transition-colors shrink-0"
                 >
-                    RITU<span className="text-ritual-red">AL</span>
+                    RITU<span className="text-ritual-red-hover">AL</span>
                 </Link>
 
                 {/* Nav links — scrollable on mobile with fade */}
@@ -87,7 +87,7 @@ export function Navbar({ user }: NavbarProps) {
                     ) : (
                         <Link
                             href={routes.login}
-                            className="font-figure text-base tracking-wide bg-ritual-red text-ritual-panel px-4 py-2 hover:bg-ritual-red-hover transition-colors"
+                            className="font-figure text-base tracking-wide bg-ritual-red text-ritual-bone px-4 py-2 hover:bg-ritual-red-hover transition-colors"
                         >
                             Ingresar
                         </Link>

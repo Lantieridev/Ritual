@@ -46,7 +46,7 @@ export function ProfileForm({ user, profile }: ProfileFormProps) {
                             className="w-full h-full object-cover"
                         />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center font-display text-4xl text-ritual-red select-none">
+                        <div className="w-full h-full flex items-center justify-center font-display text-4xl text-ritual-red-hover select-none">
                             {(profile?.full_name?.[0] || user.email?.[0] || '?').toUpperCase()}
                         </div>
                     )}
@@ -58,7 +58,7 @@ export function ProfileForm({ user, profile }: ProfileFormProps) {
                 </div>
 
                 <div className="space-y-2 flex-1 w-full">
-                    <label htmlFor="avatar" className="block font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-mid">
+                    <label htmlFor="avatar" className="block font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text">
                         Foto de Perfil
                     </label>
                     <input
@@ -67,7 +67,7 @@ export function ProfileForm({ user, profile }: ProfileFormProps) {
                         name="avatar"
                         accept="image/*"
                         onChange={handleAvatarChange}
-                        className="block w-full font-label text-xs text-ritual-gray-mid
+                        className="block w-full font-label text-xs text-ritual-gray-text
                             file:mr-4 file:py-2 file:px-4
                             file:border-0
                             file:font-label file:text-[10px] file:uppercase file:tracking-[0.1em]
@@ -75,7 +75,7 @@ export function ProfileForm({ user, profile }: ProfileFormProps) {
                             hover:file:bg-ritual-border-2
                             cursor-pointer"
                     />
-                    <p className="font-label text-[10px] text-ritual-gray-mid">
+                    <p className="font-label text-[10px] text-ritual-gray-text">
                         JPG, PNG o GIF. Máximo 2MB.
                     </p>
                 </div>
@@ -121,7 +121,7 @@ export function ProfileForm({ user, profile }: ProfileFormProps) {
             />
 
             {state?.error && (
-                <div role="alert" className="p-4 bg-ritual-red/10 border border-ritual-red/20 text-ritual-red font-body text-sm">
+                <div role="alert" className="p-4 bg-ritual-red/10 border border-ritual-red/20 text-ritual-red-hover font-body text-sm">
                     {state.error}
                 </div>
             )}
@@ -136,7 +136,7 @@ export function ProfileForm({ user, profile }: ProfileFormProps) {
                 <Button type="submit" disabled={isPending}>
                     {isPending ? 'Guardando...' : 'Guardar Cambios'}
                 </Button>
-                <Link href="/profile" className="font-label text-xs text-ritual-gray-mid hover:text-ritual-gray-text uppercase tracking-[0.1em]">
+                <Link href="/profile" className="font-label text-xs text-ritual-gray-text hover:text-ritual-gray-text uppercase tracking-[0.1em]">
                     Cancelar
                 </Link>
             </div>

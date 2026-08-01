@@ -107,7 +107,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       <div className="max-w-3xl mx-auto px-6 md:px-8 py-10 space-y-10">
         {/* Banda de asistencia */}
         <section>
-          <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">
+          <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-3">
             {isPast ? '¿Fuiste?' : '¿Vas a ir?'}
           </p>
           <AttendanceStatusButtons eventId={event.id} currentStatus={attendance?.status ?? null} isPast={isPast} />
@@ -116,12 +116,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* Info */}
         <section className="grid sm:grid-cols-2 gap-6 border-t border-ritual-border-subtle pt-8">
           <div>
-            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-1">Sede</p>
+            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-1">Sede</p>
             <p className="font-subtitle font-black text-xl uppercase text-ritual-bone">{venueLabel}</p>
             {event.venues?.country && <p className="font-body text-sm text-ritual-gray-text mt-0.5">{event.venues.country}</p>}
           </div>
           <div>
-            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-1">Fecha</p>
+            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-1">Fecha</p>
             <p className="font-subtitle font-black text-xl uppercase text-ritual-bone">{dateLabel}</p>
           </div>
         </section>
@@ -129,13 +129,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* Lineup — quién tocó */}
         {event.lineups && event.lineups.length > 0 && (
           <section className="border-t border-ritual-border-subtle pt-8">
-            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Quién tocó</h2>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Quién tocó</h2>
             <ul className="flex flex-wrap gap-2">
               {event.lineups.map((row) => (
                 <li key={row.artists.id}>
                   <span className="inline-flex items-center gap-2 bg-ritual-surface border border-ritual-border text-ritual-gray-light-3 font-dense font-extrabold px-4 py-2 text-sm">
                     {row.artists.name}
-                    {row.artists.genre && <span className="font-label text-ritual-gray-mid font-normal text-xs">{row.artists.genre}</span>}
+                    {row.artists.genre && <span className="font-label text-ritual-gray-text font-normal text-xs">{row.artists.genre}</span>}
                   </span>
                 </li>
               ))}
@@ -146,7 +146,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* El recorte — reseña */}
         {reviewVariant !== 'none' && (
           <section className="border-t border-ritual-border-subtle pt-8">
-            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Tu reseña</h2>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Tu reseña</h2>
             <div
               className="bg-ritual-paper text-ritual-paper-ink border-l-[3px] border-ritual-paper-red px-6 py-6 md:px-8 md:py-8"
               style={{ clipPath: 'polygon(0 0, 100% 0, 100% 97%, 98% 100%, 94% 97%, 90% 100%, 86% 97%, 82% 100%, 78% 97%, 74% 100%, 70% 97%, 66% 100%, 62% 97%, 58% 100%, 54% 97%, 50% 100%, 46% 97%, 42% 100%, 38% 97%, 34% 100%, 30% 97%, 26% 100%, 22% 97%, 18% 100%, 14% 97%, 10% 100%, 6% 97%, 2% 100%, 0 97%)' }}
@@ -171,18 +171,18 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
         {/* Fotos */}
         <section className="border-t border-ritual-border-subtle pt-8">
-          <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">
-            Fotos {photos.length > 0 && <span className="text-ritual-gray-mid">({photos.length})</span>}
+          <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">
+            Fotos {photos.length > 0 && <span className="text-ritual-gray-text">({photos.length})</span>}
           </h2>
           <PhotoGallery eventId={event.id} initialPhotos={photos} />
         </section>
 
         {/* Quiénes fueron — depende de la capa social, todavía sin backend */}
         <section className="border-t border-ritual-border-subtle pt-8">
-          <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Quiénes fueron</h2>
-          <p className="font-body text-sm text-ritual-gray-mid">
+          <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-3">Quiénes fueron</h2>
+          <p className="font-body text-sm text-ritual-gray-text">
             Próximamente — depende de la capa social (
-            <a href="https://github.com/Lantieridev/Ritual/issues/5" target="_blank" rel="noopener noreferrer" className="text-ritual-red underline underline-offset-4">
+            <a href="https://github.com/Lantieridev/Ritual/issues/5" target="_blank" rel="noopener noreferrer" className="text-ritual-red-hover underline underline-offset-4">
               issue #5
             </a>
             ), todavía sin implementar.
@@ -192,7 +192,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* La cuenta de esa noche */}
         {expenses.length > 0 && (
           <section className="border-t border-ritual-border-subtle pt-8">
-            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">La cuenta de esa noche</h2>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">La cuenta de esa noche</h2>
             <div className="bg-ritual-paper text-ritual-paper-ink px-6 py-6 border-l-[3px] border-ritual-paper-red">
               <ul className="divide-y divide-ritual-paper-2">
                 {expenses.map((ex) => (
@@ -214,10 +214,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* Rating, reseña y notas — form, solo si fue */}
         {attendance?.status === 'went' && (
           <section className="border-t border-ritual-border-subtle pt-8">
-            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Tu memoria del show</h2>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Tu memoria del show</h2>
             {attendance?.notes && (
               <div className="mb-6 bg-ritual-surface border border-ritual-border-subtle px-4 py-3">
-                <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mb-2">Notas / Setlist</p>
+                <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-text mb-2">Notas / Setlist</p>
                 <pre className="font-label text-sm text-ritual-gray-text whitespace-pre-wrap leading-relaxed">{attendance.notes}</pre>
               </div>
             )}
@@ -232,7 +232,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
         {/* Zona de peligro */}
         <section className="border-t border-ritual-border-subtle pt-8">
-          <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Acciones</h2>
+          <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-3">Acciones</h2>
           <DeleteEventButton event={event} deleteEvent={deleteEvent} />
         </section>
       </div>

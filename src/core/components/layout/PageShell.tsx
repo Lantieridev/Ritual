@@ -31,7 +31,7 @@ export function PageShell({
         {backHref ? (
           <Link
             href={backHref}
-            className="inline-block font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid hover:text-ritual-gray-text transition-colors pt-8"
+            className="inline-block font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text hover:text-ritual-gray-text transition-colors pt-8"
           >
             {backLabel ?? '← Volver'}
           </Link>

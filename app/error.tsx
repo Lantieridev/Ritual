@@ -20,9 +20,9 @@ export default function Error({ error, reset }: ErrorProps) {
 
   return (
     <main className="min-h-screen bg-ritual-bg text-ritual-bone p-6 md:p-8 flex flex-col items-center justify-center gap-6">
-      <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-red">Se cortó la luz</p>
+      <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-red-hover">Se cortó la luz</p>
       <h1 className="font-display text-4xl uppercase text-ritual-bone text-center">Algo salió mal</h1>
-      <p className="font-body text-sm text-ritual-gray-mid text-center max-w-md">
+      <p className="font-body text-sm text-ritual-gray-text text-center max-w-md">
         {error.message || 'Ocurrió un error inesperado.'}
       </p>
       <div className="flex gap-3">

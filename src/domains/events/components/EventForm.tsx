@@ -162,7 +162,7 @@ export function EventForm({
   return (
     <form onSubmit={handleSubmit} className="max-w-xl space-y-6">
       {error && (
-        <div role="alert" className="bg-ritual-red/10 border border-ritual-red/30 text-ritual-red px-4 py-3 font-body text-sm">
+        <div role="alert" className="bg-ritual-red/10 border border-ritual-red/30 text-ritual-red-hover px-4 py-3 font-body text-sm">
           {error}
         </div>
       )}
@@ -185,12 +185,12 @@ export function EventForm({
           <div className="flex items-center justify-between gap-3 border border-ritual-border bg-ritual-surface px-4 py-2.5">
             <span className="font-body text-sm text-ritual-bone truncate">
               {selectedVenue.label}
-              {selectedVenue.sublabel && <span className="text-ritual-gray-mid"> · {selectedVenue.sublabel}</span>}
+              {selectedVenue.sublabel && <span className="text-ritual-gray-text"> · {selectedVenue.sublabel}</span>}
             </span>
             <button
               type="button"
               onClick={() => setSelectedVenue(null)}
-              className="shrink-0 font-label text-xs text-ritual-gray-mid hover:text-ritual-gray-text transition-colors"
+              className="shrink-0 font-label text-xs text-ritual-gray-text hover:text-ritual-gray-text transition-colors"
             >
               Cambiar
             </button>
@@ -219,7 +219,7 @@ export function EventForm({
                     type="button"
                     onClick={() => removeArtist(a.id)}
                     aria-label={`Quitar ${a.label} del lineup`}
-                    className="text-ritual-gray-mid hover:text-ritual-bone transition-colors"
+                    className="text-ritual-gray-text hover:text-ritual-bone transition-colors"
                   >
                     ×
                   </button>

@@ -50,14 +50,14 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
                 className="flex items-center gap-2 px-2 py-1.5 bg-ritual-surface hover:bg-ritual-surface-high transition-colors border border-ritual-border-subtle"
             >
                 <div className="w-6 h-6 rounded-full bg-ritual-red flex items-center justify-center">
-                    <span className="font-figure text-xs text-ritual-panel uppercase leading-none">
+                    <span className="font-figure text-xs text-ritual-bone uppercase leading-none">
                         {user.email?.[0] ?? 'U'}
                     </span>
                 </div>
                 <span className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-light hidden md:block max-w-[100px] truncate">
                     {user.email?.split('@')[0]}
                 </span>
-                <svg className={`w-4 h-4 text-ritual-gray-mid transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={`w-4 h-4 text-ritual-gray-text transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
@@ -65,7 +65,7 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
             {isOpen && (
                 <div role="menu" className="absolute right-0 mt-2 w-56 border border-ritual-border bg-ritual-panel-2 shadow-2xl py-1 z-50 origin-top-right animate-in fade-in zoom-in-95 duration-200">
                     <div className="px-4 py-3 border-b border-ritual-border-subtle mb-1">
-                        <p className="font-label text-[9px] text-ritual-gray-mid uppercase tracking-[0.14em]">Conectado como</p>
+                        <p className="font-label text-[9px] text-ritual-gray-text uppercase tracking-[0.14em]">Conectado como</p>
                         <p className="font-body text-sm text-ritual-bone truncate">{user.email}</p>
                     </div>
 
@@ -89,7 +89,7 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
                             type="button"
                             role="menuitem"
                             onClick={() => signout()}
-                            className="w-full text-left px-4 py-2 font-label text-[10px] tracking-[0.1em] uppercase text-ritual-red hover:bg-ritual-surface hover:text-ritual-red-hover transition-colors"
+                            className="w-full text-left px-4 py-2 font-label text-[10px] tracking-[0.1em] uppercase text-ritual-red-hover hover:bg-ritual-surface hover:text-ritual-red-hover transition-colors"
                         >
                             Cerrar Sesión
                         </button>

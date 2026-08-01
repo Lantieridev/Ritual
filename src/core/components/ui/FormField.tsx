@@ -29,11 +29,11 @@ export function FormField({
         className="block font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text mb-1.5"
       >
         {label}
-        {required ? <span className="text-ritual-red"> *</span> : null}
+        {required ? <span className="text-ritual-red-hover"> *</span> : null}
       </label>
       {children}
       {hint != null && hint !== '' ? (
-        <p className="mt-1.5 font-body text-sm text-ritual-gray-mid">{hint}</p>
+        <p className="mt-1.5 font-body text-sm text-ritual-gray-text">{hint}</p>
       ) : null}
     </div>
   )

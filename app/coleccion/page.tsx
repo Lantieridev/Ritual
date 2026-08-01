@@ -46,7 +46,7 @@ export default async function CollectionPage({ searchParams }: PageProps) {
                         key={value}
                         href={`${routes.collection}?tab=${value}`}
                         aria-current={tab === value ? 'page' : undefined}
-                        className={`px-5 py-3 font-label text-[10px] tracking-[0.16em] uppercase border-b-2 -mb-px transition-colors ${tab === value ? 'border-ritual-red text-ritual-bone' : 'border-transparent text-ritual-gray-mid hover:text-ritual-gray-text'
+                        className={`px-5 py-3 font-label text-[10px] tracking-[0.16em] uppercase border-b-2 -mb-px transition-colors ${tab === value ? 'border-ritual-red text-ritual-bone' : 'border-transparent text-ritual-gray-text hover:text-ritual-gray-text'
                             }`}
                     >
                         {label}
@@ -111,11 +111,11 @@ async function ArtistsShelvesView() {
 
             {shelves.catalog.length > 0 && (
                 <section>
-                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Resto del catálogo</h2>
+                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Resto del catálogo</h2>
                     <ul className="flex flex-wrap gap-2">
                         {shelves.catalog.map((a) => (
                             <li key={a.id}>
-                                <Link href={routes.artists.detail(a.id)} className="font-label text-xs text-ritual-gray-mid hover:text-ritual-gray-text border border-ritual-border px-3 py-1.5 block">
+                                <Link href={routes.artists.detail(a.id)} className="font-label text-xs text-ritual-gray-text hover:text-ritual-gray-text border border-ritual-border px-3 py-1.5 block">
                                     {a.name}
                                 </Link>
                             </li>
@@ -131,7 +131,7 @@ function TerritoryBox({ label, value }: { label: string; value: string | number 
     return (
         <div className="border border-ritual-border bg-ritual-surface p-4 text-center">
             <p className="font-display text-2xl text-ritual-bone truncate">{value}</p>
-            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-1">{label}</p>
+            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-text mt-1">{label}</p>
         </div>
     )
 }
@@ -140,7 +140,7 @@ function ArtistShelf({ title, artists }: { title: string; artists: Array<Collect
     if (artists.length === 0) return null
     return (
         <section>
-            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">{title}</h2>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">{title}</h2>
             <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {artists.map((artist) => (
                     <li key={artist.id}>
@@ -154,11 +154,11 @@ function ArtistShelf({ title, artists }: { title: string; artists: Array<Collect
                                         <Image src={artist.image} alt={artist.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 640px) 50vw, 25vw" />
                                     </div>
                                 ) : (
-                                    <div className="flex h-full items-center justify-center text-ritual-gray-mid text-3xl select-none">♪</div>
+                                    <div className="flex h-full items-center justify-center text-ritual-gray-text text-3xl select-none">♪</div>
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg/90 via-transparent to-transparent" />
                                 {artist.timesSeen > 0 && (
-                                    <span className="absolute top-2 right-2 font-figure text-lg text-ritual-red bg-ritual-bg/70 px-1.5">{artist.timesSeen}×</span>
+                                    <span className="absolute top-2 right-2 font-figure text-lg text-ritual-red-hover bg-ritual-bg/70 px-1.5">{artist.timesSeen}×</span>
                                 )}
                             </div>
                             <p className="font-dense font-extrabold text-sm text-ritual-bone truncate p-3">{artist.name}</p>
@@ -197,9 +197,9 @@ async function VenuesTab() {
                         >
                             <p className="font-subtitle font-black uppercase text-ritual-bone">{v.name}</p>
                             {(v.city || v.country) && (
-                                <p className="font-label text-xs text-ritual-gray-mid">{[v.city, v.country].filter(Boolean).join(', ')}</p>
+                                <p className="font-label text-xs text-ritual-gray-text">{[v.city, v.country].filter(Boolean).join(', ')}</p>
                             )}
-                            {v.address && <p className="font-body text-xs text-ritual-gray-mid mt-0.5">{v.address}</p>}
+                            {v.address && <p className="font-body text-xs text-ritual-gray-text mt-0.5">{v.address}</p>}
                         </Link>
                     </li>
                 ))}
@@ -243,7 +243,7 @@ async function FestivalsTab() {
 function FestivalList({ title, festivals }: { title: string; festivals: Awaited<ReturnType<typeof getFestivals>> }) {
     return (
         <section>
-            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">{title}</h2>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">{title}</h2>
             <ul className="divide-y divide-ritual-border-subtle">
                 {festivals.map((festival) => {
                     const status = festival.festival_attendance?.[0]?.status
@@ -252,16 +252,16 @@ function FestivalList({ title, festivals }: { title: string; festivals: Awaited<
                             <Link href={routes.festivals.detail(festival.id)} className="group flex items-center gap-5 py-4">
                                 <div className="flex-1 min-w-0">
                                     <p className="font-subtitle font-black uppercase text-ritual-bone truncate">
-                                        {festival.name} {festival.edition && <span className="text-ritual-red">{festival.edition}</span>}
+                                        {festival.name} {festival.edition && <span className="text-ritual-red-hover">{festival.edition}</span>}
                                     </p>
-                                    <p className="font-label text-xs text-ritual-gray-mid mt-0.5">{[festival.city, festival.country].filter(Boolean).join(', ')}</p>
+                                    <p className="font-label text-xs text-ritual-gray-text mt-0.5">{[festival.city, festival.country].filter(Boolean).join(', ')}</p>
                                 </div>
                                 {status && FESTIVAL_STATUS_LABEL[status] && (
-                                    <span className="font-label text-[9px] uppercase tracking-[0.1em] text-ritual-red border border-ritual-red/40 px-2 py-0.5 shrink-0">
+                                    <span className="font-label text-[9px] uppercase tracking-[0.1em] text-ritual-red-hover border border-ritual-red/40 px-2 py-0.5 shrink-0">
                                         {FESTIVAL_STATUS_LABEL[status]}
                                     </span>
                                 )}
-                                <span className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-mid opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Ver →</span>
+                                <span className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Ver →</span>
                             </Link>
                         </li>
                     )

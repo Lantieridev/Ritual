@@ -42,7 +42,7 @@ export default async function ExpensesPage() {
 
       {expenses.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
-          <p className="font-body text-ritual-gray-mid max-w-sm">
+          <p className="font-body text-ritual-gray-text max-w-sm">
             {userId ? 'No tenés gastos cargados todavía.' : 'No hay gastos para mostrar.'}
           </p>
           {userId && (
@@ -58,7 +58,7 @@ export default async function ExpensesPage() {
             <p className="font-display leading-[0.8] text-ritual-bone" style={{ fontSize: 'min(20vw, 140px)' }}>
               {formatARS(summary.total)}
             </p>
-            <p className="font-label text-xs tracking-[0.1em] uppercase text-ritual-gray-mid mt-2">
+            <p className="font-label text-xs tracking-[0.1em] uppercase text-ritual-gray-text mt-2">
               {summary.count} gasto{summary.count !== 1 ? 's' : ''}
             </p>
           </div>
@@ -66,7 +66,7 @@ export default async function ExpensesPage() {
           {/* Barra de categorías */}
           {topCategories.length > 0 && (
             <section>
-              <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Por categoría</h2>
+              <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Por categoría</h2>
               <div className="space-y-2">
                 {topCategories.map(([cat, amount]) => {
                   const pct = summary.total > 0 ? (amount / summary.total) * 100 : 0
@@ -92,7 +92,7 @@ export default async function ExpensesPage() {
           {/* La noche más cara — ticket de papel */}
           {mostExpensive && (
             <section>
-              <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">La noche más cara</h2>
+              <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">La noche más cara</h2>
               <div className="bg-ritual-paper text-ritual-paper-ink border-l-[3px] border-ritual-paper-red px-6 py-6 max-w-sm">
                 <p className="font-label text-[9px] tracking-[0.14em] uppercase opacity-60">
                   {getExpenseCategory(mostExpensive.category).icon} {mostExpensive.category} · {formatDate(mostExpensive.date, { day: 'numeric', month: 'short' })}
@@ -108,7 +108,7 @@ export default async function ExpensesPage() {
 
           {/* Movimientos */}
           <section>
-            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Todos los gastos</h2>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Todos los gastos</h2>
             <ul className="divide-y divide-ritual-border-subtle">
               {expenses.map((ex) => {
                 const { icon } = getExpenseCategory(ex.category)
@@ -119,9 +119,9 @@ export default async function ExpensesPage() {
                         <p className="font-dense font-extrabold text-ritual-bone">
                           {icon} {formatARS(Number(ex.amount))}
                         </p>
-                        {ex.note && <p className="font-label text-xs text-ritual-gray-mid mt-0.5 truncate">{ex.note}</p>}
+                        {ex.note && <p className="font-label text-xs text-ritual-gray-text mt-0.5 truncate">{ex.note}</p>}
                       </div>
-                      <p className="font-label text-xs text-ritual-gray-mid whitespace-nowrap">{formatDate(ex.date, { day: 'numeric', month: 'short' })}</p>
+                      <p className="font-label text-xs text-ritual-gray-text whitespace-nowrap">{formatDate(ex.date, { day: 'numeric', month: 'short' })}</p>
                     </Link>
                   </li>
                 )

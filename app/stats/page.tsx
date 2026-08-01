@@ -24,7 +24,7 @@ export default async function StatsPage() {
         <main className="min-h-screen bg-ritual-bg text-ritual-bone">
             <div className="max-w-4xl mx-auto px-6 md:px-8 py-16">
                 <div className="mb-12 flex items-start justify-between gap-4 flex-wrap">
-                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid">Tu perfil musical</p>
+                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text">Tu perfil musical</p>
                     <Link
                         href={routes.wrapped}
                         className="font-label text-[10px] tracking-[0.14em] uppercase border border-ritual-border px-4 py-2 text-ritual-gray-text hover:text-ritual-bone hover:border-ritual-border-2 transition-colors"
@@ -36,8 +36,8 @@ export default async function StatsPage() {
                 {!hasData ? (
                     <div className="flex flex-col items-center gap-5 py-24 text-center">
                         <h1 className="font-display text-4xl uppercase text-ritual-bone">Todavía no hay datos</h1>
-                        <p className="font-body text-sm text-ritual-gray-mid">Agregá recitales para ver tus números.</p>
-                        <Link href={routes.events.search} className="font-label text-[10px] tracking-[0.14em] uppercase bg-ritual-red text-ritual-panel px-6 py-3">
+                        <p className="font-body text-sm text-ritual-gray-text">Agregá recitales para ver tus números.</p>
+                        <Link href={routes.events.search} className="font-label text-[10px] tracking-[0.14em] uppercase bg-ritual-red text-ritual-bone px-6 py-3">
                             Buscar shows
                         </Link>
                     </div>
@@ -64,7 +64,7 @@ export default async function StatsPage() {
                                 <p className="font-display text-6xl text-ritual-bone tabular-nums">{stats.averageRating}</p>
                                 <div>
                                     <StarRating value={Math.round(stats.averageRating)} size="lg" />
-                                    <p className="font-label text-[10px] text-ritual-gray-mid mt-1 uppercase tracking-[0.1em]">
+                                    <p className="font-label text-[10px] text-ritual-gray-text mt-1 uppercase tracking-[0.1em]">
                                         Promedio sobre {stats.totalRated} show{stats.totalRated !== 1 ? 's' : ''} calificado{stats.totalRated !== 1 ? 's' : ''}
                                     </p>
                                 </div>
@@ -73,7 +73,7 @@ export default async function StatsPage() {
 
                         {years.length > 0 && (
                             <section>
-                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-6">Shows por año</h2>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-6">Shows por año</h2>
                                 <div className="space-y-3">
                                     {years.map((year) => {
                                         const count = stats.showsByYear[year]
@@ -99,13 +99,13 @@ export default async function StatsPage() {
 
                         {stats.topArtists.length > 0 && (
                             <section>
-                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-6">Artistas más vistos</h2>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-6">Artistas más vistos</h2>
                                 <ul className="divide-y divide-ritual-border-subtle">
                                     {stats.topArtists.map((a, i) => (
                                         <li key={a.name} className="flex items-center gap-4 py-3">
-                                            <span className="font-figure text-lg text-ritual-gray-mid w-6 text-right shrink-0">{i + 1}</span>
+                                            <span className="font-figure text-lg text-ritual-gray-text w-6 text-right shrink-0">{i + 1}</span>
                                             <span className="flex-1 font-dense font-extrabold text-ritual-bone">{a.name}</span>
-                                            <span className="font-label text-xs text-ritual-gray-mid shrink-0">
+                                            <span className="font-label text-xs text-ritual-gray-text shrink-0">
                                                 {a.count} show{a.count !== 1 ? 's' : ''}
                                             </span>
                                         </li>
@@ -116,16 +116,16 @@ export default async function StatsPage() {
 
                         {stats.topVenues.length > 0 && (
                             <section>
-                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-6">Venues más visitados</h2>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-6">Venues más visitados</h2>
                                 <ul className="divide-y divide-ritual-border-subtle">
                                     {stats.topVenues.map((v, i) => (
                                         <li key={v.name} className="flex items-center gap-4 py-3">
-                                            <span className="font-figure text-lg text-ritual-gray-mid w-6 text-right shrink-0">{i + 1}</span>
+                                            <span className="font-figure text-lg text-ritual-gray-text w-6 text-right shrink-0">{i + 1}</span>
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-dense font-extrabold text-ritual-bone truncate">{v.name}</p>
-                                                {v.city && <p className="font-label text-[10px] text-ritual-gray-mid">{v.city}</p>}
+                                                {v.city && <p className="font-label text-[10px] text-ritual-gray-text">{v.city}</p>}
                                             </div>
-                                            <span className="font-label text-xs text-ritual-gray-mid shrink-0">
+                                            <span className="font-label text-xs text-ritual-gray-text shrink-0">
                                                 {v.count} show{v.count !== 1 ? 's' : ''}
                                             </span>
                                         </li>
@@ -136,7 +136,7 @@ export default async function StatsPage() {
 
                         {stats.uniqueCities.length > 0 && (
                             <section>
-                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Ciudades</h2>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Ciudades</h2>
                                 <div className="flex flex-wrap gap-2">
                                     {stats.uniqueCities.sort().map((city) => (
                                         <span key={city} className="font-label text-xs text-ritual-gray-text border border-ritual-border px-3 py-1.5">
@@ -149,7 +149,7 @@ export default async function StatsPage() {
 
                         {stats.recentActivity.length > 0 && (
                             <section>
-                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-6">Últimos shows</h2>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-6">Últimos shows</h2>
                                 <ul className="divide-y divide-ritual-border-subtle">
                                     {stats.recentActivity.map((ev) => {
                                         const dateObj = new Date(ev.date)
@@ -157,19 +157,19 @@ export default async function StatsPage() {
                                             <li key={ev.id}>
                                                 <Link href={routes.events.detail(ev.id)} className="group flex items-center gap-4 py-3">
                                                     <div className="w-12 shrink-0 text-center">
-                                                        <p className="font-label text-[9px] font-bold text-ritual-gray-mid uppercase">{formatDate(dateObj, { month: 'short' })}</p>
+                                                        <p className="font-label text-[9px] font-bold text-ritual-gray-text uppercase">{formatDate(dateObj, { month: 'short' })}</p>
                                                         <p className="font-display text-xl text-ritual-bone leading-none">{dateObj.getDate()}</p>
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="font-dense font-extrabold text-ritual-bone truncate">{ev.name || 'Recital'}</p>
                                                         {ev.venueName && (
-                                                            <p className="font-label text-[10px] text-ritual-gray-mid truncate">
+                                                            <p className="font-label text-[10px] text-ritual-gray-text truncate">
                                                                 {[ev.venueName, ev.venueCity].filter(Boolean).join(', ')}
                                                             </p>
                                                         )}
                                                     </div>
                                                     {ev.rating && <StarRating value={ev.rating} size="xs" className="shrink-0" />}
-                                                    <span className="font-label text-[9px] tracking-[0.1em] uppercase text-ritual-red opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Ver →</span>
+                                                    <span className="font-label text-[9px] tracking-[0.1em] uppercase text-ritual-red-hover opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Ver →</span>
                                                 </Link>
                                             </li>
                                         )

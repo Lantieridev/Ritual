@@ -11,7 +11,7 @@ function SubmitButton() {
         <button
             type="submit"
             disabled={pending}
-            className="w-full bg-ritual-red px-4 py-3 font-figure text-xl tracking-wide text-ritual-panel transition-colors hover:bg-ritual-red-hover disabled:opacity-50"
+            className="w-full bg-ritual-red px-4 py-3 font-figure text-xl tracking-wide text-ritual-bone transition-colors hover:bg-ritual-red-hover disabled:opacity-50"
         >
             {pending ? 'Cortando…' : 'Cortar y entrar'}
         </button>
@@ -24,7 +24,7 @@ export function LoginForm() {
     return (
         <form action={action} className="space-y-5">
             <div className="space-y-1.5">
-                <label className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid" htmlFor="email">
+                <label className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text" htmlFor="email">
                     Email
                 </label>
                 <input
@@ -39,7 +39,7 @@ export function LoginForm() {
             </div>
 
             <div className="space-y-1.5">
-                <label className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid" htmlFor="password">
+                <label className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text" htmlFor="password">
                     Contraseña
                 </label>
                 <input
@@ -54,16 +54,16 @@ export function LoginForm() {
             </div>
 
             {state?.error && (
-                <p role="alert" className="font-body text-sm text-ritual-red bg-ritual-red/10 border border-ritual-red/20 p-3">
+                <p role="alert" className="font-body text-sm text-ritual-red-hover bg-ritual-red/10 border border-ritual-red/20 p-3">
                     {state.error}
                 </p>
             )}
 
             <SubmitButton />
 
-            <div className="text-center font-label text-xs text-ritual-gray-mid pt-4">
+            <div className="text-center font-label text-xs text-ritual-gray-text pt-4">
                 ¿No tenés talonario?{' '}
-                <Link href="/signup" className="text-ritual-red hover:underline underline-offset-4">
+                <Link href="/signup" className="text-ritual-red-hover hover:underline underline-offset-4">
                     Emitilo acá
                 </Link>
             </div>

@@ -99,14 +99,14 @@ export default async function BuscarPage({ searchParams }: PageProps) {
       <div className="flex border-b border-ritual-border-subtle mb-8">
         <Link
           href={tabHref('cartelera', params)}
-          className={`px-5 py-3 font-label text-[10px] tracking-[0.16em] uppercase border-b-2 -mb-px transition-colors ${tab === 'cartelera' ? 'border-ritual-red text-ritual-bone' : 'border-transparent text-ritual-gray-mid hover:text-ritual-gray-text'
+          className={`px-5 py-3 font-label text-[10px] tracking-[0.16em] uppercase border-b-2 -mb-px transition-colors ${tab === 'cartelera' ? 'border-ritual-red text-ritual-bone' : 'border-transparent text-ritual-gray-text hover:text-ritual-gray-text'
             }`}
         >
           En cartelera
         </Link>
         <Link
           href={tabHref('archivo', params)}
-          className={`px-5 py-3 font-label text-[10px] tracking-[0.16em] uppercase border-b-2 -mb-px transition-colors ${tab === 'archivo' ? 'border-ritual-red text-ritual-bone' : 'border-transparent text-ritual-gray-mid hover:text-ritual-gray-text'
+          className={`px-5 py-3 font-label text-[10px] tracking-[0.16em] uppercase border-b-2 -mb-px transition-colors ${tab === 'archivo' ? 'border-ritual-red text-ritual-bone' : 'border-transparent text-ritual-gray-text hover:text-ritual-gray-text'
             }`}
         >
           En tu archivo
@@ -118,7 +118,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
           {!anyConfigured && (
             <div className="border border-ritual-border bg-ritual-surface px-5 py-4 mb-6 space-y-2">
               <p className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text">APIs no configuradas</p>
-              <p className="font-body text-sm text-ritual-gray-mid">
+              <p className="font-body text-sm text-ritual-gray-text">
                 Para shows futuros necesitás <strong className="text-ritual-gray-text">TICKETMASTER_API_KEY</strong>, para historial{' '}
                 <strong className="text-ritual-gray-text">SETLISTFM_API_KEY</strong> en <code className="bg-ritual-surface-high px-1">.env.local</code>.
               </p>
@@ -128,13 +128,13 @@ export default async function BuscarPage({ searchParams }: PageProps) {
           <div className="flex gap-1 mb-6">
             <Link
               href={`/buscar?${new URLSearchParams({ ...(params.artist ? { artist: params.artist } : {}), source: 'future', tab: 'cartelera' }).toString()}`}
-              className={`px-4 py-2 font-label text-[10px] tracking-[0.1em] uppercase ${source === 'future' ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-mid hover:text-ritual-gray-text'}`}
+              className={`px-4 py-2 font-label text-[10px] tracking-[0.1em] uppercase ${source === 'future' ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-text hover:text-ritual-gray-text'}`}
             >
               Shows futuros
             </Link>
             <Link
               href={`/buscar?${new URLSearchParams({ ...(params.artist ? { artist: params.artist } : {}), source: 'past', tab: 'cartelera' }).toString()}`}
-              className={`px-4 py-2 font-label text-[10px] tracking-[0.1em] uppercase ${source === 'past' ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-mid hover:text-ritual-gray-text'}`}
+              className={`px-4 py-2 font-label text-[10px] tracking-[0.1em] uppercase ${source === 'past' ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-text hover:text-ritual-gray-text'}`}
             >
               Historial pasado
             </Link>
@@ -152,12 +152,12 @@ export default async function BuscarPage({ searchParams }: PageProps) {
 
           {(tmError || slError) && (
             <div className="mt-4 border border-ritual-red/30 bg-ritual-red/10 px-4 py-3" role="alert">
-              <p className="font-body text-sm text-ritual-red">{tmError || slError}</p>
+              <p className="font-body text-sm text-ritual-red-hover">{tmError || slError}</p>
             </div>
           )}
 
           {source === 'past' && !params.artist?.trim() && hasQuery && (
-            <p className="mt-4 font-body text-sm text-ritual-gray-mid">La búsqueda de historial solo funciona por artista.</p>
+            <p className="mt-4 font-body text-sm text-ritual-gray-text">La búsqueda de historial solo funciona por artista.</p>
           )}
 
           {hasQuery && !tmError && !slError && (
@@ -192,13 +192,13 @@ export default async function BuscarPage({ searchParams }: PageProps) {
           {query.length >= 2 && archiveResults && (
             <div className="space-y-8">
               {archiveTotal === 0 && (
-                <p className="font-body text-ritual-gray-mid text-center py-8">
+                <p className="font-body text-ritual-gray-text text-center py-8">
                   Sin resultados para <strong className="text-ritual-gray-text">&quot;{query}&quot;</strong>
                 </p>
               )}
               {archiveResults.events.length > 0 && (
                 <section>
-                  <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid mb-3">
+                  <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text mb-3">
                     Eventos ({archiveResults.events.length})
                   </p>
                   <ul className="divide-y divide-ritual-border-subtle">
@@ -206,7 +206,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
                       <li key={ev.id}>
                         <Link href={routes.events.detail(ev.id)} className="flex items-center justify-between gap-4 py-3 group">
                           <span className="font-dense font-extrabold text-ritual-bone truncate">{ev.name || 'Recital'}</span>
-                          <span className="font-label text-xs text-ritual-gray-mid whitespace-nowrap">
+                          <span className="font-label text-xs text-ritual-gray-text whitespace-nowrap">
                             {formatDate(ev.date, { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                         </Link>
@@ -217,7 +217,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
               )}
               {archiveResults.artists.length > 0 && (
                 <section>
-                  <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid mb-3">
+                  <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text mb-3">
                     Artistas ({archiveResults.artists.length})
                   </p>
                   <ul className="divide-y divide-ritual-border-subtle">
@@ -225,7 +225,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
                       <li key={artist.id}>
                         <Link href={routes.artists.detail(artist.id)} className="flex items-center gap-3 py-3">
                           <span className="font-dense font-extrabold text-ritual-bone">{artist.name}</span>
-                          {artist.genre && <span className="font-label text-xs text-ritual-gray-mid">{artist.genre}</span>}
+                          {artist.genre && <span className="font-label text-xs text-ritual-gray-text">{artist.genre}</span>}
                         </Link>
                       </li>
                     ))}
@@ -234,7 +234,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
               )}
               {archiveResults.venues.length > 0 && (
                 <section>
-                  <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid mb-3">
+                  <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text mb-3">
                     Venues ({archiveResults.venues.length})
                   </p>
                   <ul className="divide-y divide-ritual-border-subtle">
@@ -242,7 +242,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
                       <li key={venue.id}>
                         <Link href={routes.venues.detail(venue.id)} className="flex items-center justify-between gap-4 py-3">
                           <span className="font-dense font-extrabold text-ritual-bone truncate">{venue.name}</span>
-                          {venue.city && <span className="font-label text-xs text-ritual-gray-mid whitespace-nowrap">{venue.city}</span>}
+                          {venue.city && <span className="font-label text-xs text-ritual-gray-text whitespace-nowrap">{venue.city}</span>}
                         </Link>
                       </li>
                     ))}
@@ -253,10 +253,10 @@ export default async function BuscarPage({ searchParams }: PageProps) {
           )}
 
           {query.length > 0 && query.length < 2 && (
-            <p className="font-body text-sm text-ritual-gray-mid text-center py-4">Escribí al menos 2 caracteres.</p>
+            <p className="font-body text-sm text-ritual-gray-text text-center py-4">Escribí al menos 2 caracteres.</p>
           )}
           {!query && (
-            <p className="font-body text-sm text-ritual-gray-mid text-center py-8">Buscá entre lo que ya guardaste.</p>
+            <p className="font-body text-sm text-ritual-gray-text text-center py-8">Buscá entre lo que ya guardaste.</p>
           )}
         </>
       )}

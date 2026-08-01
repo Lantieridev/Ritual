@@ -13,7 +13,7 @@ interface LinkButtonProps {
 const base =
   'inline-flex items-center justify-center font-label text-[10px] tracking-[0.14em] uppercase transition-colors focus:outline-none focus:ring-2 focus:ring-ritual-red/40'
 const variants: Record<LinkButtonVariant, string> = {
-  primary: 'bg-ritual-red text-ritual-panel hover:bg-ritual-red-hover',
+  primary: 'bg-ritual-red text-ritual-bone hover:bg-ritual-red-hover',
   secondary: 'border border-ritual-border text-ritual-bone hover:border-ritual-border-2 hover:bg-ritual-surface',
 }
 

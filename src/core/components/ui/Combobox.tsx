@@ -144,7 +144,7 @@ export function Combobox({ id, options, placeholder, excludeIds, onSelect, onCre
                                 aria-selected={i === highlightedIndex}
                                 disabled={row.kind === 'create' && isCreating}
                                 className={`w-full text-left px-3 py-2 font-body text-sm transition-colors ${i === highlightedIndex ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-light-3'
-                                    } ${row.kind === 'create' ? 'text-ritual-red' : ''}`}
+                                    } ${row.kind === 'create' ? 'text-ritual-red-hover' : ''}`}
                                 onMouseEnter={() => setHighlightedIndex(i)}
                                 onClick={() => (row.kind === 'option' ? selectOption(row.option) : handleCreate())}
                             >
@@ -152,7 +152,7 @@ export function Combobox({ id, options, placeholder, excludeIds, onSelect, onCre
                                     <>
                                         {row.option.label}
                                         {row.option.sublabel && (
-                                            <span className="text-ritual-gray-mid"> · {row.option.sublabel}</span>
+                                            <span className="text-ritual-gray-text"> · {row.option.sublabel}</span>
                                         )}
                                     </>
                                 ) : (
@@ -165,7 +165,7 @@ export function Combobox({ id, options, placeholder, excludeIds, onSelect, onCre
             )}
 
             {createError && (
-                <p role="alert" className="mt-1 font-label text-xs text-ritual-red">
+                <p role="alert" className="mt-1 font-label text-xs text-ritual-red-hover">
                     {createError}
                 </p>
             )}

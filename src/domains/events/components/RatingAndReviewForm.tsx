@@ -56,7 +56,7 @@ export function RatingAndReviewForm({
                         <button
                             type="button"
                             onClick={() => setRating(0)}
-                            className="ml-2 font-label text-xs text-ritual-gray-mid hover:text-ritual-gray-text transition-colors self-center"
+                            className="ml-2 font-label text-xs text-ritual-gray-text hover:text-ritual-gray-text transition-colors self-center"
                         >
                             Borrar
                         </button>
@@ -77,7 +77,7 @@ export function RatingAndReviewForm({
                     rows={3}
                     className="w-full border border-ritual-border bg-ritual-surface px-4 py-3 font-body italic text-sm text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none focus:ring-1 focus:ring-ritual-red/40 resize-none"
                 />
-                <p className="text-right font-label text-[10px] text-ritual-gray-mid mt-1">{review.length}/{MAX_REVIEW}</p>
+                <p className="text-right font-label text-[10px] text-ritual-gray-text mt-1">{review.length}/{MAX_REVIEW}</p>
             </div>
 
             {/* Notas / Setlist */}
@@ -93,18 +93,18 @@ export function RatingAndReviewForm({
                     rows={5}
                     className="w-full border border-ritual-border bg-ritual-surface px-4 py-3 font-label text-sm text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none focus:ring-1 focus:ring-ritual-red/40 resize-none"
                 />
-                <p className="text-right font-label text-[10px] text-ritual-gray-mid mt-1">{notes.length}/{MAX_NOTES}</p>
+                <p className="text-right font-label text-[10px] text-ritual-gray-text mt-1">{notes.length}/{MAX_NOTES}</p>
             </div>
 
             <div className="flex items-center gap-3">
                 <button
                     type="submit"
                     disabled={isPending}
-                    className="inline-flex items-center justify-center bg-ritual-red px-5 py-2.5 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-panel hover:bg-ritual-red-hover transition-colors disabled:opacity-50"
+                    className="inline-flex items-center justify-center bg-ritual-red px-5 py-2.5 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-bone hover:bg-ritual-red-hover transition-colors disabled:opacity-50"
                 >
                     {isPending ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar memoria'}
                 </button>
-                {error && <p className="font-label text-sm text-ritual-red">{error}</p>}
+                {error && <p className="font-label text-sm text-ritual-red-hover">{error}</p>}
             </div>
         </form>
     )

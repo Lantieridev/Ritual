@@ -62,7 +62,7 @@ export function AttendanceStatusButtons({ eventId, currentStatus, isPast }: Stat
                             disabled={Boolean(loadingStatus)}
                             onClick={() => handleSelect(value)}
                             className={`flex-1 px-4 py-3 font-label text-[10px] tracking-[0.14em] uppercase transition-all disabled:cursor-not-allowed border-r border-ritual-border last:border-r-0 ${isActive
-                                    ? 'bg-ritual-red text-ritual-panel'
+                                    ? 'bg-ritual-red text-ritual-bone'
                                     : 'text-ritual-gray-text hover:bg-ritual-surface hover:text-ritual-bone'
                                 }`}
                         >
@@ -73,14 +73,14 @@ export function AttendanceStatusButtons({ eventId, currentStatus, isPast }: Stat
             </div>
 
             {error && (
-                <p role="alert" className="mt-2 font-label text-xs text-ritual-red">
+                <p role="alert" className="mt-2 font-label text-xs text-ritual-red-hover">
                     {error}
                 </p>
             )}
 
             {/* Si el status guardado no coincide con las opciones disponibles, mostrar aviso */}
             {activeStatus && !options.find((o) => o.value === activeStatus) && (
-                <p className="mt-2 font-body text-xs text-ritual-gray-mid">
+                <p className="mt-2 font-body text-xs text-ritual-gray-text">
                     {isPast
                         ? 'Tenías marcado "quiero ir" — ¿finalmente fuiste?'
                         : 'Tenías marcado "fui" para un show futuro.'}

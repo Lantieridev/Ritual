@@ -35,7 +35,7 @@ export function EmptyState({ title, description, action, icon, className, childr
             {action && (
                 <Link
                     href={action.href}
-                    className="inline-flex items-center justify-center bg-ritual-red px-4 py-2 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-panel hover:bg-ritual-red-hover transition-colors"
+                    className="inline-flex items-center justify-center bg-ritual-red px-4 py-2 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-bone hover:bg-ritual-red-hover transition-colors"
                 >
                     {action.label}
                 </Link>

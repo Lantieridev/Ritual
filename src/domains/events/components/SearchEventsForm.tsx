@@ -60,7 +60,7 @@ export function SearchEventsForm({
           <button
             type="button"
             onClick={() => setMode('artist')}
-            className={`px-3 py-1.5 font-label text-[10px] tracking-[0.1em] uppercase transition-colors ${mode === 'artist' ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-mid hover:text-ritual-gray-text'
+            className={`px-3 py-1.5 font-label text-[10px] tracking-[0.1em] uppercase transition-colors ${mode === 'artist' ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-text hover:text-ritual-gray-text'
               }`}
           >
             Por artista
@@ -68,7 +68,7 @@ export function SearchEventsForm({
           <button
             type="button"
             onClick={() => setMode('location')}
-            className={`px-3 py-1.5 font-label text-[10px] tracking-[0.1em] uppercase transition-colors ${mode === 'location' ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-mid hover:text-ritual-gray-text'
+            className={`px-3 py-1.5 font-label text-[10px] tracking-[0.1em] uppercase transition-colors ${mode === 'location' ? 'bg-ritual-surface-high text-ritual-bone' : 'text-ritual-gray-text hover:text-ritual-gray-text'
               }`}
           >
             Por ciudad

@@ -93,7 +93,7 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
                     </h1>
                     <div className="flex flex-wrap items-center gap-4 mt-3">
                         {timesSeen > 0 && (
-                            <span className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-red">
+                            <span className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-red-hover">
                                 {timesSeen} {timesSeen === 1 ? 'vez' : 'veces'}{averageRating != null && ` · ${averageRating.toFixed(1)} promedio`}
                             </span>
                         )}
@@ -116,7 +116,7 @@ export default async function ArtistDetailPage({ params }: ArtistDetailPageProps
                             href={spotifyUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-mid hover:text-ritual-gray-text transition-colors"
+                            className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text hover:text-ritual-gray-text transition-colors"
                         >
                             Abrir en Spotify →
                         </a>

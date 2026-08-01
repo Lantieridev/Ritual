@@ -83,7 +83,7 @@ export function WrappedStories({ slides, handle }: WrappedStoriesProps) {
         >
           ← Anterior
         </button>
-        <Link href={routes.profile} className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-red">
+        <Link href={routes.profile} className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-red-hover">
           Ver perfil
         </Link>
         <button

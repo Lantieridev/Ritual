@@ -55,12 +55,12 @@ export default async function WrappedPage({ searchParams }: PageProps) {
         <main className="min-h-screen bg-ritual-bg text-ritual-bone">
             <div className="max-w-2xl mx-auto px-6 md:px-8 py-16">
                 <div className="mb-10">
-                    <Link href={routes.stats} className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid hover:text-ritual-gray-text transition-colors mb-4 inline-block">
+                    <Link href={routes.stats} className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text hover:text-ritual-gray-text transition-colors mb-4 inline-block">
                         ← Números
                     </Link>
                     <div className="flex items-end gap-4 flex-wrap">
                         <h1 className="font-display text-5xl uppercase text-ritual-bone">
-                            {selectedYear} <span className="text-ritual-gray-mid">Wrapped</span>
+                            {selectedYear} <span className="text-ritual-gray-text">Wrapped</span>
                         </h1>
                         {availableYears.length > 1 && (
                             <div className="flex gap-1.5 flex-wrap ml-auto">
@@ -69,7 +69,7 @@ export default async function WrappedPage({ searchParams }: PageProps) {
                                         key={y}
                                         href={`/wrapped?year=${y}`}
                                         aria-current={y === selectedYear ? 'page' : undefined}
-                                        className={`px-3 py-1.5 font-label text-xs ${y === selectedYear ? 'bg-ritual-red text-ritual-panel' : 'border border-ritual-border text-ritual-gray-mid hover:text-ritual-gray-text'}`}
+                                        className={`px-3 py-1.5 font-label text-xs ${y === selectedYear ? 'bg-ritual-red text-ritual-bone' : 'border border-ritual-border text-ritual-gray-text hover:text-ritual-gray-text'}`}
                                     >
                                         {y}
                                     </Link>
@@ -81,9 +81,9 @@ export default async function WrappedPage({ searchParams }: PageProps) {
 
                 {!hasData ? (
                     <div className="py-20 text-center">
-                        <p className="font-body text-ritual-gray-mid text-lg mb-2">Sin shows en {selectedYear}</p>
-                        <p className="font-label text-xs text-ritual-gray-mid uppercase tracking-[0.1em]">Marcá shows como &quot;Fui&quot; para verlos acá.</p>
-                        <Link href={routes.home} className="inline-block mt-6 font-label text-xs text-ritual-red uppercase tracking-[0.1em] underline underline-offset-4">
+                        <p className="font-body text-ritual-gray-text text-lg mb-2">Sin shows en {selectedYear}</p>
+                        <p className="font-label text-xs text-ritual-gray-text uppercase tracking-[0.1em]">Marcá shows como &quot;Fui&quot; para verlos acá.</p>
+                        <Link href={routes.home} className="inline-block mt-6 font-label text-xs text-ritual-red-hover uppercase tracking-[0.1em] underline underline-offset-4">
                             Ver mis recitales →
                         </Link>
                     </div>
@@ -112,13 +112,13 @@ export default async function WrappedPage({ searchParams }: PageProps) {
 
                             {topArtistsThisYear.length > 0 && (
                                 <section>
-                                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-5">Tus artistas del año</h2>
+                                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-5">Tus artistas del año</h2>
                                     <ol className="space-y-3">
                                         {topArtistsThisYear.map(([name, count], i) => (
                                             <li key={name} className="flex items-center gap-4">
-                                                <span className="font-figure text-xl text-ritual-gray-mid w-6 shrink-0">{i + 1}</span>
+                                                <span className="font-figure text-xl text-ritual-gray-text w-6 shrink-0">{i + 1}</span>
                                                 <p className="flex-1 font-dense font-extrabold text-ritual-bone truncate">{name}</p>
-                                                <span className="font-label text-xs text-ritual-gray-mid shrink-0">{count} show{count !== 1 ? 's' : ''}</span>
+                                                <span className="font-label text-xs text-ritual-gray-text shrink-0">{count} show{count !== 1 ? 's' : ''}</span>
                                             </li>
                                         ))}
                                     </ol>
@@ -127,13 +127,13 @@ export default async function WrappedPage({ searchParams }: PageProps) {
 
                             {topVenuesThisYear.length > 0 && (
                                 <section>
-                                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-5">Tus venues del año</h2>
+                                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-5">Tus venues del año</h2>
                                     <ol className="space-y-3">
                                         {topVenuesThisYear.map(([name, count], i) => (
                                             <li key={name} className="flex items-center gap-4">
-                                                <span className="font-figure text-xl text-ritual-gray-mid w-6 shrink-0">{i + 1}</span>
+                                                <span className="font-figure text-xl text-ritual-gray-text w-6 shrink-0">{i + 1}</span>
                                                 <p className="flex-1 font-dense font-extrabold text-ritual-bone truncate">{name}</p>
-                                                <span className="font-label text-xs text-ritual-gray-mid shrink-0">{count}×</span>
+                                                <span className="font-label text-xs text-ritual-gray-text shrink-0">{count}×</span>
                                             </li>
                                         ))}
                                     </ol>
@@ -141,7 +141,7 @@ export default async function WrappedPage({ searchParams }: PageProps) {
                             )}
 
                             <section>
-                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-5">Todos los shows de {selectedYear}</h2>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-5">Todos los shows de {selectedYear}</h2>
                                 <ul className="divide-y divide-ritual-border-subtle">
                                     {attendedThisYear.map((ev) => {
                                         const date = new Date(ev.date)
@@ -150,7 +150,7 @@ export default async function WrappedPage({ searchParams }: PageProps) {
                                             <li key={ev.id}>
                                                 <Link href={routes.events.detail(ev.id)} className="flex items-center gap-4 py-3">
                                                     <div className="w-10 shrink-0 text-center">
-                                                        <p className="font-label text-[9px] font-bold text-ritual-gray-mid uppercase">{formatDate(date, { month: 'short' })}</p>
+                                                        <p className="font-label text-[9px] font-bold text-ritual-gray-text uppercase">{formatDate(date, { month: 'short' })}</p>
                                                         <p className="font-display text-lg text-ritual-bone leading-none">{date.getDate()}</p>
                                                     </div>
                                                     <p className="flex-1 font-dense font-extrabold text-ritual-bone truncate text-sm">{ev.name || artists[0] || 'Recital'}</p>
@@ -172,7 +172,7 @@ function StatBox({ label, value }: { label: string; value: string | number }) {
     return (
         <div className="border border-ritual-border bg-ritual-surface p-4">
             <p className="font-display text-2xl text-ritual-bone truncate">{value}</p>
-            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-1">{label}</p>
+            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-text mt-1">{label}</p>
         </div>
     )
 }
@@ -190,7 +190,7 @@ function buildSlides(data: {
             kind: 'cover',
             content: (
                 <div className="text-center">
-                    <p className="font-label text-[10px] tracking-[0.3em] uppercase text-ritual-red mb-3">Tu resumen</p>
+                    <p className="font-label text-[10px] tracking-[0.3em] uppercase text-ritual-red-hover mb-3">Tu resumen</p>
                     <p className="font-display text-8xl text-ritual-bone leading-none">{data.selectedYear}</p>
                 </div>
             ),
@@ -213,9 +213,9 @@ function buildSlides(data: {
             kind: 'artist',
             content: (
                 <div className="text-center">
-                    <p className="font-label text-[10px] tracking-[0.3em] uppercase text-ritual-red mb-3">Tu banda del año</p>
+                    <p className="font-label text-[10px] tracking-[0.3em] uppercase text-ritual-red-hover mb-3">Tu banda del año</p>
                     <p className="font-display text-5xl uppercase text-ritual-bone leading-[0.9]">{data.topArtist[0]}</p>
-                    <p className="font-label text-xs text-ritual-gray-mid mt-4">{data.topArtist[1]} show{data.topArtist[1] !== 1 ? 's' : ''}</p>
+                    <p className="font-label text-xs text-ritual-gray-text mt-4">{data.topArtist[1]} show{data.topArtist[1] !== 1 ? 's' : ''}</p>
                 </div>
             ),
         })
@@ -227,9 +227,9 @@ function buildSlides(data: {
             kind: 'bestNight',
             content: (
                 <div className="text-center">
-                    <p className="font-label text-[10px] tracking-[0.3em] uppercase text-ritual-red mb-3">La mejor noche</p>
+                    <p className="font-label text-[10px] tracking-[0.3em] uppercase text-ritual-red-hover mb-3">La mejor noche</p>
                     <p className="font-display text-4xl uppercase text-ritual-bone leading-[0.9]">{data.bestNight.name || artists[0] || 'Recital'}</p>
-                    {data.bestNight.venues && <p className="font-label text-xs text-ritual-gray-mid mt-4">{data.bestNight.venues.name}</p>}
+                    {data.bestNight.venues && <p className="font-label text-xs text-ritual-gray-text mt-4">{data.bestNight.venues.name}</p>}
                 </div>
             ),
         })
@@ -250,7 +250,7 @@ function buildSlides(data: {
     slides.push({
         kind: 'expenses',
         content: (
-            <div className="text-center bg-ritual-red text-ritual-panel -m-8 p-8 w-full h-full flex flex-col items-center justify-center">
+            <div className="text-center bg-ritual-red text-ritual-bone -m-8 p-8 w-full h-full flex flex-col items-center justify-center">
                 <p className="font-label text-[10px] tracking-[0.3em] uppercase mb-3">Lo que gastaste</p>
                 <p className="font-display text-6xl leading-none">{formatARS(data.spentThisYear)}</p>
             </div>
@@ -262,7 +262,7 @@ function buildSlides(data: {
         content: (
             <div className="text-center">
                 <p className="font-display text-4xl uppercase text-ritual-bone leading-[0.9]">Ritual</p>
-                <p className="font-label text-xs text-ritual-gray-mid mt-4">Nos vemos el año que viene.</p>
+                <p className="font-label text-xs text-ritual-gray-text mt-4">Nos vemos el año que viene.</p>
             </div>
         ),
     })

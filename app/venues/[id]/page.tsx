@@ -35,24 +35,24 @@ export default async function VenueDetailPage({ params }: VenueDetailPageProps) 
             <div className="max-w-3xl mx-auto px-6 md:px-8 py-16">
                 <Link
                     href={routes.venues.list}
-                    className="inline-flex items-center gap-2 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid hover:text-ritual-gray-text transition-colors mb-10"
+                    className="inline-flex items-center gap-2 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text hover:text-ritual-gray-text transition-colors mb-10"
                 >
                     ← Sedes
                 </Link>
 
                 <div className="mb-10">
-                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-2">
+                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-2">
                         {[venue.city, venue.country].filter(Boolean).join(' · ')}
                     </p>
                     <h1 className="font-display text-6xl md:text-8xl leading-[0.85] uppercase text-ritual-bone mb-2">
                         {venue.name}
                     </h1>
                     {nightsHere > 0 && (
-                        <p className="font-label text-[11px] tracking-[0.1em] uppercase text-ritual-red mt-3">
+                        <p className="font-label text-[11px] tracking-[0.1em] uppercase text-ritual-red-hover mt-3">
                             {nightsHere} {nightsHere === 1 ? 'noche tuya' : 'noches tuyas'} acá
                         </p>
                     )}
-                    {venue.address && <p className="font-body text-sm text-ritual-gray-mid mt-2">📍 {venue.address}</p>}
+                    {venue.address && <p className="font-body text-sm text-ritual-gray-text mt-2">📍 {venue.address}</p>}
                 </div>
 
                 <div className="grid grid-cols-3 gap-4 mb-12">
@@ -63,14 +63,14 @@ export default async function VenueDetailPage({ params }: VenueDetailPageProps) 
                     ].map(({ label, value }) => (
                         <div key={label} className="border border-ritual-border bg-ritual-surface p-4 text-center">
                             <p className="font-display text-3xl text-ritual-bone tabular-nums">{value}</p>
-                            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-1">{label}</p>
+                            <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-text mt-1">{label}</p>
                         </div>
                     ))}
                 </div>
 
                 {/* El plano — depende de una columna de zona/sector que no existe todavía en attendance */}
                 <div className="border border-dashed border-ritual-border p-5 mb-12">
-                    <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid">
+                    <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text">
                         El plano del lugar, con un punto por visita, todavía no está — necesita guardar en qué zona
                         estuviste cada noche, y esa columna no existe todavía en el modelo de datos.
                     </p>
@@ -78,19 +78,19 @@ export default async function VenueDetailPage({ params }: VenueDetailPageProps) 
 
                 {venue.events.length === 0 ? (
                     <div className="py-16 text-center">
-                        <p className="font-body text-ritual-gray-mid">No hay shows registrados en esta sede.</p>
+                        <p className="font-body text-ritual-gray-text">No hay shows registrados en esta sede.</p>
                     </div>
                 ) : (
                     <div className="space-y-10">
                         {upcomingEvents.length > 0 && (
                             <section>
-                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-5">Próximos</h2>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-5">Próximos</h2>
                                 <EventList events={upcomingEvents} />
                             </section>
                         )}
                         {pastEvents.length > 0 && (
                             <section>
-                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-5">Tus noches acá</h2>
+                                <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-5">Tus noches acá</h2>
                                 <EventList events={pastEvents} />
                             </section>
                         )}
@@ -114,25 +114,25 @@ function EventList({ events }: { events: Array<{ id: string; name: string | null
                             className="group flex items-center gap-5 py-4 transition-colors"
                         >
                             <div className="w-12 shrink-0 text-center">
-                                <p className="font-label text-[10px] font-bold text-ritual-gray-mid uppercase">
+                                <p className="font-label text-[10px] font-bold text-ritual-gray-text uppercase">
                                     {formatDate(dateObj, { month: 'short' })}
                                 </p>
                                 <p className="font-display text-2xl text-ritual-bone leading-none mt-0.5">
                                     {dateObj.getDate()}
                                 </p>
-                                <p className="font-label text-[9px] text-ritual-gray-mid">{dateObj.getFullYear()}</p>
+                                <p className="font-label text-[9px] text-ritual-gray-text">{dateObj.getFullYear()}</p>
                             </div>
 
                             <div className="flex-1 min-w-0">
                                 <p className="font-dense font-extrabold text-ritual-bone truncate">{ev.name || artists[0] || 'Recital'}</p>
                                 {artists.length > 0 && (
-                                    <p className="font-label text-xs text-ritual-gray-mid mt-0.5 truncate">
+                                    <p className="font-label text-xs text-ritual-gray-text mt-0.5 truncate">
                                         {artists.slice(0, 3).join(' · ')}{artists.length > 3 ? ` +${artists.length - 3}` : ''}
                                     </p>
                                 )}
                             </div>
 
-                            <span className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-red opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Ver →</span>
+                            <span className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-red-hover opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Ver →</span>
                         </Link>
                     </li>
                 )

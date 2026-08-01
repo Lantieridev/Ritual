@@ -54,12 +54,12 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
                 aria-haspopup="menu"
                 aria-expanded={open}
                 className={`inline-flex items-center gap-2 border px-4 py-2.5 font-label text-[10px] tracking-[0.1em] uppercase transition-all disabled:opacity-50 ${status === 'went'
-                        ? 'border-ritual-red bg-ritual-red text-ritual-panel'
+                        ? 'border-ritual-red bg-ritual-red text-ritual-bone'
                         : status === 'going'
                             ? 'border-ritual-border-2 bg-ritual-surface-high text-ritual-bone'
                             : status === 'interested'
                                 ? 'border-ritual-border bg-ritual-surface text-ritual-gray-light-3'
-                                : 'border-ritual-border bg-ritual-surface text-ritual-gray-mid hover:text-ritual-gray-text hover:border-ritual-border-2'
+                                : 'border-ritual-border bg-ritual-surface text-ritual-gray-text hover:text-ritual-gray-text hover:border-ritual-border-2'
                     }`}
             >
                 {isPending ? (
@@ -84,11 +84,11 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
                                 role="menuitemradio"
                                 aria-checked={status === opt.value}
                                 onClick={() => handleSelect(opt.value)}
-                                className={`w-full flex items-center gap-2.5 px-4 py-2.5 font-label text-[10px] tracking-[0.1em] uppercase transition-colors hover:bg-ritual-surface ${status === opt.value ? 'text-ritual-bone' : 'text-ritual-gray-mid'
+                                className={`w-full flex items-center gap-2.5 px-4 py-2.5 font-label text-[10px] tracking-[0.1em] uppercase transition-colors hover:bg-ritual-surface ${status === opt.value ? 'text-ritual-bone' : 'text-ritual-gray-text'
                                     }`}
                             >
                                 {opt.label}
-                                {status === opt.value && <span className="ml-auto text-ritual-red">✓</span>}
+                                {status === opt.value && <span className="ml-auto text-ritual-red-hover">✓</span>}
                             </button>
                         ))}
                     </div>
@@ -96,7 +96,7 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
             )}
 
             {error && (
-                <p role="alert" className="absolute right-0 top-full mt-1 w-56 font-label text-xs text-ritual-red">
+                <p role="alert" className="absolute right-0 top-full mt-1 w-56 font-label text-xs text-ritual-red-hover">
                     {error}
                 </p>
             )}
