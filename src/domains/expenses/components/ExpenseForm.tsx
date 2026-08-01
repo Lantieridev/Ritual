@@ -59,9 +59,14 @@ export function ExpenseForm({ events, createExpense, expense, updateExpense }: E
   return (
     <form onSubmit={handleSubmit} className="max-w-xl space-y-6">
       {error && (
-        <div role="alert" className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 text-sm">
+        <div role="alert" className="bg-ritual-red/10 border border-ritual-red/30 text-ritual-red px-4 py-3 font-body text-sm">
           {error}
         </div>
+      )}
+      {isEdit && expense && (
+        <p className="font-display leading-[0.8] text-ritual-bone" style={{ fontSize: 'min(16vw, 100px)' }}>
+          ${Number(expense.amount).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+        </p>
       )}
       <FormField label="Monto" id="amount" required>
         <input id="amount" name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" className={inputClass} defaultValue={expense?.amount != null ? Number(expense.amount) : ''} />
@@ -94,7 +99,7 @@ export function ExpenseForm({ events, createExpense, expense, updateExpense }: E
         <Button type="submit" variant="primary" disabled={isSubmitting}>
           {isSubmitting ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Agregar gasto'}
         </Button>
-        <Link href={cancelHref} className="inline-flex items-center justify-center rounded-lg font-medium border border-white/20 text-white hover:border-white/30 hover:bg-white/5 px-6 py-2.5 transition-colors">
+        <Link href={cancelHref} className="inline-flex items-center justify-center font-label text-[10px] tracking-[0.14em] uppercase border border-ritual-border text-ritual-bone hover:border-ritual-border-2 hover:bg-ritual-surface px-6 py-2.5 transition-colors">
           Cancelar
         </Link>
       </div>

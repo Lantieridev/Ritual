@@ -37,27 +37,28 @@ export function ProfileForm({ user, profile }: ProfileFormProps) {
 
             {/* Avatar Section */}
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-                <div className="w-32 h-32 rounded-full overflow-hidden bg-neutral-900 border border-white/10 shrink-0 relative group">
+                <div className="w-32 h-32 overflow-hidden bg-ritual-surface border-2 border-ritual-red shrink-0 relative group">
                     {previewUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- preview de un File local (blob: URL), next/image no soporta ese esquema
                         <img
                             src={previewUrl}
                             alt="Avatar Preview"
                             className="w-full h-full object-cover"
                         />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-4xl text-zinc-700 font-bold select-none">
+                        <div className="w-full h-full flex items-center justify-center font-display text-4xl text-ritual-red select-none">
                             {(profile?.full_name?.[0] || user.email?.[0] || '?').toUpperCase()}
                         </div>
                     )}
 
                     {/* Overlay for upload hint */}
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        <span className="text-xs text-white font-medium">Cambiar</span>
+                    <div className="absolute inset-0 bg-ritual-bg/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <span className="font-label text-[10px] uppercase tracking-[0.1em] text-ritual-bone">Cambiar</span>
                     </div>
                 </div>
 
                 <div className="space-y-2 flex-1 w-full">
-                    <label htmlFor="avatar" className="block text-sm font-medium text-zinc-400">
+                    <label htmlFor="avatar" className="block font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-mid">
                         Foto de Perfil
                     </label>
                     <input
@@ -66,15 +67,15 @@ export function ProfileForm({ user, profile }: ProfileFormProps) {
                         name="avatar"
                         accept="image/*"
                         onChange={handleAvatarChange}
-                        className="block w-full text-sm text-zinc-400
+                        className="block w-full font-label text-xs text-ritual-gray-mid
                             file:mr-4 file:py-2 file:px-4
-                            file:rounded-full file:border-0
-                            file:text-sm file:font-semibold
-                            file:bg-white/10 file:text-white
-                            hover:file:bg-white/20
+                            file:border-0
+                            file:font-label file:text-[10px] file:uppercase file:tracking-[0.1em]
+                            file:bg-ritual-surface-high file:text-ritual-bone
+                            hover:file:bg-ritual-border-2
                             cursor-pointer"
                     />
-                    <p className="text-xs text-zinc-500">
+                    <p className="font-label text-[10px] text-ritual-gray-mid">
                         JPG, PNG o GIF. Máximo 2MB.
                     </p>
                 </div>
@@ -120,13 +121,13 @@ export function ProfileForm({ user, profile }: ProfileFormProps) {
             />
 
             {state?.error && (
-                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                <div role="alert" className="p-4 bg-ritual-red/10 border border-ritual-red/20 text-ritual-red font-body text-sm">
                     {state.error}
                 </div>
             )}
 
             {state?.success && (
-                <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+                <div role="status" className="p-4 bg-ritual-surface border border-ritual-border text-ritual-gray-light-3 font-body text-sm">
                     {state.success}
                 </div>
             )}
@@ -135,7 +136,7 @@ export function ProfileForm({ user, profile }: ProfileFormProps) {
                 <Button type="submit" disabled={isPending}>
                     {isPending ? 'Guardando...' : 'Guardar Cambios'}
                 </Button>
-                <Link href="/profile" className="text-sm text-zinc-400 hover:text-white">
+                <Link href="/profile" className="font-label text-xs text-ritual-gray-mid hover:text-ritual-gray-text uppercase tracking-[0.1em]">
                     Cancelar
                 </Link>
             </div>
