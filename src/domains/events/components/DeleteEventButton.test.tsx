@@ -11,14 +11,14 @@ describe('DeleteEventButton', () => {
   it('shows only the trigger button before confirming', () => {
     render(<DeleteEventButton event={event} deleteEvent={vi.fn()} />)
 
-    expect(screen.getByRole('button', { name: 'Eliminar recital' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Romper este talón' })).toBeInTheDocument()
     expect(screen.queryByText(/Sí, eliminar/)).not.toBeInTheDocument()
   })
 
   it('shows the confirmation dialog with the event name after the first click', async () => {
     render(<DeleteEventButton event={event} deleteEvent={vi.fn()} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Eliminar recital' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Romper este talón' }))
 
     expect(screen.getByText(/Show de prueba/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Sí, eliminar/ })).toBeInTheDocument()
@@ -28,10 +28,10 @@ describe('DeleteEventButton', () => {
     const deleteEvent = vi.fn()
     render(<DeleteEventButton event={event} deleteEvent={deleteEvent} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Eliminar recital' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Romper este talón' }))
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
 
-    expect(screen.getByRole('button', { name: 'Eliminar recital' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Romper este talón' })).toBeInTheDocument()
     expect(deleteEvent).not.toHaveBeenCalled()
   })
 
@@ -39,7 +39,7 @@ describe('DeleteEventButton', () => {
     const deleteEvent = vi.fn().mockResolvedValue({})
     render(<DeleteEventButton event={event} deleteEvent={deleteEvent} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Eliminar recital' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Romper este talón' }))
     await userEvent.click(screen.getByRole('button', { name: /Sí, eliminar/ }))
 
     expect(deleteEvent).toHaveBeenCalledWith('e1')
@@ -49,7 +49,7 @@ describe('DeleteEventButton', () => {
     const deleteEvent = vi.fn().mockResolvedValue({ error: 'No se pudo eliminar' })
     render(<DeleteEventButton event={event} deleteEvent={deleteEvent} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Eliminar recital' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Romper este talón' }))
     await userEvent.click(screen.getByRole('button', { name: /Sí, eliminar/ }))
 
     await waitFor(() => {
@@ -61,7 +61,7 @@ describe('DeleteEventButton', () => {
   it('falls back to a generic label when the event has no name', async () => {
     render(<DeleteEventButton event={{ ...event, name: null }} deleteEvent={vi.fn()} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Eliminar recital' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Romper este talón' }))
 
     expect(screen.getByText(/este recital/)).toBeInTheDocument()
   })

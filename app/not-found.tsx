@@ -6,14 +6,26 @@ import { routes } from '@/src/core/lib/routes'
  */
 export default function NotFound() {
   return (
-    <main className="min-h-screen bg-neutral-950 text-white p-6 md:p-8 font-sans flex flex-col items-center justify-center gap-6">
-      <h1 className="text-3xl font-bold text-zinc-400">Página no encontrada</h1>
-      <p className="text-zinc-500 text-center max-w-sm">
+    <main className="min-h-screen bg-ritual-bg text-ritual-bone flex flex-col items-center justify-center gap-6 px-6">
+      <div className="relative inline-block">
+        <div className="border-2 border-ritual-border bg-ritual-surface px-10 py-8 text-center">
+          <p className="font-label text-[9px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-2">Talón</p>
+          <p className="font-display text-5xl text-ritual-bone">404</p>
+        </div>
+        <span
+          className="absolute -top-3 -right-8 font-label text-xs font-bold uppercase tracking-[0.1em] text-ritual-red border-2 border-ritual-red px-2 py-0.5 bg-ritual-bg"
+          style={{ transform: 'rotate(-9deg)' }}
+        >
+          Cancelado
+        </span>
+      </div>
+      <h1 className="font-display text-3xl uppercase text-ritual-bone text-center">Esta función se canceló</h1>
+      <p className="font-body text-sm text-ritual-gray-mid text-center max-w-sm">
         La ruta que buscás no existe o fue movida.
       </p>
       <Link
         href={routes.home}
-        className="inline-flex items-center justify-center rounded-lg font-medium bg-white text-neutral-950 hover:bg-zinc-200 px-6 py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-white/30"
+        className="font-label text-[10px] tracking-[0.14em] uppercase bg-ritual-red text-ritual-panel hover:bg-ritual-red-hover px-6 py-3 transition-colors"
       >
         Volver al inicio
       </Link>

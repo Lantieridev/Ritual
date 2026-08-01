@@ -11,10 +11,10 @@ interface DeleteEventButtonProps {
 export function DeleteEventButton({ event, deleteEvent }: DeleteEventButtonProps) {
   return (
     <ConfirmDeleteButton
-      label="Eliminar recital"
+      label="Romper este talón"
       confirmMessage={
         <>
-          ¿Eliminar <strong>{event.name || 'este recital'}</strong>? Se borrarán también los artistas del lineup. Esta acción no se puede deshacer.
+          ¿Romper el talón de <strong>{event.name || 'este recital'}</strong>? Se pierde también el lineup, las fotos y tu reseña. No se puede deshacer.
         </>
       }
       onConfirm={() => deleteEvent(event.id)}
