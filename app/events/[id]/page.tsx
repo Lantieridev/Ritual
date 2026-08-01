@@ -129,7 +129,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* Lineup — quién tocó */}
         {event.lineups && event.lineups.length > 0 && (
           <section className="border-t border-ritual-border-subtle pt-8">
-            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Quién tocó</p>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Quién tocó</h2>
             <ul className="flex flex-wrap gap-2">
               {event.lineups.map((row) => (
                 <li key={row.artists.id}>
@@ -146,7 +146,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* El recorte — reseña */}
         {reviewVariant !== 'none' && (
           <section className="border-t border-ritual-border-subtle pt-8">
-            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Tu reseña</p>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Tu reseña</h2>
             <div
               className="bg-ritual-paper text-ritual-paper-ink border-l-[3px] border-ritual-paper-red px-6 py-6 md:px-8 md:py-8"
               style={{ clipPath: 'polygon(0 0, 100% 0, 100% 97%, 98% 100%, 94% 97%, 90% 100%, 86% 97%, 82% 100%, 78% 97%, 74% 100%, 70% 97%, 66% 100%, 62% 97%, 58% 100%, 54% 97%, 50% 100%, 46% 97%, 42% 100%, 38% 97%, 34% 100%, 30% 97%, 26% 100%, 22% 97%, 18% 100%, 14% 97%, 10% 100%, 6% 97%, 2% 100%, 0 97%)' }}
@@ -171,15 +171,15 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
         {/* Fotos */}
         <section className="border-t border-ritual-border-subtle pt-8">
-          <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">
+          <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">
             Fotos {photos.length > 0 && <span className="text-ritual-gray-mid">({photos.length})</span>}
-          </p>
+          </h2>
           <PhotoGallery eventId={event.id} initialPhotos={photos} />
         </section>
 
         {/* Quiénes fueron — depende de la capa social, todavía sin backend */}
         <section className="border-t border-ritual-border-subtle pt-8">
-          <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Quiénes fueron</p>
+          <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Quiénes fueron</h2>
           <p className="font-body text-sm text-ritual-gray-mid">
             Próximamente — depende de la capa social (
             <a href="https://github.com/Lantieridev/Ritual/issues/5" target="_blank" rel="noopener noreferrer" className="text-ritual-red underline underline-offset-4">
@@ -192,7 +192,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* La cuenta de esa noche */}
         {expenses.length > 0 && (
           <section className="border-t border-ritual-border-subtle pt-8">
-            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">La cuenta de esa noche</p>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">La cuenta de esa noche</h2>
             <div className="bg-ritual-paper text-ritual-paper-ink px-6 py-6 border-l-[3px] border-ritual-paper-red">
               <ul className="divide-y divide-ritual-paper-2">
                 {expenses.map((ex) => (
@@ -214,7 +214,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* Rating, reseña y notas — form, solo si fue */}
         {attendance?.status === 'went' && (
           <section className="border-t border-ritual-border-subtle pt-8">
-            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Tu memoria del show</p>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Tu memoria del show</h2>
             {attendance?.notes && (
               <div className="mb-6 bg-ritual-surface border border-ritual-border-subtle px-4 py-3">
                 <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mb-2">Notas / Setlist</p>
@@ -232,7 +232,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
         {/* Zona de peligro */}
         <section className="border-t border-ritual-border-subtle pt-8">
-          <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Acciones</p>
+          <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Acciones</h2>
           <DeleteEventButton event={event} deleteEvent={deleteEvent} />
         </section>
       </div>

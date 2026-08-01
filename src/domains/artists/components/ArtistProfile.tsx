@@ -45,7 +45,7 @@ export function ArtistProfile({
             {/* Próximas funciones — lo que se viene va primero */}
             {(internalUpcoming.length > 0 || upcomingEvents.length > 0) && (
                 <section>
-                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Próximas funciones</p>
+                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Próximas funciones</h2>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {internalUpcoming.map((ev) => (
                             <Link
@@ -90,7 +90,7 @@ export function ArtistProfile({
             {/* Bio */}
             {bio && (
                 <section>
-                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Biografía</p>
+                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Biografía</h2>
                     <p className="font-body text-sm text-ritual-gray-light-3 leading-relaxed whitespace-pre-line">{bio}</p>
                 </section>
             )}
@@ -98,9 +98,9 @@ export function ArtistProfile({
             {/* Las veces que fuiste */}
             {recentNights.length > 0 && (
                 <section>
-                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">
+                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">
                         Las {timesSeen} {timesSeen === 1 ? 'vez' : 'veces'} que fuiste
-                    </p>
+                    </h2>
                     <ul className="divide-y divide-ritual-border-subtle">
                         {recentNights.map((ev) => {
                             const rating = ev.attendance?.[0]?.rating
@@ -127,7 +127,7 @@ export function ArtistProfile({
             <div className="grid sm:grid-cols-2 gap-10">
                 {venuesSeenAt.length > 0 && (
                     <section>
-                        <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Dónde las viste</p>
+                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Dónde las viste</h2>
                         <div className="flex flex-wrap gap-2">
                             {venuesSeenAt.map((name) => (
                                 <span key={name} className="font-label text-xs text-ritual-gray-text border border-ritual-border px-3 py-1.5">{name}</span>
@@ -137,7 +137,7 @@ export function ArtistProfile({
                 )}
                 {similarArtists.length > 0 && (
                     <section>
-                        <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Del mismo palo</p>
+                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Del mismo palo</h2>
                         <div className="flex flex-wrap gap-2">
                             {similarArtists.map((similar) => (
                                 <span key={similar.name} className="font-label text-xs text-ritual-gray-text border border-ritual-border px-3 py-1.5">{similar.name}</span>

@@ -107,6 +107,17 @@ body {
 }
 
 /*
+ * Foco visible integrado a la paleta — WCAG 2.4.7. Sin esto queda el
+ * outline azul default del navegador, que funciona pero desentona con la
+ * paleta negro/gris/rojo. :focus-visible en vez de :focus para no mostrar
+ * el anillo en clicks de mouse, solo en navegación por teclado.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-ritual-red);
+  outline-offset: 2px;
+}
+
+/*
  * Tratamiento de foto de la identidad visual: blanco y negro duro + duotono
  * rojo. Clase opt-in — se aplica pantalla por pantalla al reconstruir cada
  * una con el nuevo sistema, no globalmente sobre las imágenes existentes.

@@ -86,7 +86,7 @@ export default async function ProfilePage() {
 
                 {/* Cuenta */}
                 <section>
-                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Cuenta</p>
+                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Cuenta</h2>
                     <div className="border border-ritual-border-subtle bg-ritual-surface p-4">
                         <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid">Correo electrónico</p>
                         <p className="font-body text-ritual-bone mt-1">{user.email}</p>
@@ -96,9 +96,9 @@ export default async function ProfilePage() {
                 {/* La base de datos de tus shows */}
                 {wentEvents.length > 0 && (
                     <section>
-                        <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">
+                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">
                             Tu base de datos — {wentEvents.length} shows
-                        </p>
+                        </h2>
                         <ul className="divide-y divide-ritual-border-subtle">
                             {wentEvents.map((ev) => {
                                 const rating = ev.attendance?.[0]?.rating

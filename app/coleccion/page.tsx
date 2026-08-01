@@ -111,7 +111,7 @@ async function ArtistsShelvesView() {
 
             {shelves.catalog.length > 0 && (
                 <section>
-                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Resto del catálogo</p>
+                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Resto del catálogo</h2>
                     <ul className="flex flex-wrap gap-2">
                         {shelves.catalog.map((a) => (
                             <li key={a.id}>
@@ -140,7 +140,7 @@ function ArtistShelf({ title, artists }: { title: string; artists: Array<Collect
     if (artists.length === 0) return null
     return (
         <section>
-            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">{title}</p>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">{title}</h2>
             <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {artists.map((artist) => (
                     <li key={artist.id}>
@@ -243,7 +243,7 @@ async function FestivalsTab() {
 function FestivalList({ title, festivals }: { title: string; festivals: Awaited<ReturnType<typeof getFestivals>> }) {
     return (
         <section>
-            <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">{title}</p>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">{title}</h2>
             <ul className="divide-y divide-ritual-border-subtle">
                 {festivals.map((festival) => {
                     const status = festival.festival_attendance?.[0]?.status
