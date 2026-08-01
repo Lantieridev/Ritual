@@ -5,11 +5,11 @@ import { getExpenses, getExpensesSummary } from '@/src/domains/expenses/data'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { getExpenseCategory } from '@/src/domains/expenses/categories'
-import { Card, LinkButton } from '@/src/core/components/ui'
+import { LinkButton } from '@/src/core/components/ui'
 import { PageShell } from '@/src/core/components/layout'
 
 export const metadata: Metadata = {
-  title: 'Mis gastos | RITUAL',
+  title: 'Gastos | RITUAL',
   description: 'Gastos personales de recitales. No se comparten con otros usuarios.',
 }
 
@@ -24,35 +24,25 @@ export default async function ExpensesPage() {
     getExpensesSummary(userId),
   ])
 
-  const years = Object.keys(summary.byYear).sort((a, b) => Number(b) - Number(a))
-  const topCategories = Object.entries(summary.byCategory)
-    .sort(([, a], [, b]) => b - a)
+  const topCategories = Object.entries(summary.byCategory).sort(([, a], [, b]) => b - a)
+  const mostExpensive = expenses.length > 0 ? expenses.reduce((max, e) => (Number(e.amount) > Number(max.amount) ? e : max)) : null
 
   return (
     <PageShell
       backHref={routes.home}
       backLabel="← Inicio"
-      title="Mis gastos"
-      description="Gastos personales de recitales."
-      action={
-        userId ? (
-          <LinkButton href={routes.expenses.new} variant="primary" className="px-4 py-2 text-sm">
-            + Nuevo gasto
-          </LinkButton>
-        ) : undefined
-      }
+      title="Gastos"
+      action={userId ? <LinkButton href={routes.expenses.new} variant="primary" className="px-4 py-2">+ Nuevo gasto</LinkButton> : undefined}
     >
       {!userId && (
-        <p className="rounded-lg bg-zinc-500/10 border border-zinc-500/30 text-zinc-300 px-4 py-3 text-sm mb-6">
-          Iniciá sesión para ver y cargar gastos. En desarrollo podés setear{' '}
-          <code className="bg-white/10 px-1 rounded">RITUAL_DEV_USER_ID</code> en .env.local.
+        <p className="font-body text-sm bg-ritual-surface border border-ritual-border-subtle px-4 py-3 mb-6 text-ritual-gray-text">
+          Iniciá sesión para ver y cargar gastos.
         </p>
       )}
 
       {expenses.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
-          <p className="text-5xl">💸</p>
-          <p className="text-zinc-500 max-w-sm">
+          <p className="font-body text-ritual-gray-mid max-w-sm">
             {userId ? 'No tenés gastos cargados todavía.' : 'No hay gastos para mostrar.'}
           </p>
           {userId && (
@@ -62,87 +52,82 @@ export default async function ExpensesPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-4">
-              <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">Total</p>
-              <p className="text-2xl font-bold text-white">{formatARS(summary.total)}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-4">
-              <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">Gastos</p>
-              <p className="text-2xl font-bold text-white">{summary.count}</p>
-            </div>
-            {years[0] && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-4 col-span-2 sm:col-span-1">
-                <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">{years[0]}</p>
-                <p className="text-2xl font-bold text-white">{formatARS(summary.byYear[years[0]])}</p>
-              </div>
-            )}
+        <div className="space-y-10">
+          {/* Total como titular */}
+          <div>
+            <p className="font-display leading-[0.8] text-ritual-bone" style={{ fontSize: 'min(20vw, 140px)' }}>
+              {formatARS(summary.total)}
+            </p>
+            <p className="font-label text-xs tracking-[0.1em] uppercase text-ritual-gray-mid mt-2">
+              {summary.count} gasto{summary.count !== 1 ? 's' : ''}
+            </p>
           </div>
 
-          {/* Breakdown por categoría */}
+          {/* Barra de categorías */}
           {topCategories.length > 0 && (
-            <div>
-              <p className="text-xs uppercase tracking-widest text-zinc-500 mb-3">Por categoría</p>
+            <section>
+              <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Por categoría</h2>
               <div className="space-y-2">
                 {topCategories.map(([cat, amount]) => {
                   const pct = summary.total > 0 ? (amount / summary.total) * 100 : 0
-                  const { icon, color } = getExpenseCategory(cat)
+                  const { icon } = getExpenseCategory(cat)
                   return (
                     <div key={cat} className="flex items-center gap-3">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${color} min-w-[110px]`}>
+                      <span className="font-label text-xs text-ritual-gray-text min-w-[120px]">
                         {icon} {cat}
                       </span>
-                      <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-white/40 rounded-full transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
+                      <div className="flex-1 h-1.5 bg-ritual-surface overflow-hidden">
+                        <div className="h-full bg-ritual-red" style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-sm font-medium text-zinc-300 tabular-nums min-w-[80px] text-right">
+                      <span className="font-label text-sm text-ritual-gray-light-3 tabular-nums min-w-[80px] text-right">
                         {formatARS(amount)}
                       </span>
                     </div>
                   )
                 })}
               </div>
-            </div>
+            </section>
           )}
 
-          {/* Lista de gastos */}
-          <div>
-            <p className="text-xs uppercase tracking-widest text-zinc-500 mb-3">Todos los gastos</p>
-            <ul className="grid gap-3 md:grid-cols-2">
+          {/* La noche más cara — ticket de papel */}
+          {mostExpensive && (
+            <section>
+              <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">La noche más cara</h2>
+              <div className="bg-ritual-paper text-ritual-paper-ink border-l-[3px] border-ritual-paper-red px-6 py-6 max-w-sm">
+                <p className="font-label text-[9px] tracking-[0.14em] uppercase opacity-60">
+                  {getExpenseCategory(mostExpensive.category).icon} {mostExpensive.category} · {formatDate(mostExpensive.date, { day: 'numeric', month: 'short' })}
+                </p>
+                <div className="flex items-center justify-between pt-3 mt-3 border-t border-dashed border-ritual-paper-2 font-figure text-3xl">
+                  <span>TOTAL</span>
+                  <span>{formatARS(Number(mostExpensive.amount))}</span>
+                </div>
+                <p className="font-label text-[9px] tracking-[0.1em] uppercase opacity-50 mt-3">no se aceptan devoluciones</p>
+              </div>
+            </section>
+          )}
+
+          {/* Movimientos */}
+          <section>
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">Todos los gastos</h2>
+            <ul className="divide-y divide-ritual-border-subtle">
               {expenses.map((ex) => {
-                const { icon, color } = getExpenseCategory(ex.category)
+                const { icon } = getExpenseCategory(ex.category)
                 return (
                   <li key={ex.id}>
-                    <Link href={routes.expenses.detail(ex.id)} className="block h-full">
-                      <Card className="h-full hover:border-white/20 transition-colors">
-                        <div className="flex justify-between items-start gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${color}`}>
-                                {icon} {ex.category}
-                              </span>
-                            </div>
-                            <p className="text-lg font-bold text-white">{formatARS(Number(ex.amount))}</p>
-                            {ex.note && (
-                              <p className="text-sm text-zinc-500 mt-0.5 line-clamp-1">{ex.note}</p>
-                            )}
-                          </div>
-                          <p className="text-sm text-zinc-600 whitespace-nowrap">
-                            {formatDate(ex.date, { day: 'numeric', month: 'short' })}
-                          </p>
-                        </div>
-                      </Card>
+                    <Link href={routes.expenses.detail(ex.id)} className="flex items-center justify-between gap-4 py-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-dense font-extrabold text-ritual-bone">
+                          {icon} {formatARS(Number(ex.amount))}
+                        </p>
+                        {ex.note && <p className="font-label text-xs text-ritual-gray-mid mt-0.5 truncate">{ex.note}</p>}
+                      </div>
+                      <p className="font-label text-xs text-ritual-gray-mid whitespace-nowrap">{formatDate(ex.date, { day: 'numeric', month: 'short' })}</p>
                     </Link>
                   </li>
                 )
               })}
             </ul>
-          </div>
+          </section>
         </div>
       )}
     </PageShell>
