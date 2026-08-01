@@ -1,15 +1,24 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { SignOutButton } from '@/src/domains/auth/components'
 import { getProfile } from '@/src/domains/auth/data'
+import { getEventsWithAttendance } from '@/src/domains/events/data'
 import { safeHref } from '@/src/core/lib/validation'
-import Link from 'next/link'
-import Image from 'next/image'
-import { Button } from '@/src/core/components/ui/Button'
+import { formatDate } from '@/src/core/lib/utils'
+import { routes } from '@/src/core/lib/routes'
+import { StarRating, LinkButton } from '@/src/core/components/ui'
 import { PageShell } from '@/src/core/components/layout'
 
 export const metadata = {
     title: 'Mi Perfil | RITUAL',
+}
+
+function monogram(name: string | null | undefined, fallback: string): string {
+    const source = name?.trim() || fallback
+    const parts = source.split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+    return source.slice(0, 2).toUpperCase()
 }
 
 export default async function ProfilePage() {
@@ -20,82 +29,100 @@ export default async function ProfilePage() {
         redirect('/login')
     }
 
-    const profile = await getProfile(user.id)
+    const [profile, allEvents] = await Promise.all([
+        getProfile(user.id),
+        getEventsWithAttendance(),
+    ])
+
+    const wentEvents = allEvents
+        .filter((e) => e.attendance?.[0]?.status === 'went')
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+    const displayName = profile?.full_name || user.email?.split('@')[0] || 'Sin nombre'
+    const seal = monogram(profile?.full_name, user.email?.[0] ?? '?')
 
     return (
         <PageShell title="Mi Perfil" action={<SignOutButton />}>
-            <div className="max-w-2xl mx-auto space-y-8">
+            <div className="max-w-3xl mx-auto space-y-12">
+                {/* El carnet de socio: sello · datos · social */}
+                <section className="border border-ritual-border bg-ritual-surface p-6 md:p-8">
+                    <div className="grid md:grid-cols-[auto_1fr_auto] gap-6 md:gap-10 items-start">
+                        {/* Sello */}
+                        <div className="w-24 h-24 shrink-0 border-2 border-ritual-red flex items-center justify-center mx-auto md:mx-0">
+                            <span className="font-display text-4xl text-ritual-red">{seal}</span>
+                        </div>
 
-                <hr className="border-white/10" />
+                        {/* Datos */}
+                        <div className="text-center md:text-left">
+                            <p className="font-label text-[9px] tracking-[0.2em] uppercase text-ritual-gray-mid">Socio Ritual</p>
+                            <h2 className="font-display text-3xl uppercase text-ritual-bone mt-1">{displayName}</h2>
+                            <p className="font-label text-xs text-ritual-gray-mid">@{profile?.username || 'usuario'}</p>
+                            {profile?.bio && <p className="font-body text-sm text-ritual-gray-light-3 mt-3 whitespace-pre-wrap">{profile.bio}</p>}
+                            <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4 font-label text-xs text-ritual-gray-mid">
+                                {profile?.location && <span>📍 {profile.location}</span>}
+                                {safeHref(profile?.website) && (
+                                    <a href={safeHref(profile?.website)!} target="_blank" rel="noopener noreferrer" className="text-ritual-red hover:underline">
+                                        {profile!.website!.replace(/^https?:\/\//, '')}
+                                    </a>
+                                )}
+                            </div>
+                        </div>
 
-                {/* Profile Card */}
-                <section className="flex flex-col md:flex-row gap-8 items-start">
-                    {/* Avatar */}
-                    <div className="shrink-0">
-                        <div className="w-32 h-32 rounded-full overflow-hidden bg-neutral-900 border border-white/10 relative">
-                            {profile?.avatar_url ? (
-                                <Image
-                                    src={profile.avatar_url}
-                                    alt={profile.full_name || 'Avatar'}
-                                    fill
-                                    className="object-cover"
-                                    sizes="128px"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-4xl text-zinc-700 font-bold select-none">
-                                    {(profile?.full_name?.[0] || user.email?.[0] || '?').toUpperCase()}
-                                </div>
-                            )}
+                        {/* Cifras */}
+                        <div className="flex md:flex-col gap-6 md:gap-2 justify-center font-figure text-2xl text-ritual-bone text-center md:text-right shrink-0">
+                            <div>
+                                {wentEvents.length}
+                                <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-0.5">shows</p>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Info */}
-                    <div className="flex-1 space-y-4">
-                        <div>
-                            <h2 className="text-2xl font-bold">{profile?.full_name || 'Sin nombre'}</h2>
-                            <p className="text-zinc-400">@{profile?.username || 'usuario'}</p>
-                        </div>
-
-                        {profile?.bio && (
-                            <p className="text-zinc-300 whitespace-pre-wrap leading-relaxed">
-                                {profile.bio}
-                            </p>
-                        )}
-
-                        <div className="flex flex-wrap gap-4 pt-2">
-                            {profile?.location && (
-                                <div className="text-sm text-zinc-500 flex items-center gap-2">
-                                    📍 {profile.location}
-                                </div>
-                            )}
-                            {safeHref(profile?.website) && (
-                                <a href={safeHref(profile?.website)!} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:underline flex items-center gap-2">
-                                    🔗 {profile!.website!.replace(/^https?:\/\//, '')}
-                                </a>
-                            )}
-                        </div>
-
-                        <div className="pt-4">
-                            <Link href="/profile/edit">
-                                <Button variant="secondary" className="w-full md:w-auto">
-                                    Editar Perfil
-                                </Button>
-                            </Link>
-                        </div>
+                    <div className="pt-4 mt-4 border-t border-ritual-border-subtle">
+                        <LinkButton href={routes.profile + '/edit'} variant="secondary" className="px-5 py-2">
+                            Editar carnet
+                        </LinkButton>
                     </div>
                 </section>
 
-                <hr className="border-white/10" />
-
-                {/* Account Settings Placeholder */}
-                <section className="space-y-6">
-                    <h3 className="text-lg font-semibold text-zinc-400">Cuenta</h3>
-                    <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-                        <p className="text-sm text-zinc-400">Correo electrónico</p>
-                        <p className="text-white mt-1">{user.email}</p>
+                {/* Cuenta */}
+                <section>
+                    <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-3">Cuenta</p>
+                    <div className="border border-ritual-border-subtle bg-ritual-surface p-4">
+                        <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid">Correo electrónico</p>
+                        <p className="font-body text-ritual-bone mt-1">{user.email}</p>
                     </div>
                 </section>
 
+                {/* La base de datos de tus shows */}
+                {wentEvents.length > 0 && (
+                    <section>
+                        <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-mid mb-4">
+                            Tu base de datos — {wentEvents.length} shows
+                        </p>
+                        <ul className="divide-y divide-ritual-border-subtle">
+                            {wentEvents.map((ev) => {
+                                const rating = ev.attendance?.[0]?.rating
+                                const review = ev.attendance?.[0]?.review
+                                return (
+                                    <li key={ev.id} className="py-4">
+                                        <Link href={routes.events.detail(ev.id)} className="flex items-start gap-4 group">
+                                            <div className="w-12 shrink-0 text-center">
+                                                <p className="font-label text-[9px] font-bold text-ritual-gray-mid uppercase">{formatDate(ev.date, { month: 'short' })}</p>
+                                                <p className="font-display text-xl text-ritual-bone leading-none">{new Date(ev.date).getDate()}</p>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-dense font-extrabold text-ritual-bone truncate">{ev.name || ev.lineups?.[0]?.artists.name || 'Recital'}</p>
+                                                {ev.venues && <p className="font-label text-[10px] text-ritual-gray-mid">{ev.venues.name}</p>}
+                                                {review && <p className="font-body italic text-sm text-ritual-gray-light-3 mt-1.5">&ldquo;{review}&rdquo;</p>}
+                                            </div>
+                                            {rating != null && <StarRating value={rating} size="xs" className="shrink-0" />}
+                                        </Link>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    </section>
+                )}
             </div>
         </PageShell>
     )
