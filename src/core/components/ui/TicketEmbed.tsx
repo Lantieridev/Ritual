@@ -49,12 +49,27 @@ export function TicketEmbed({
   const src = `/tickets/ticket-${material}.html?${params.toString()}`
 
   return (
-    <iframe
-      src={src}
-      title={title}
-      className={className}
-      style={{ border: 'none', background: 'transparent' }}
-      loading="lazy"
-    />
+    <>
+      {/*
+       * El objeto 3D es un iframe sin alternativa operable por teclado ni
+       * anunciable por lector de pantalla (ver tarea de accesibilidad) —
+       * este resumen en texto plano es el contenido real de la entrada,
+       * no decorativo, para que esa información no dependa del canvas.
+       */}
+      <p className="sr-only">
+        {title}: {artistLine1}
+        {artistLine2 ? ` ${artistLine2}` : ''} — {venue}
+        {address ? `, ${address}` : ''}. {when}.{seat ? ` ${seat}.` : ''}
+      </p>
+      <iframe
+        src={src}
+        title={title}
+        aria-hidden="true"
+        tabIndex={-1}
+        className={className}
+        style={{ border: 'none', background: 'transparent' }}
+        loading="lazy"
+      />
+    </>
   )
 }
