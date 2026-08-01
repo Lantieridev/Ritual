@@ -14,6 +14,10 @@
     "supabase:db-push": "npx supabase db push",
     "supabase:gen-types": "npx supabase gen types typescript -o src/lib/database.types.ts"
   },
+  "overrides": {
+    "postcss": "^8.5.18",
+    "sharp": "^0.35.0"
+  },
   "dependencies": {
     "@pothos/core": "^4.13.1",
     "@supabase/ssr": "^0.8.0",
