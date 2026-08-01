@@ -16,12 +16,12 @@ interface TicketEmbedProps {
 
 /**
  * El talón 3D del handoff de diseño (three.js procedural, ver
- * public/tickets/README-ish en ticket-hierro.html/ticket-papel.html).
+ * ticket-hierro.html/ticket-papel.html en public/tickets/). three.js está
+ * auto-alojado en public/tickets/vendor/ (no unpkg): el CSP de la app
+ * (script-src 'self') bloqueaba silenciosamente el import map cuando
+ * apuntaba a unpkg.com, dejando el ticket vacío sin ningún error visible.
  * Vive como iframe same-origin a propósito: portarlo a un componente React
- * con three.js de npm es trabajo aparte (ver tarea de sistema de diseño);
- * como iframe ya funciona en la app real porque carga three.js desde unpkg
- * con conexión a internet — el bloqueo del handoff era solo para el export
- * HTML standalone offline, no para la app corriendo.
+ * con three.js de npm es trabajo aparte (ver tarea de sistema de diseño).
  */
 export function TicketEmbed({
   material = 'hierro',
