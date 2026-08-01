@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { AuthSessionMissingError } from '@supabase/supabase-js'
 
 const mockCreateClient = vi.fn()
 
@@ -43,5 +44,42 @@ describe('getCurrentUserId', () => {
     const id = await getCurrentUserId()
 
     expect(id).toBeNull()
+  })
+
+  it('does not log an error for the expected anonymous-visitor case (no session)', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockCreateClient.mockReturnValue(
+      Promise.resolve({
+        auth: {
+          getUser: () =>
+            Promise.resolve({ data: { user: null }, error: new AuthSessionMissingError() }),
+        },
+      })
+    )
+
+    const id = await getCurrentUserId()
+
+    expect(id).toBeNull()
+    expect(consoleError).not.toHaveBeenCalled()
+    consoleError.mockRestore()
+  })
+
+  it('logs a genuine auth error (not a missing session)', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const realError = { name: 'AuthApiError', __isAuthError: true, message: 'invalid token' }
+    mockCreateClient.mockReturnValue(
+      Promise.resolve({
+        auth: { getUser: () => Promise.resolve({ data: { user: null }, error: realError }) },
+      })
+    )
+
+    const id = await getCurrentUserId()
+
+    expect(id).toBeNull()
+    expect(consoleError).toHaveBeenCalledWith(
+      'supabase.auth.getUser() failed in getCurrentUserId:',
+      realError
+    )
+    consoleError.mockRestore()
   })
 })

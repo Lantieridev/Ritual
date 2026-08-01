@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { isAuthSessionMissingError } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
@@ -30,7 +31,7 @@ export async function updateSession(request: NextRequest) {
     )
 
     const { data: { user }, error: getUserError } = await supabase.auth.getUser()
-    if (getUserError) {
+    if (getUserError && !isAuthSessionMissingError(getUserError)) {
         console.error('supabase.auth.getUser() failed in middleware:', getUserError)
     }
 

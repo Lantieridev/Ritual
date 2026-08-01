@@ -1,4 +1,5 @@
 import 'server-only'
+import { isAuthSessionMissingError } from '@supabase/supabase-js'
 import { createClient } from '@/src/core/lib/supabase/server'
 
 /**
@@ -10,7 +11,7 @@ export async function getCurrentUserId(): Promise<string | null> {
     const supabase = await createClient()
     try {
         const { data: { user }, error: getUserError } = await supabase.auth.getUser()
-        if (getUserError) {
+        if (getUserError && !isAuthSessionMissingError(getUserError)) {
             console.error('supabase.auth.getUser() failed in getCurrentUserId:', getUserError)
         }
         return user?.id ?? null

@@ -34,6 +34,7 @@ export const metadata: Metadata = {
   description: "Plataforma de gestión de recitales: itinerarios, giras y memoria en vivo.",
 };
 
+import { isAuthSessionMissingError } from "@supabase/supabase-js";
 import { createClient } from "@/src/core/lib/supabase/server";
 
 export default async function RootLayout({
@@ -43,7 +44,7 @@ export default async function RootLayout({
 }>) {
   const supabase = await createClient();
   const { data: { user }, error: getUserError } = await supabase.auth.getUser();
-  if (getUserError) {
+  if (getUserError && !isAuthSessionMissingError(getUserError)) {
     console.error("supabase.auth.getUser() failed in root layout:", getUserError);
   }
 
