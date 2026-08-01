@@ -11,9 +11,9 @@ function SubmitButton() {
         <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-md bg-white px-4 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-zinc-200 disabled:opacity-50"
+            className="w-full bg-ritual-red px-4 py-3 font-figure text-xl tracking-wide text-ritual-panel transition-colors hover:bg-ritual-red-hover disabled:opacity-50"
         >
-            {pending ? 'Creando cuenta...' : 'Registrarse'}
+            {pending ? 'Emitiendo…' : 'Emitir mi talonario'}
         </button>
     )
 }
@@ -23,25 +23,25 @@ export function SignupForm() {
 
     if (state?.success) {
         return (
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-6 text-center">
-                <h3 className="text-lg font-semibold text-emerald-400 mb-2">¡Cuenta creada!</h3>
-                <p className="text-sm text-zinc-300 mb-4">
+            <div className="border border-ritual-border bg-ritual-surface p-6 text-center">
+                <h3 className="font-display text-2xl uppercase text-ritual-bone mb-2">Talonario emitido</h3>
+                <p className="font-body text-sm text-ritual-gray-text mb-4">
                     Te enviamos un email de confirmación (si aplica) o ya podés ingresar.
                 </p>
                 <Link
                     href="/login"
-                    className="inline-block rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                    className="inline-block bg-ritual-red px-5 py-2.5 font-label text-[10px] tracking-[0.14em] uppercase text-ritual-panel hover:bg-ritual-red-hover"
                 >
-                    Ir al Login
+                    Ir a Ingresar
                 </Link>
             </div>
         )
     }
 
     return (
-        <form action={action} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-backwards">
-            <div className="space-y-2">
-                <label className="text-xs font-medium uppercase tracking-wider text-zinc-500" htmlFor="email">
+        <form action={action} className="space-y-5">
+            <div className="space-y-1.5">
+                <label className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid" htmlFor="email">
                     Email
                 </label>
                 <input
@@ -49,13 +49,14 @@ export function SignupForm() {
                     name="email"
                     type="email"
                     required
-                    className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20"
+                    autoComplete="email"
+                    className="w-full border-0 border-b border-ritual-border bg-transparent px-0 py-2 font-figure text-xl text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none"
                     placeholder="tu@email.com"
                 />
             </div>
 
-            <div className="space-y-2">
-                <label className="text-xs font-medium uppercase tracking-wider text-zinc-500" htmlFor="password">
+            <div className="space-y-1.5">
+                <label className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-mid" htmlFor="password">
                     Contraseña
                 </label>
                 <input
@@ -64,22 +65,23 @@ export function SignupForm() {
                     type="password"
                     required
                     minLength={6}
-                    className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20"
+                    autoComplete="new-password"
+                    className="w-full border-0 border-b border-ritual-border bg-transparent px-0 py-2 font-figure text-xl text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none"
                     placeholder="Mínimo 6 caracteres"
                 />
             </div>
 
             {state?.error && (
-                <p className="text-sm text-red-500 bg-red-500/10 p-2 rounded-md border border-red-500/20">
+                <p role="alert" className="font-body text-sm text-ritual-red bg-ritual-red/10 border border-ritual-red/20 p-3">
                     {state.error}
                 </p>
             )}
 
             <SubmitButton />
 
-            <div className="text-center text-sm text-zinc-500 pt-4">
-                ¿Ya tenés cuenta?{' '}
-                <Link href="/login" className="text-white hover:underline underline-offset-4">
+            <div className="text-center font-label text-xs text-ritual-gray-mid pt-4">
+                ¿Ya tenés talonario?{' '}
+                <Link href="/login" className="text-ritual-red hover:underline underline-offset-4">
                     Ingresá
                 </Link>
             </div>
