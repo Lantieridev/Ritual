@@ -2,16 +2,22 @@ import { createClient } from '@/src/core/lib/supabase/server'
 import type { ActionResult } from '@/src/core/types'
 import { MAX_GENRES, MIN_AGE_YEARS, MAX_AGE_YEARS } from './parseSignupTaste'
 import { importLastfmForUser } from './importLastfmForUser'
+import { syncCityCoordinates as syncCityCoordinatesData } from './syncCityCoordinates'
 import {
   listGenres as listGenresData,
   getTasteProfileRow,
   writeTasteProfile,
   setLastfmUsername,
   removeLastfmConnection,
+  getTasteProfile as getTasteProfileData,
+  getArtistImportance as getArtistImportanceData,
+  getArtistGenres as getArtistGenresData,
+  findRankingContext as findRankingContextData,
 } from './data'
-import type { GenreOption, TasteProfileRow } from './data'
+import type { GenreOption, TasteProfileRow, RankingContext } from './data'
+import type { ArtistImportance, TasteBasis, TasteProfile, TasteSourceId } from './types'
 
-export type { GenreOption, TasteProfileRow }
+export type { GenreOption, TasteProfileRow, RankingContext, ArtistImportance, TasteBasis, TasteProfile, TasteSourceId }
 
 /**
  * Use-case layer for the taste domain (ADR 0001) — same seam as
@@ -95,4 +101,42 @@ export async function disconnectLastfm(): Promise<ActionResult> {
   if (!user) return { error: 'No estás autenticado.' }
 
   return removeLastfmConnection(supabase, user.id)
+}
+
+/**
+ * The blended taste read model (issue #81 — `recommendations` needs it for
+ * the affinity factor, and ADR 0001 says it can only reach it through this
+ * seam, never `./data` directly).
+ */
+export async function getTasteProfile(userId: string, now?: Date): Promise<TasteProfile> {
+  return getTasteProfileData(userId, now)
+}
+
+/** Batched `artist_importance` read, for the peso/importance factor. */
+export async function getArtistImportance(artistIds: readonly string[]): Promise<Map<string, ArtistImportance>> {
+  return getArtistImportanceData(artistIds)
+}
+
+/** Batched `artist_genres` read, for the declared-genre affinity/reason match. */
+export async function getArtistGenres(artistIds: readonly string[]): Promise<Map<string, readonly string[]>> {
+  return getArtistGenresData(artistIds)
+}
+
+/** Declared genres + city coordinates for the ranking pure core (proximity + declared-genres basis). */
+export async function findRankingContext(userId: string): Promise<RankingContext | null> {
+  return findRankingContextData(userId)
+}
+
+/**
+ * Geocodes a saved city into `taste_profiles.city_lat/lng` — re-exported so
+ * `auth/service.ts`'s profile-save hook imports it from here instead of
+ * reaching into `./syncCityCoordinates` directly (ADR 0001; this closed a
+ * pre-existing violation).
+ */
+export async function syncCityCoordinates(
+  supabase: Parameters<typeof syncCityCoordinatesData>[0],
+  userId: string,
+  city: string
+): Promise<void> {
+  return syncCityCoordinatesData(supabase, userId, city)
 }

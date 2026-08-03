@@ -14,13 +14,13 @@ vi.mock('next/server', () => ({
   after: vi.fn(),
 }))
 
-vi.mock('@/src/domains/taste/syncCityCoordinates', () => ({
+vi.mock('@/src/domains/taste/service', () => ({
   syncCityCoordinates: vi.fn(),
 }))
 
 import { modifyProfile, assignUserRole, completeOnboarding } from '@/src/domains/auth/service'
 import { after } from 'next/server'
-import { syncCityCoordinates } from '@/src/domains/taste/syncCityCoordinates'
+import { syncCityCoordinates } from '@/src/domains/taste/service'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}

@@ -12,21 +12,44 @@ vi.mock('@/src/domains/taste/data', () => ({
   writeTasteProfile: vi.fn(),
   setLastfmUsername: vi.fn(),
   removeLastfmConnection: vi.fn(),
+  getTasteProfile: vi.fn(),
+  getArtistImportance: vi.fn(),
+  getArtistGenres: vi.fn(),
+  findRankingContext: vi.fn(),
 }))
 
 vi.mock('@/src/domains/taste/importLastfmForUser', () => ({
   importLastfmForUser: vi.fn(),
 }))
 
-import { updateTasteProfile, connectLastfm, disconnectLastfm, findTasteProfile } from '@/src/domains/taste/service'
+vi.mock('@/src/domains/taste/syncCityCoordinates', () => ({
+  syncCityCoordinates: vi.fn(),
+}))
+
+import {
+  updateTasteProfile,
+  connectLastfm,
+  disconnectLastfm,
+  findTasteProfile,
+  getTasteProfile,
+  getArtistImportance,
+  getArtistGenres,
+  findRankingContext,
+  syncCityCoordinates,
+} from '@/src/domains/taste/service'
 import {
   listGenres,
   getTasteProfileRow,
   writeTasteProfile,
   setLastfmUsername,
   removeLastfmConnection,
+  getTasteProfile as getTasteProfileData,
+  getArtistImportance as getArtistImportanceData,
+  getArtistGenres as getArtistGenresData,
+  findRankingContext as findRankingContextData,
 } from '@/src/domains/taste/data'
 import { importLastfmForUser } from '@/src/domains/taste/importLastfmForUser'
+import { syncCityCoordinates as syncCityCoordinatesData } from '@/src/domains/taste/syncCityCoordinates'
 
 function makeSupabase(user: { id: string } | null) {
   return { auth: { getUser: vi.fn(() => Promise.resolve({ data: { user } })) } }
@@ -177,5 +200,63 @@ describe('disconnectLastfm', () => {
 
     expect(removeLastfmConnection).toHaveBeenCalledWith(expect.anything(), 'u1')
     expect(result).toEqual({})
+  })
+})
+
+/**
+ * The recommendations domain must reach every taste read (and the
+ * profile-save geocoding hook) through this seam, never `./data` directly
+ * (ADR 0001) — these re-exports are what makes that possible.
+ */
+describe('taste/service re-exports for the recommendations domain (issue #81)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('re-exports getTasteProfile', async () => {
+    const profile = { artistAffinity: new Map(), genreAffinity: new Map(), realSignalCount: 0, hasAnySignal: false, basis: 'none' as const, sources: [] }
+    vi.mocked(getTasteProfileData).mockResolvedValue(profile)
+
+    const result = await getTasteProfile('u1')
+
+    expect(getTasteProfileData).toHaveBeenCalledWith('u1', undefined)
+    expect(result).toBe(profile)
+  })
+
+  it('re-exports getArtistImportance', async () => {
+    const map = new Map()
+    vi.mocked(getArtistImportanceData).mockResolvedValue(map)
+
+    const result = await getArtistImportance(['a1'])
+
+    expect(getArtistImportanceData).toHaveBeenCalledWith(['a1'])
+    expect(result).toBe(map)
+  })
+
+  it('re-exports getArtistGenres', async () => {
+    const map = new Map()
+    vi.mocked(getArtistGenresData).mockResolvedValue(map)
+
+    const result = await getArtistGenres(['a1'])
+
+    expect(getArtistGenresData).toHaveBeenCalledWith(['a1'])
+    expect(result).toBe(map)
+  })
+
+  it('re-exports findRankingContext', async () => {
+    const ctx = { declaredGenreKeys: ['rock'], cityCoords: null }
+    vi.mocked(findRankingContextData).mockResolvedValue(ctx)
+
+    const result = await findRankingContext('u1')
+
+    expect(findRankingContextData).toHaveBeenCalledWith('u1')
+    expect(result).toBe(ctx)
+  })
+
+  it('re-exports syncCityCoordinates — the seam auth/service.ts now imports through', async () => {
+    vi.mocked(syncCityCoordinatesData).mockResolvedValue(undefined)
+    const supabase = {} as never
+
+    await syncCityCoordinates(supabase, 'u1', 'La Plata')
+
+    expect(syncCityCoordinatesData).toHaveBeenCalledWith(supabase, 'u1', 'La Plata')
   })
 })

@@ -1,5 +1,7 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import { blendTasteProfile } from '@/src/domains/taste/blend'
+import { parseCoord } from '@/src/core/lib/geo'
+import type { LatLng } from '@/src/core/lib/geo'
 import type { ArtistImportance, TasteProfile, TasteSignal, TasteSource } from '@/src/domains/taste/types'
 import { profilePriorSource } from '@/src/domains/taste/adapters/profilePrior'
 import { attendanceSource } from '@/src/domains/taste/adapters/attendance'
@@ -31,19 +33,29 @@ export async function getTasteProfile(
   const supabase = await createClient()
   const settled = await Promise.allSettled(sources.map((source) => source.collect({ userId, supabase })))
   const signals = settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
-  const artistGenres = await loadArtistGenres(supabase, signals)
+  const artistGenres = await loadArtistGenres(signals)
   return blendTasteProfile(signals, { now, artistGenres })
 }
 
 /** Genres for every artist referenced by an artist-kind signal, so blend can split an artist's weight across them. */
-async function loadArtistGenres(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  signals: readonly TasteSignal[]
-): Promise<ReadonlyMap<string, readonly string[]>> {
+async function loadArtistGenres(signals: readonly TasteSignal[]): Promise<ReadonlyMap<string, readonly string[]>> {
   const artistIds = [...new Set(signals.filter((s) => s.kind === 'artist').map((s) => s.ref))]
+  return getArtistGenres(artistIds)
+}
+
+/**
+ * Public, batched read of `artist_genres` — change 2's ranking (`recommendations`
+ * domain) needs the same mapping `loadArtistGenres` already queries privately
+ * for the taste blend, so it's lifted here instead of duplicated.
+ */
+export async function getArtistGenres(artistIds: readonly string[]): Promise<Map<string, readonly string[]>> {
   if (artistIds.length === 0) return new Map()
 
-  const { data, error } = await supabase.from('artist_genres').select('artist_id, genre_key').in('artist_id', artistIds)
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('artist_genres')
+    .select('artist_id, genre_key')
+    .in('artist_id', artistIds as string[])
   if (error || !data) return new Map()
 
   const byArtist = new Map<string, string[]>()
@@ -53,6 +65,36 @@ async function loadArtistGenres(
     else byArtist.set(row.artist_id, [row.genre_key])
   }
   return byArtist
+}
+
+export interface RankingContext {
+  declaredGenreKeys: string[]
+  cityCoords: LatLng | null
+}
+
+/**
+ * One owner-RLS read of the fields the ranking pure core needs beyond
+ * `getTasteProfile`: the declared genre keys (for the declared-genres basis)
+ * and the city coordinates `syncCityCoordinates` already wrote (for the
+ * proximity factor) — no live geocoding here.
+ */
+export async function findRankingContext(userId: string): Promise<RankingContext | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('taste_profiles')
+    .select('favorite_genre_keys, city_lat, city_lng')
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !data) return null
+
+  const lat = parseCoord(data.city_lat, 'lat')
+  const lng = parseCoord(data.city_lng, 'lng')
+
+  return {
+    declaredGenreKeys: data.favorite_genre_keys ?? [],
+    cityCoords: lat !== null && lng !== null ? { lat, lng } : null,
+  }
 }
 
 /** Batched read of `artist_importance`, for change 2's ranking function. Empty ids never touch the DB. */

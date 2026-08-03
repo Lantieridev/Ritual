@@ -7,6 +7,7 @@
 import 'server-only'
 import { getTicketmasterApiKey } from '@/src/core/lib/env'
 import { fetchWithRetry, isTimeoutError } from '@/src/core/lib/http'
+import { parseCoord } from '@/src/core/lib/geo'
 import { FutureEvent } from '@/src/core/types'
 
 const BASE = 'https://app.ticketmaster.com/discovery/v2'
@@ -32,6 +33,9 @@ interface TicketmasterEventResponse {
                     name: string
                     city?: { name: string }
                     country?: { name: string }
+                    // Discovery v2 documents these as numbers, but real payloads have
+                    // been observed sending numeric strings — `parseCoord` accepts both.
+                    location?: { latitude?: unknown; longitude?: unknown }
                 }>
                 attractions?: Array<{ name: string }>
             }
@@ -126,6 +130,8 @@ export async function searchTicketmasterEvents(
                     name: venue?.name ?? 'Sede desconocida',
                     city: venue?.city?.name ?? null,
                     country: venue?.country?.name ?? null,
+                    lat: parseCoord(venue?.location?.latitude, 'lat'),
+                    lng: parseCoord(venue?.location?.longitude, 'lng'),
                 },
                 lineup: ev._embedded?.attractions?.map((a) => a.name) ?? [],
                 url: ev.url,

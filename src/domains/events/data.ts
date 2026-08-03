@@ -4,6 +4,8 @@ import { getCurrentUserId } from '@/src/core/auth/session'
 import { combineDateAndTime, todayDateOnly } from '@/src/core/lib/dates'
 import { pickShowTonight, type ShowTonight, type ShowTonightRow } from './show-tonight'
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
 const EVENTS_SELECT = `
   *,
   venues ( name, city, country ),
@@ -330,4 +332,56 @@ export async function getShowTonight(userId: string, now: Date = new Date()): Pr
   }
 
   return pickShowTonight((data ?? []) as unknown as ShowTonightRow[], now)
+}
+
+/**
+ * Home ranking strip candidates (issue #81): a narrow select, distinct from
+ * `EVENTS_SELECT`, because it's the only generic listing that needs venue
+ * lat/lng — for the proximity factor. `EVENTS_SELECT` stays as-is; adding
+ * lat/lng there would make every other listing pay for a field it never
+ * reads (payload economy).
+ */
+export const SUGGESTION_CANDIDATES_SELECT = `
+  id, name, date,
+  venues ( name, city, lat, lng ),
+  lineups ( artists ( id, name ) )
+`
+
+export interface SuggestionCandidateRow {
+  id: string
+  name: string
+  date: string
+  venues: { name: string; city: string | null; lat: unknown; lng: unknown } | null
+  lineups: Array<{ artists: { id: string; name: string } | null }>
+}
+
+/** Defensive cap, same spirit as MAX_EVENTS — the ranking strip only ever surfaces its top 6. */
+export const CANDIDATE_LIMIT = 100
+const CANDIDATE_WINDOW_DAYS = 90
+
+/**
+ * Catalog events 0–90 days out, from the start of today in Argentina time
+ * (same cutoff rule as getUpcomingEvents) — the ranking pure core excludes
+ * anything outside this window anyway, so the query keeps the payload small
+ * instead of relying on `rankSuggestions` to filter it client-side.
+ */
+export async function listSuggestionCandidates(now: Date = new Date()): Promise<SuggestionCandidateRow[]> {
+  const supabase = await createClient()
+  const start = combineDateAndTime(todayDateOnly(now), '00:00')
+  const cutoff = new Date(now.getTime() + CANDIDATE_WINDOW_DAYS * MS_PER_DAY)
+  const end = combineDateAndTime(todayDateOnly(cutoff), '00:00')
+
+  const { data, error } = await supabase
+    .from('events')
+    .select(SUGGESTION_CANDIDATES_SELECT)
+    .gte('date', start)
+    .lt('date', end)
+    .order('date', { ascending: true })
+    .limit(CANDIDATE_LIMIT)
+
+  if (error) {
+    console.error('Error buscando candidatos de sugerencias:', error)
+    return []
+  }
+  return (data ?? []) as unknown as SuggestionCandidateRow[]
 }

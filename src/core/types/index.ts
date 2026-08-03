@@ -270,6 +270,9 @@ export interface FutureEvent {
     name: string
     city?: string | null
     country?: string | null
+    /** Parsed via `parseCoord` (issue #81 — the ranking proximity factor); `null` when Ticketmaster didn't send a usable location. */
+    lat?: number | null
+    lng?: number | null
   }
   lineup: string[]
   url?: string

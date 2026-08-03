@@ -4,8 +4,8 @@ import { findOrCreateByName } from '@/src/core/lib/find-or-create'
 import { parseExternalDateTime } from '@/src/core/lib/dates'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, EventCreateInput, EventUpdateInput, FutureEvent, EventWithRelations } from '@/src/core/types'
-import { getEvents, getEventsWithAttendance, getEventById, getEventIdsForSitemap, getMyEvents, getUpcomingEvents, getUpcomingEventsInCity, getShowTonight } from './data'
-import type { EventWithAttendance } from './data'
+import { getEvents, getEventsWithAttendance, getEventById, getEventIdsForSitemap, getMyEvents, getUpcomingEvents, getUpcomingEventsInCity, getShowTonight, listSuggestionCandidates as loadSuggestionCandidates } from './data'
+import type { EventWithAttendance, SuggestionCandidateRow } from './data'
 import type { ShowTonight } from './show-tonight'
 import { getAttendanceForEvent, getAttendanceForEventsBatch } from './attendance-data'
 import type { EventAttendance } from './attendance-data'
@@ -17,7 +17,7 @@ import { getEventMessages, addEventMessage } from './messages-data'
 import type { EventMessage } from './messages-data'
 import { buildLineupRows } from './lineup-b2b'
 
-export type { EventWithRelations, EventWithAttendance, EventAttendance, AttendanceStatus, EventPhoto, EventMessage, ShowTonight }
+export type { EventWithRelations, EventWithAttendance, EventAttendance, AttendanceStatus, EventPhoto, EventMessage, ShowTonight, SuggestionCandidateRow }
 
 /**
  * Attendance y fotos de un evento puntual: mismos casos de uso, repartidos en
@@ -93,6 +93,11 @@ export async function listUpcomingEvents(limit?: number): Promise<EventWithRelat
 /** El show al que el usuario va esta noche (issue #82), para la banda de "Tu entrada de hoy". */
 export async function findShowTonight(userId: string, now?: Date): Promise<ShowTonight | null> {
   return getShowTonight(userId, now)
+}
+
+/** Catálogo 0-90 días para la franja de sugerencias del home (issue #81) — la única lista que trae lat/lng de sede. */
+export async function listSuggestionCandidates(now?: Date): Promise<SuggestionCandidateRow[]> {
+  return loadSuggestionCandidates(now)
 }
 
 const MAX_NAME_LENGTH = 200

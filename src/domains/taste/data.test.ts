@@ -15,6 +15,8 @@ import {
   listGenres,
   getTasteProfile,
   getArtistImportance,
+  getArtistGenres,
+  findRankingContext,
   getTasteProfileRow,
   writeTasteProfile,
   setLastfmUsername,
@@ -169,6 +171,87 @@ describe('getArtistImportance', () => {
 
     expect(mockCreateClient).not.toHaveBeenCalled()
     expect(result.size).toBe(0)
+  })
+})
+
+describe('getArtistGenres', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('reuses the same query loadArtistGenres runs internally, keyed by artist id', async () => {
+    mockCreateClient.mockReturnValue(
+      Promise.resolve(makeArtistGenresSupabase([
+        { artist_id: 'a1', genre_key: 'rock' },
+        { artist_id: 'a1', genre_key: 'indie' },
+        { artist_id: 'a2', genre_key: 'pop' },
+      ]))
+    )
+
+    const result = await getArtistGenres(['a1', 'a2'])
+
+    expect(result.get('a1')).toEqual(['rock', 'indie'])
+    expect(result.get('a2')).toEqual(['pop'])
+  })
+
+  it('short-circuits without a query when no artist ids are requested', async () => {
+    const result = await getArtistGenres([])
+
+    expect(mockCreateClient).not.toHaveBeenCalled()
+    expect(result.size).toBe(0)
+  })
+})
+
+describe('findRankingContext', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('reads the owner-RLS declared genres and city coordinates for the given user', async () => {
+    const builder: Record<string, unknown> = {}
+    builder.select = vi.fn(() => builder)
+    builder.eq = vi.fn(() => builder)
+    builder.single = vi.fn(() =>
+      Promise.resolve({
+        data: { favorite_genre_keys: ['rock'], city_lat: '-34.6', city_lng: -58.4 },
+        error: null,
+      })
+    )
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await findRankingContext('u1')
+
+    expect(fromMock).toHaveBeenCalledWith('taste_profiles')
+    expect(builder.select).toHaveBeenCalledWith('favorite_genre_keys, city_lat, city_lng')
+    expect(builder.eq).toHaveBeenCalledWith('user_id', 'u1')
+    expect(result).toEqual({ declaredGenreKeys: ['rock'], cityCoords: { lat: -34.6, lng: -58.4 } })
+  })
+
+  it('is null coordinates when the city has not been geocoded yet', async () => {
+    const builder: Record<string, unknown> = {}
+    builder.select = vi.fn(() => builder)
+    builder.eq = vi.fn(() => builder)
+    builder.single = vi.fn(() =>
+      Promise.resolve({ data: { favorite_genre_keys: [], city_lat: null, city_lng: null }, error: null })
+    )
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await findRankingContext('u1')
+
+    expect(result).toEqual({ declaredGenreKeys: [], cityCoords: null })
+  })
+
+  it('returns null when the row does not exist yet', async () => {
+    const builder: Record<string, unknown> = {}
+    builder.select = vi.fn(() => builder)
+    builder.eq = vi.fn(() => builder)
+    builder.single = vi.fn(() => Promise.resolve({ data: null, error: { message: 'no rows' } }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await findRankingContext('u1')
+
+    expect(result).toBeNull()
   })
 })
 

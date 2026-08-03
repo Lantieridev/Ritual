@@ -6,14 +6,15 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
-import { getUpcomingEvents } from '@/src/domains/events/data'
-import { listUpcomingEvents } from '@/src/domains/events/service'
+import { getUpcomingEvents, listSuggestionCandidates, SUGGESTION_CANDIDATES_SELECT, CANDIDATE_LIMIT } from '@/src/domains/events/data'
+import { listUpcomingEvents, listSuggestionCandidates as listSuggestionCandidatesService } from '@/src/domains/events/service'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
   const chain = () => builder
   builder.select = vi.fn(chain)
   builder.gte = vi.fn(chain)
+  builder.lt = vi.fn(chain)
   builder.order = vi.fn(chain)
   builder.limit = vi.fn(chain)
   builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
@@ -107,5 +108,63 @@ describe('listUpcomingEvents (service.ts wrapper)', () => {
 
     expect(builder.limit).toHaveBeenCalledWith(10)
     expect(result).toEqual(mockEvents)
+  })
+})
+
+describe('listSuggestionCandidates', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('queries events using the narrow SUGGESTION_CANDIDATES_SELECT, from today (AR) to +90d, ordered by date asc, capped at CANDIDATE_LIMIT', async () => {
+    const rows = [{ id: 'e1', name: 'Show A', date: '2026-09-15T20:00:00.000Z', venues: null, lineups: [] }]
+    const builder = makeQueryBuilder({ data: rows, error: null })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const now = new Date('2026-09-14T12:00:00.000Z')
+    const result = await listSuggestionCandidates(now)
+
+    expect(fromMock).toHaveBeenCalledWith('events')
+    expect(builder.select).toHaveBeenCalledWith(SUGGESTION_CANDIDATES_SELECT)
+    expect(builder.gte).toHaveBeenCalledWith('date', '2026-09-14T00:00:00-03:00')
+    expect(builder.lt).toHaveBeenCalledWith('date', '2026-12-13T00:00:00-03:00')
+    expect(builder.order).toHaveBeenCalledWith('date', { ascending: true })
+    expect(builder.limit).toHaveBeenCalledWith(CANDIDATE_LIMIT)
+    expect(CANDIDATE_LIMIT).toBe(100)
+    expect(result).toEqual(rows)
+  })
+
+  it('returns an empty array and logs error when the query fails', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const builder = makeQueryBuilder({ data: null, error: { message: 'boom' } })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await listSuggestionCandidates(new Date('2026-09-14T12:00:00.000Z'))
+
+    expect(result).toEqual([])
+    expect(consoleSpy).toHaveBeenCalled()
+    consoleSpy.mockRestore()
+  })
+
+  it('never touches the original EVENTS_SELECT shape (payload economy: no lat/lng on the generic listing)', () => {
+    expect(SUGGESTION_CANDIDATES_SELECT).toContain('lat')
+    expect(SUGGESTION_CANDIDATES_SELECT).toContain('lng')
+  })
+})
+
+describe('listSuggestionCandidates (service.ts wrapper)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('forwards the reference date to listSuggestionCandidates', async () => {
+    const rows = [{ id: 'e1', name: 'Show A', date: '2026-09-15', venues: null, lineups: [] }]
+    const builder = makeQueryBuilder({ data: rows, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await listSuggestionCandidatesService(new Date('2026-09-14T12:00:00.000Z'))
+
+    expect(result).toEqual(rows)
   })
 })

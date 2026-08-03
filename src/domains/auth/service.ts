@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
 import { sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { getProfile, getUsernamesByIdsBatch } from './data'
-import { syncCityCoordinates } from '@/src/domains/taste/syncCityCoordinates'
+import { syncCityCoordinates } from '@/src/domains/taste/service'
 import type { Profile } from '@/src/core/types'
 
 /**

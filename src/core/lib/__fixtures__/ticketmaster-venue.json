@@ -1,0 +1,31 @@
+{
+  "_embedded": {
+    "events": [
+      {
+        "id": "vvG1zZo8lu3_e",
+        "name": "Bandalos Chinos en Buenos Aires",
+        "url": "https://www.ticketmaster.com/event/vvG1zZo8lu3_e",
+        "dates": {
+          "start": {
+            "localDate": "2026-05-01",
+            "localTime": "21:00:00",
+            "dateTime": "2026-05-02T00:00:00Z"
+          }
+        },
+        "classifications": [{ "genre": { "name": "Rock" } }],
+        "_embedded": {
+          "venues": [
+            {
+              "name": "Movistar Arena",
+              "city": { "name": "Buenos Aires" },
+              "country": { "name": "Argentina" },
+              "location": { "longitude": "-58.435175", "latitude": "-34.601076" }
+            }
+          ],
+          "attractions": [{ "name": "Bandalos Chinos" }]
+        }
+      }
+    ]
+  },
+  "page": { "size": 20, "totalElements": 1, "totalPages": 1, "number": 0 }
+}

@@ -6,6 +6,7 @@ vi.mock('@/src/core/lib/env', () => ({
 
 import { isTicketmasterConfigured, searchTicketmasterEvents } from '@/src/core/lib/ticketmaster'
 import { getTicketmasterApiKey } from '@/src/core/lib/env'
+import realVenueResponse from '@/src/core/lib/__fixtures__/ticketmaster-venue.json'
 
 describe('isTicketmasterConfigured', () => {
   it('reflects whether an API key is set', () => {
@@ -84,7 +85,7 @@ describe('searchTicketmasterEvents', () => {
         id: 'tm-1',
         title: 'Bandalos Chinos en Buenos Aires',
         datetime: '2024-05-01T23:00:00Z',
-        venue: { name: 'Movistar Arena', city: 'Buenos Aires', country: 'Argentina' },
+        venue: { name: 'Movistar Arena', city: 'Buenos Aires', country: 'Argentina', lat: null, lng: null },
         lineup: ['Bandalos Chinos'],
         url: 'https://ticketmaster.com/tm-1',
         image: 'big.jpg',
@@ -169,6 +170,64 @@ describe('searchTicketmasterEvents', () => {
 
     expect(result.events[0].venue.name).toBe('Sede desconocida')
     expect(result.events[0].lineup).toEqual([])
+  })
+
+  it('parses the venue coordinates from a real captured Discovery v2 response (numeric strings)', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(realVenueResponse),
+    } as Response)
+
+    const result = await searchTicketmasterEvents({ keyword: 'Bandalos Chinos' })
+
+    expect(result.events[0].venue.lat).toBeCloseTo(-34.601076, 6)
+    expect(result.events[0].venue.lng).toBeCloseTo(-58.435175, 6)
+  })
+
+  it('is null coordinates when the venue has no location', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          _embedded: {
+            events: [{ id: 'tm-4', name: 'Sin location', dates: { start: { dateTime: '2024-05-01T20:00:00Z' } } }],
+          },
+          page: { size: 20, totalElements: 1, totalPages: 1, number: 0 },
+        }),
+    } as Response)
+
+    const result = await searchTicketmasterEvents({ keyword: 'x' })
+
+    expect(result.events[0].venue.lat).toBeNull()
+    expect(result.events[0].venue.lng).toBeNull()
+  })
+
+  it('is null coordinates when the location values are not parsable', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          _embedded: {
+            events: [
+              {
+                id: 'tm-5',
+                name: 'Location rota',
+                dates: { start: { dateTime: '2024-05-01T20:00:00Z' } },
+                _embedded: { venues: [{ name: 'X', location: { latitude: 'not-a-number', longitude: null } }] },
+              },
+            ],
+          },
+          page: { size: 20, totalElements: 1, totalPages: 1, number: 0 },
+        }),
+    } as Response)
+
+    const result = await searchTicketmasterEvents({ keyword: 'x' })
+
+    expect(result.events[0].venue.lat).toBeNull()
+    expect(result.events[0].venue.lng).toBeNull()
   })
 
   it('returns a specific error for an invalid API key (401/403)', async () => {
