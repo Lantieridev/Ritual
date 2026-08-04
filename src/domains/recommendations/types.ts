@@ -6,6 +6,7 @@
  */
 import type { LatLng } from '@/src/core/lib/geo'
 import type { ArtistImportance, TasteBasis, TasteProfile, TasteSourceId } from '@/src/domains/taste/types'
+import type { FutureEvent } from '@/src/core/types'
 
 export type StripMode = 'personal' | 'general'
 
@@ -65,4 +66,16 @@ export interface StripHeadingInput {
     city: string | null
     sources: readonly TasteSourceId[]
     declaredGenreLabels: readonly string[]
+}
+
+/** A wishlist artist, as `getHomeSuggestions` receives it — no more than id + name is needed for candidate assembly. */
+export interface WishlistArtist {
+    id: string
+    name: string
+}
+
+/** One Ticketmaster search result paired with the wishlist artist whose keyword produced it. */
+export interface TicketmasterMatch {
+    artist: WishlistArtist
+    event: FutureEvent
 }
