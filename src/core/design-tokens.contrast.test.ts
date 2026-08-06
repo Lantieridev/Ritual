@@ -351,7 +351,7 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
   {
     id: 'HHS-26',
     component: 'HomeHeroStates / FirstTimeHero',
-    element: 'Seed artist subtitle 1 "Para arrancar..."',
+    element: 'Seed note (tiered copy)',
     textToken: '--color-ritual-gray-mid',
     bgToken: '--color-ritual-bg',
     fontSize: '9px',
@@ -626,6 +626,78 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
     isBold: true,
     isLarge: true,
   },
+
+  // --- SuggestionsStrip.tsx (issue #81 — home ranking strip) ---
+  {
+    id: 'SGS-01',
+    component: 'SuggestionsStrip',
+    element: 'Heading title',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-bg',
+    fontSize: '28px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'SGS-02',
+    component: 'SuggestionsStrip',
+    element: 'Heading note',
+    textToken: '--color-ritual-gray-mid-2',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'SGS-03',
+    component: 'SuggestionsStrip',
+    element: 'Link "Ver todo"',
+    textToken: '--color-ritual-gray-text',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'SGS-04',
+    component: 'SuggestionsStrip',
+    element: 'Card date badge',
+    textToken: '--color-ritual-panel',
+    bgToken: '--color-ritual-red',
+    fontSize: '17px',
+    isBold: true,
+    isLarge: false,
+  },
+  {
+    id: 'SGS-05',
+    component: 'SuggestionsStrip',
+    element: 'Card headliner name',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-panel',
+    fontSize: '25px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'SGS-06',
+    component: 'SuggestionsStrip',
+    element: 'Card venue name',
+    textToken: '--color-ritual-gray-text',
+    bgToken: '--color-ritual-panel',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'SGS-07',
+    component: 'SuggestionsStrip',
+    element: 'Card reason line',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-panel',
+    fontSize: '12px',
+    isBold: false,
+    isLarge: false,
+  },
 ]
 
 describe('Design Tokens & Color Contrast (WCAG AA)', () => {
@@ -645,6 +717,7 @@ describe('Design Tokens & Color Contrast (WCAG AA)', () => {
   const DESIGN_DEBT_PAIR_IDS = new Set([
     'HHS-05', 'MAS-02', 'HHS-09', 'HHS-11', 'HHS-24', 'HHS-26', 'HHS-27', 'HHS-28', 'MTB-05', 'MTB-07',
     'HHT-04', 'HHT-06', 'HHT-08', // #78
+    'SGS-02', 'SGS-04', 'SGS-07', // #78 — home ranking strip note/badge/reason, same prototype colors
   ])
 
   it('every non-exempt text pair outside the known design debt meets WCAG AA', () => {

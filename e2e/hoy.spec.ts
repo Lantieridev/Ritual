@@ -12,7 +12,12 @@ const STATES = [
   // Sin sede/clima/"Lo último que viste" (#82) — misma pasada genérica de
   // overflow, targets ≥44px y clearance de footer, con la degradación honesta.
   'normal-sin-datos',
-  'show-today-sin-datos'
+  'show-today-sin-datos',
+  // Home ranking strip (#81) — personal con distancia, general (sin
+  // personalizar) y personal sin coordenadas resueltas todavía.
+  'strip-personal',
+  'strip-general',
+  'strip-sin-distancia'
 ];
 
 const DESKTOP_VIEWPORTS = [
@@ -144,6 +149,41 @@ test.describe('Hoy States Visual Tests', () => {
 
         await page.screenshot({ path: `test-results/screenshots/${state}-${viewport.width}x${viewport.height}-${testInfo.project.name}.png`, fullPage: true });
       }
+    });
+  }
+});
+
+/**
+ * Home ranking strip (#81) — list semantics, the mock's 228px mobile card
+ * width, and that a reason line actually renders. The generic pass above
+ * already covers overflow, 44px targets and font loading for these states.
+ */
+test.describe('Home Ranking Strip', () => {
+  const STRIP_STATES = ['strip-personal', 'strip-general', 'strip-sin-distancia'];
+
+  for (const state of STRIP_STATES) {
+    test(`strip semantics and mobile card width for ${state}`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      const response = await page.goto(`/dev/hoy/${state}`);
+      expect(response?.status()).toBe(200);
+      await page.waitForLoadState('load');
+
+      const list = page.getByRole('list').last();
+      await expect(list).toBeVisible();
+
+      const cards = list.getByRole('listitem');
+      await expect(cards.first()).toBeVisible();
+
+      const firstCardBox = await cards.first().boundingBox();
+      expect(firstCardBox?.width).toBe(228);
+
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(overflow).toBe(false);
+
+      const reasonText = await page.evaluate(() => document.querySelector('.text-ritual-red.italic')?.textContent);
+      expect(reasonText).toBeTruthy();
     });
   }
 });

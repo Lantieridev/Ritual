@@ -1,30 +1,43 @@
 import { notFound } from 'next/navigation'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
-import type { EventWithAttendance } from '@/src/domains/events/service'
+import { SuggestionsStrip } from '@/src/domains/recommendations/components/SuggestionsStrip'
 import type { HomeHeroState } from '@/src/domains/events/home-view'
+import {
+  mockEvent,
+  mockEventSinDatos,
+  STRIP_PERSONAL_HEADING,
+  STRIP_PERSONAL_CANDIDATES,
+  STRIP_GENERAL_HEADING,
+  STRIP_GENERAL_CANDIDATES,
+  STRIP_SIN_DISTANCIA_HEADING,
+  STRIP_SIN_DISTANCIA_CANDIDATES,
+} from './fixtures'
 
-const mockEvent: EventWithAttendance = {
-  id: 'e-123',
-  name: 'Mock Show',
-  date: new Date().toISOString(),
-  venue_id: 'v-123',
-  venues: { name: 'Mock Venue', city: 'Buenos Aires', country: 'Argentina' },
-  lineups: [{ artists: { id: 'a-1', name: 'Mock Artist', genre: 'Rock' }, b2b_group: null }],
-  attendance: [{ id: 'att-1', status: 'going', user_id: 'u-1', rating: null, review: null }]
-}
-
-// Fixture del hero mobile de Hoy sin dirección, clima ni "Lo último que
-// viste": prueba en mano y en e2e que esas secciones se omiten enteras en
-// vez de mostrar un placeholder inventado.
-const mockEventSinDatos: EventWithAttendance = {
-  ...mockEvent,
-  venues: { name: 'Mock Venue', city: 'Buenos Aires', country: 'Argentina' },
-}
+/**
+ * The three "strip-*" states (issue #81) preview `SuggestionsStrip` under a
+ * representative `HomeHero` — the same placement Unit 5 wires into the real
+ * home page, before that wiring lands.
+ */
+const STRIP_STATE_FIXTURES = {
+  'strip-personal': { heading: STRIP_PERSONAL_HEADING, candidates: STRIP_PERSONAL_CANDIDATES },
+  'strip-general': { heading: STRIP_GENERAL_HEADING, candidates: STRIP_GENERAL_CANDIDATES },
+  'strip-sin-distancia': { heading: STRIP_SIN_DISTANCIA_HEADING, candidates: STRIP_SIN_DISTANCIA_CANDIDATES },
+} as const
 
 export default async function DevHoyPage({ params }: { params: Promise<{ estado: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound()
 
   const { estado } = await params
+
+  if (estado in STRIP_STATE_FIXTURES) {
+    const { heading, candidates } = STRIP_STATE_FIXTURES[estado as keyof typeof STRIP_STATE_FIXTURES]
+    return (
+      <>
+        <HomeHero state={{ kind: 'normal', nextShow: mockEvent, daysUntil: 5 }} backgroundImage={null} />
+        <SuggestionsStrip heading={heading} candidates={candidates} />
+      </>
+    )
+  }
 
   let state: HomeHeroState
   switch (estado) {
