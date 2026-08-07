@@ -6,6 +6,7 @@ import { listMyEvents, listUpcomingEvents } from '@/src/domains/events/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { findProfile } from '@/src/domains/auth/service'
 import type { HomeHeroState } from '@/src/domains/events/home-view'
+import type { ReactNode } from 'react'
 
 /*
  * HomePage es un Server Component async con hijos async dentro de Suspense,
@@ -13,18 +14,20 @@ import type { HomeHeroState } from '@/src/domains/events/home-view'
  * para capturar el estado que recibe, y se renderiza el árbol devuelto para
  * mirar el resto de la página (la sección "Tu archivo").
  */
-const mockHomeHero = vi.fn((props: { state: HomeHeroState; recentSeen?: unknown[]; initialOpen?: boolean }) => (
-  <div data-testid="mock-home-hero">{props.state.kind}</div>
-))
+const mockHomeHero = vi.fn(
+  (props: { state: HomeHeroState; recentSeen?: unknown[]; initialOpen?: boolean; suggestions?: ReactNode }) => (
+    <div data-testid="mock-home-hero">{props.state.kind}</div>
+  )
+)
 
 vi.mock('@/src/domains/events/components/HomeHero', () => ({
-  HomeHero: (props: { state: HomeHeroState; recentSeen?: unknown[]; initialOpen?: boolean }) => mockHomeHero(props),
+  HomeHero: (props: { state: HomeHeroState; recentSeen?: unknown[]; initialOpen?: boolean; suggestions?: ReactNode }) =>
+    mockHomeHero(props),
 }))
 
 vi.mock('@/src/domains/events/service', () => ({
   listMyEvents: vi.fn(async () => []),
   listUpcomingEvents: vi.fn(async () => []),
-  listUpcomingEventsInCity: vi.fn(async () => []),
 }))
 
 vi.mock('@/src/core/auth/session', () => ({
@@ -226,5 +229,56 @@ describe('HomePage integration — home states', () => {
     render(element)
 
     expect(mockHomeHero).toHaveBeenCalledWith(expect.objectContaining({ initialOpen: false }))
+  })
+
+  it('(i) un usuario con sesión y un show próximo muestra el skeleton de la franja de sugerencias, propia y no bloqueante (#81)', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-123')
+    const upcomingShow = {
+      id: 'ev-up1',
+      name: 'Show Futuro 1',
+      date: '2026-09-20T21:00:00-03:00',
+      venue_id: 'v1',
+      venues: { name: 'Niceto', city: 'CABA', country: 'AR' },
+      lineups: [{ artists: { id: 'a1', name: 'Bandalos Chinos', genre: 'Indie' }, is_headliner: true }],
+      attendance: [{ id: 'att-1', status: 'going', user_id: 'user-123', rating: null, review: null }],
+    }
+    vi.mocked(listMyEvents).mockResolvedValue([upcomingShow] as never)
+
+    const element = await HomePage()
+    render(element)
+
+    expect(screen.getByRole('status', { name: /buscando shows para vos/i })).toBeInTheDocument()
+  })
+
+  it('(j) un usuario de primera vez no recibe ninguna franja de sugerencias', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-123')
+    vi.mocked(listMyEvents).mockResolvedValue([])
+
+    const element = await HomePage()
+    render(element)
+
+    expect(screen.queryByRole('status', { name: /buscando shows para vos/i })).toBeNull()
+  })
+
+  it('(k) sin sesión, HomeHero recibe la franja de sugerencias como ReactNode ya armado, nunca como una Promise (JD-006)', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const upcomingShow1 = {
+      id: 'ev-up1',
+      name: 'Show Futuro 1',
+      date: '2026-09-20T21:00:00-03:00',
+      venue_id: 'v1',
+      venues: { name: 'Niceto', city: 'CABA', country: 'AR' },
+      lineups: [{ artists: { id: 'a1', name: 'Bandalos Chinos', genre: 'Indie' }, is_headliner: true }],
+    }
+    vi.mocked(listUpcomingEvents).mockResolvedValue([upcomingShow1] as never)
+
+    const element = await HomePage()
+    render(element)
+
+    const guestCall = mockHomeHero.mock.calls.find(([props]) => props.state.kind === 'guest')
+    expect(guestCall).toBeTruthy()
+    const [props] = guestCall!
+    expect(props.suggestions).toBeTruthy()
+    expect(props.suggestions instanceof Promise).toBe(false)
   })
 })

@@ -328,7 +328,16 @@ export function FirstTimeHero() {
 }
 
 /** Sin sesión: misma maqueta, fuente de datos del catálogo, sin fingir personalización. */
-export function GuestHero({ event, image }: { event: EventWithRelations | undefined; image: string | null }) {
+export function GuestHero({
+  event,
+  image,
+  suggestions,
+}: {
+  event: EventWithRelations | undefined
+  image: string | null
+  /** La franja de sugerencias (issue #81), ya resuelta como elemento — ver JD-006 en HomeHero.tsx. */
+  suggestions?: ReactNode
+}) {
   const place = event ? [event.venues?.name, event.venues?.city].filter(Boolean).join(' · ') : ''
 
   return (
@@ -367,6 +376,8 @@ export function GuestHero({ event, image }: { event: EventWithRelations | undefi
           <MobileHomeHeader guest inFlow />
         </section>
       )}
+
+      {suggestions}
 
       <div className="mx-5 mt-6 border-2 border-dashed border-ritual-mobile-dashed px-4 py-[18px] md:mx-10 md:max-w-xl">
         <p className="font-display text-[26px] leading-[0.94] uppercase text-ritual-bone">

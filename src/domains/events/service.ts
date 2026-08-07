@@ -4,7 +4,7 @@ import { findOrCreateByName } from '@/src/core/lib/find-or-create'
 import { parseExternalDateTime } from '@/src/core/lib/dates'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, EventCreateInput, EventUpdateInput, FutureEvent, EventWithRelations } from '@/src/core/types'
-import { getEvents, getEventsWithAttendance, getEventById, getEventIdsForSitemap, getMyEvents, getUpcomingEvents, getUpcomingEventsInCity, getShowTonight, listSuggestionCandidates as loadSuggestionCandidates } from './data'
+import { getEvents, getEventsWithAttendance, getEventById, getEventIdsForSitemap, getMyEvents, getUpcomingEvents, getShowTonight, listSuggestionCandidates as loadSuggestionCandidates } from './data'
 import type { EventWithAttendance, SuggestionCandidateRow } from './data'
 import type { ShowTonight } from './show-tonight'
 import { getAttendanceForEvent, getAttendanceForEventsBatch } from './attendance-data'
@@ -78,11 +78,6 @@ export async function listEventIdsForSitemap(): Promise<Array<{ id: string; date
 /** Eventos del usuario actual (attendance propia), para Home y Wrapped. */
 export async function listMyEvents(): Promise<EventWithAttendance[]> {
   return getMyEvents()
-}
-
-/** Shows futuros del catálogo cuya sede está en `city` (issue #55). */
-export async function listUpcomingEventsInCity(city: string): Promise<EventWithRelations[]> {
-  return getUpcomingEventsInCity(city)
 }
 
 /** Próximos shows del catálogo entero, del más cercano en adelante — Home sin sesión. */

@@ -234,6 +234,29 @@ describe('HomeHero — sin sesión', () => {
     expect(screen.getByText(/colección vacía/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Entrar' })).toBeInTheDocument()
   })
+
+  it('con un show, la franja de sugerencias (issue #81) queda entre la foto del hero y "colección vacía"', () => {
+    render(
+      <HomeHero
+        state={{ kind: 'guest', event }}
+        backgroundImage={null}
+        suggestions={<div data-testid="stub-suggestions">STUB</div>}
+      />
+    )
+
+    const heading = screen.getByRole('heading', { level: 1 })
+    const stub = screen.getByTestId('stub-suggestions')
+    const card = screen.getByText(/colección vacía/i)
+
+    expect(heading.compareDocumentPosition(stub) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(stub.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('sin `suggestions`, no agrega nada entre la foto y "colección vacía" (slot opcional)', () => {
+    render(<HomeHero state={{ kind: 'guest', event }} backgroundImage={null} />)
+
+    expect(screen.queryByTestId('stub-suggestions')).not.toBeInTheDocument()
+  })
 })
 
 describe('HomeHero — mobile (#82)', () => {

@@ -1,7 +1,8 @@
 import * as React from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { listMyEvents, listUpcomingEvents, listUpcomingEventsInCity } from '@/src/domains/events/service'
+import { listMyEvents, listUpcomingEvents } from '@/src/domains/events/service'
+import type { EventWithAttendance } from '@/src/domains/events/service'
 import { buildHomeFeed, buildHomeHeroState, heroEventOf, pickRecentSeen, resolveInitialOpen } from '@/src/domains/events/home-view'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
 import { getHeroVenueDetails } from '@/src/domains/events/hero-details'
@@ -10,26 +11,17 @@ import { getClient } from '@/src/graphql/client'
 import type { GraphQLArtist, GraphQLFestival } from '@/src/core/types'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
-import { formatDate } from '@/src/core/lib/utils'
 import { StarRating } from '@/src/core/components/ui'
-import {
-  isTicketmasterConfigured,
-  searchTicketmasterEvents,
-} from '@/src/core/lib/ticketmaster'
 import { getArtistImage } from '@/src/core/lib/artist-image'
-import type { FutureEvent } from '@/src/core/types'
 import { findProfile } from '@/src/domains/auth/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
+import { getHomeSuggestions } from '@/src/domains/recommendations/service'
+import { formatReason } from '@/src/domains/recommendations/reasons'
+import { SuggestionsStrip, SuggestionsStripSkeleton } from '@/src/domains/recommendations/components/SuggestionsStrip'
 
 export const metadata: Metadata = {
   title: 'RITUAL — Tu historial de recitales',
   description: 'Registrá, recordá y revivé cada show que fuiste. Tu archivo musical personal.',
-}
-
-interface NearbyCard {
-  artistName: string
-  event: FutureEvent
-  image: string | null
 }
 
 const HomePageQuery = gql`
@@ -73,162 +65,44 @@ function toHeroFestival(festival: HomeFestival) {
 }
 
 /**
- * "Cerca tuyo": shows futuros de tus artistas en wishlist, vía Ticketmaster.
- * Acotado a los primeros 6 artistas de la wishlist para no disparar
- * demasiadas llamadas externas en cada carga de Home — si la wishlist crece
- * mucho esto conviene moverlo a un fetch client-side diferido.
+ * La franja de sugerencias del home (issue #81) — reemplaza "Cerca tuyo" y
+ * "En tu ciudad" por un único `getHomeSuggestions`, que ya cruza catálogo +
+ * Ticketmaster contra el gusto y la ubicación de quien mira. Vive en su
+ * propio Suspense (JD-006): nunca bloquea el resto de Home. `heading` le
+ * llega a `getHomeSuggestions` sin `city` (esa parte no la conoce el
+ * dominio de recomendaciones); acá se completa con `profile.location` antes
+ * de pasarla a `SuggestionsStrip`, que es quien arma el título/nota finales
+ * vía `stripHeading()`.
  */
-async function getNearbyShows(
+async function SuggestionsSection({
+  userId,
+  wishlistArtists,
+  allEvents,
+  city,
+  now,
+}: {
+  userId: string | null
   wishlistArtists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
-): Promise<NearbyCard[]> {
-  if (!isTicketmasterConfigured()) return []
-  if (wishlistArtists.length === 0) return []
-
-  // La query ya devuelve los artistas de la wishlist con su nombre. Antes se
-  // pedían los ids por un lado y el catálogo COMPLETO de artistas por otro,
-  // sólo para cruzarlos en memoria y quedarse con seis.
-  const artists = wishlistArtists.slice(0, 6)
-
-  const results = await Promise.allSettled(
-    artists.map(async (artist) => {
-      const { events } = await searchTicketmasterEvents({ keyword: artist.name })
-      return events.slice(0, 2).map((event) => ({ artistName: artist.name, event }))
-    })
-  )
-
-  const candidates = results
-    .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
-    .sort((a, b) => new Date(a.event.datetime).getTime() - new Date(b.event.datetime).getTime())
-    .slice(0, 4)
-
-  const withImages = await Promise.all(
-    candidates.map(async (c) => {
-      const { image } = await getArtistImage(c.artistName)
-      return { ...c, image }
-    })
-  )
-
-  return withImages
-}
-
-async function NearbyShowsWrapper({ wishlistArtists }: { wishlistArtists: Array<Pick<GraphQLArtist, 'id' | 'name'>> }) {
-  const nearbyShows = await getNearbyShows(wishlistArtists)
-  if (nearbyShows.length === 0) return null
+  allEvents: EventWithAttendance[]
+  city: string | null
+  now: Date
+}) {
+  const { heading, candidates } = await getHomeSuggestions(userId, wishlistArtists, allEvents, now)
+  if (candidates.length === 0) return null
 
   return (
-        <section className="min-h-screen snap-start flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-bg">
-          <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
-            <div>
-              <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">
-                Cerca tuyo · próximos 90 días
-              </p>
-              <h2 className="font-display text-[7vh] leading-[0.9] uppercase text-ritual-bone mt-2">
-                Los que no<br />te perderías
-              </h2>
-            </div>
-            <p className="font-body italic text-ritual-gray-text max-w-xs text-right">
-              Elegidos de tu wishlist.
-            </p>
-          </div>
-          <div className="flex gap-3 h-[52vh] overflow-x-auto">
-            {nearbyShows.map(({ artistName, event, image }, i) => (
-              <Link
-                key={`${event.id || event.title}-${i}`}
-                href={routes.events.new}
-                className="group relative shrink-0 basis-64 hover:basis-96 transition-[flex-basis] duration-500 overflow-hidden bg-ritual-surface"
-              >
-                <div className="absolute inset-0 ritual-photo-fallback" />
-                {image && (
-                  <div
-                    className="absolute inset-0 ritual-photo ritual-photo-bg"
-                    style={{ backgroundImage: `url(${image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg via-transparent to-transparent" />
-                <div className="relative flex flex-col justify-end h-full p-4">
-                  <p className="font-display text-3xl leading-[0.88] uppercase text-ritual-bone">{artistName}</p>
-                  <p className="font-subtitle font-bold text-sm uppercase text-ritual-gray-light-3 mt-1">
-                    {event.venue.name}
-                  </p>
-                  <p className="font-label text-[10px] text-ritual-gray-light-2 mt-1">
-                    {formatDate(event.datetime, { day: 'numeric', month: 'short' })}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-  )
-}
-
-/**
- * "En tu ciudad": geografía real contra `venues.city`, distinto de "Cerca
- * tuyo" (arriba) que es wishlist vía Ticketmaster sin nada geográfico pese
- * al nombre — issue #55. Sin fetch de imagen por card a propósito: son
- * shows que ya están en el catálogo local, no candidatos externos que haga
- * falta ilustrar uno por uno.
- */
-async function CityShowsWrapper({ city }: { city: string | undefined }) {
-  if (!city) return null
-  const events = await listUpcomingEventsInCity(city)
-  if (events.length === 0) return null
-
-  // Mismo tratamiento visual que "Cerca tuyo" (foto + degradado, carrusel que
-  // se ensancha al pasar el mouse) — son shows reales del catálogo, no menos
-  // dignos de una foto que los candidatos de wishlist de la sección de arriba.
-  const withImages = await Promise.all(
-    events.map(async (ev) => {
-      const headliner = ev.lineups?.[0]?.artists.name ?? ev.name ?? 'Recital'
-      const { image } = await getArtistImage(headliner)
-      return { ev, headliner, image }
-    })
-  )
-
-  return (
-    <section className="min-h-screen snap-start flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-panel">
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
-        <div>
-          <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">
-            En tu ciudad
-          </p>
-          <h2 className="font-display text-[7vh] leading-[0.9] uppercase text-ritual-bone mt-2">
-            Se viene<br />cerca tuyo
-          </h2>
-        </div>
-        <p className="font-body italic text-ritual-gray-text max-w-xs text-right">
-          Shows del catálogo en {city}.
-        </p>
-      </div>
-      <div className="flex gap-3 h-[52vh] overflow-x-auto">
-        {withImages.map(({ ev, headliner, image }) => (
-          <Link
-            key={ev.id}
-            href={routes.events.detail(ev.id)}
-            className="group relative shrink-0 basis-64 hover:basis-96 transition-[flex-basis] duration-500 overflow-hidden bg-ritual-surface"
-          >
-            <div className="absolute inset-0 ritual-photo-fallback" />
-            {image && (
-              <div
-                className="absolute inset-0 ritual-photo ritual-photo-bg motion-safe:transition-transform motion-safe:duration-700 group-hover:scale-105"
-                style={{ backgroundImage: `url(${image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg via-transparent to-transparent" />
-            <div className="relative flex flex-col justify-end h-full p-4">
-              <p className="font-display text-3xl leading-[0.88] uppercase text-ritual-bone">{headliner}</p>
-              {ev.venues && (
-                <p className="font-subtitle font-bold text-sm uppercase text-ritual-gray-light-3 mt-1">
-                  {ev.venues.name}
-                </p>
-              )}
-              <p className="font-label text-[10px] text-ritual-gray-light-2 mt-1">
-                {formatDate(ev.date, { day: 'numeric', month: 'short' })}
-              </p>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </section>
+    <SuggestionsStrip
+      heading={{ ...heading, city }}
+      candidates={candidates.map((candidate) => ({
+        key: candidate.key,
+        href: candidate.href,
+        headliner: candidate.headliner,
+        venueName: candidate.venueName,
+        startsAt: candidate.startsAt,
+        reason: formatReason(candidate.reason, candidate.distanceKm),
+        image: candidate.image,
+      }))}
+    />
   )
 }
 
@@ -303,25 +177,43 @@ export default async function HomePage({ searchParams }: HomePageProps = {}) {
   const hasArchive = byYear && years.length > 0
   const archiveCount = allEvents.filter((e) => e.attendance?.[0]?.status === 'went').length
 
+  // Primera vez no lleva franja de sugerencias (mock hoyVacio): no hay nada
+  // propio todavía sobre lo cual afinar, y la seguridad de la semilla fija
+  // vive aparte, en FirstTimeHero. Sin sesión la consume el propio GuestHero
+  // (JD-006, ver más abajo); el resto de los estados la renderiza la página
+  // como sección aparte, justo después del hero.
+  const suggestionsElement =
+    heroState.kind === 'first-time' ? null : (
+      <React.Suspense fallback={<SuggestionsStripSkeleton />}>
+        <SuggestionsSection
+          userId={userId}
+          wishlistArtists={data?.wishlistArtists ?? []}
+          allEvents={allEvents}
+          city={profile?.location ?? null}
+          now={now}
+        />
+      </React.Suspense>
+    )
+  const isGuest = heroState.kind === 'guest'
+
   return (
     <>
-      <React.Suspense fallback={<HomeHero state={heroState} backgroundImage={null} />}>
+      <React.Suspense
+        fallback={
+          <HomeHero state={heroState} backgroundImage={null} suggestions={isGuest ? suggestionsElement : undefined} />
+        }
+      >
         <HomeHero
           state={heroState}
           backgroundImage={heroImagePromise}
           details={heroDetails}
           recentSeen={recentSeen}
           initialOpen={initialOpen}
+          suggestions={isGuest ? suggestionsElement : undefined}
         />
       </React.Suspense>
 
-      <React.Suspense fallback={<div className="min-h-screen bg-ritual-bg animate-pulse flex items-center justify-center"><p className="text-ritual-gray-text font-label uppercase">Buscando shows cerca tuyo...</p></div>}>
-        <NearbyShowsWrapper wishlistArtists={data?.wishlistArtists ?? []} />
-      </React.Suspense>
-
-      <React.Suspense fallback={null}>
-        <CityShowsWrapper city={profile?.location ?? undefined} />
-      </React.Suspense>
+      {!isGuest && suggestionsElement}
 
       {upcomingFestivals.length > 0 && (
         <section className="min-h-screen snap-start flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-panel">

@@ -231,56 +231,8 @@ export async function getMyEvents(): Promise<EventWithAttendance[]> {
 const NEARBY_LIMIT = 6
 
 /**
- * Shows futuros del catálogo compartido cuya sede está en `city` — issue #55.
- * Distinto de "Cerca tuyo" (wishlist vía Ticketmaster, sin nada geográfico
- * real pese al nombre): esto es geografía real contra `venues.city`, sin
- * mirar wishlist ni attendance.
- *
- * Dos consultas en vez de un filtro anidado (`.eq('venues.city', city)`
- * sobre un join): más predecible que depender de que Supabase-js resuelva
- * bien un filtro sobre una tabla embebida, y esta ruta no es hot-path.
- *
- * Match exacto (case-insensitive), no normalizado — el propio issue #55 lo
- * deja anotado como decisión de diseño aparte, no bloqueante para una
- * primera versión: "CABA" en el perfil no matchea "Buenos Aires" en venues.
- */
-export async function getUpcomingEventsInCity(city: string, now: Date = new Date()): Promise<EventWithRelations[]> {
-  const trimmed = city.trim()
-  if (!trimmed) return []
-
-  const supabase = await createClient()
-
-  const { data: venueRows, error: venueError } = await supabase
-    .from('venues')
-    .select('id')
-    .ilike('city', trimmed)
-
-  if (venueError) {
-    console.error('Error buscando sedes por ciudad:', venueError)
-    return []
-  }
-  const venueIds = (venueRows ?? []).map((v) => v.id as string)
-  if (venueIds.length === 0) return []
-
-  const { data, error } = await supabase
-    .from('events')
-    .select(EVENTS_SELECT)
-    .in('venue_id', venueIds)
-    .gte('date', now.toISOString())
-    .order('date', { ascending: true })
-    .limit(NEARBY_LIMIT)
-
-  if (error) {
-    console.error('Error buscando shows por ciudad:', error)
-    return []
-  }
-  return (data ?? []) as unknown as EventWithRelations[]
-}
-
-/**
  * Próximos shows del catálogo entero, del más cercano en adelante. Es lo que
- * ve en Home un visitante sin sesión: no hay ciudad ni gustos para afinar
- * (con ciudad, ver getUpcomingEventsInCity arriba).
+ * ve en Home un visitante sin sesión: no hay ciudad ni gustos para afinar.
  *
  * Corta desde el comienzo de hoy en hora argentina, no desde este instante:
  * para la app un show de hoy sigue siendo próximo aunque ya haya empezado
@@ -309,8 +261,9 @@ export async function getUpcomingEvents(limit: number = NEARBY_LIMIT, now: Date 
  * "Tu entrada de hoy" del layout raíz. Consulta "attendance-first": acotada
  * a las propias filas 'going' del usuario (tabla chica) en vez de partir del
  * catálogo entero de eventos — un filtro de fecha en SQL sobre el embed
- * necesitaría `!inner`, que el repo evita (ver getUpcomingEventsInCity más
- * arriba); `pickShowTonight` filtra el día calendario en Argentina (R1-003).
+ * necesitaría `!inner`, que el repo evita (un filtro anidado sobre una tabla
+ * embebida es menos predecible que resolverlo en dos pasos cuando hace
+ * falta); `pickShowTonight` filtra el día calendario en Argentina (R1-003).
  */
 export async function getShowTonight(userId: string, now: Date = new Date()): Promise<ShowTonight | null> {
   const supabase = await createClient()

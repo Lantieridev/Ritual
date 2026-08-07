@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, use } from 'react'
+import { useCallback, useState, use, type ReactNode } from 'react'
 import Link from 'next/link'
 import { TicketEmbed } from '@/src/core/components/ui'
 import { MobileHeroAction } from '@/src/core/components/layout/MobileAction'
@@ -27,6 +27,14 @@ interface HomeHeroProps {
   initialOpen?: boolean
   /** Dirección y clima del hero mobile (#82/#8) — Promise-aware: `TonightMobileHero` la resuelve en su propio Suspense, nunca bloquea el resto del hero (R1-008). */
   details?: Promise<HeroVenueDetails> | HeroVenueDetails | null
+  /**
+   * La franja de sugerencias (issue #81), ya resuelta como `ReactNode` por
+   * quien llama — nunca una Promise (JD-006): `getHomeSuggestions` hace I/O
+   * server-only, así que la envuelve su propio Suspense en `app/page.tsx` y
+   * acá sólo se la ubica. Sólo `GuestHero` la usa; en el resto de los
+   * estados la página la renderiza aparte, después del hero.
+   */
+  suggestions?: ReactNode
 }
 
 /**
@@ -83,6 +91,7 @@ export function HomeHero({
   recentSeen = [],
   initialOpen = false,
   details = null,
+  suggestions,
 }: HomeHeroProps) {
   const resolvedBg = backgroundImage instanceof Promise ? use(backgroundImage) : backgroundImage
   const [open, setOpen] = useState(initialOpen)
@@ -121,7 +130,7 @@ export function HomeHero({
   if (state.kind === 'morning-after') return <MorningAfterHero event={state.event} image={resolvedBg} />
   if (state.kind === 'past-only') return <PastOnlyHero event={state.event} yearsAgo={state.yearsAgo} image={resolvedBg} />
   if (state.kind === 'first-time') return <FirstTimeHero />
-  if (state.kind === 'guest') return <GuestHero event={state.event} image={resolvedBg} />
+  if (state.kind === 'guest') return <GuestHero event={state.event} image={resolvedBg} suggestions={suggestions} />
 
   const event = state.kind === 'show-today' ? state.event : state.nextShow
   const artists = event.lineups?.map((l) => l.artists.name) ?? []
