@@ -75,34 +75,26 @@ function buildQuery(venue: { name: string; address?: string | null; city?: strin
 }
 
 /**
- * Coordenadas de una sede. Nunca tira: ante timeout, error de red o respuesta
- * inesperada devuelve `{ lat: null, lng: null, error }`, igual que el resto de
- * los clientes externos — ver el ADR 0003. Quien llama decide si guarda la
- * sede sin coordenadas (que es lo que corresponde: la sede vale igual).
+ * Núcleo compartido de una búsqueda Nominatim: arma la consulta con el
+ * User-Agent y el timeout requeridos, y devuelve el primer resultado o
+ * `NONE`/un error — nunca tira. Extraído de `geocodeVenue` para que
+ * `geocodeCity` (taste_profiles.city) reuse la misma lógica de red en vez de
+ * reimplementarla con otro texto de query.
  */
-export async function geocodeVenue(
-    venue: {
-        name: string
-        address?: string | null
-        city?: string | null
-        country?: string | null
-    },
-    timeoutMs: number = TIMEOUT_INTERACTIVO_MS
+async function searchOne(
+    query: string,
+    options: { timeoutMs: number; countryCode?: string }
 ): Promise<GeocodeResult> {
-    const q = buildQuery(venue)
-    if (!q) return NONE
+    if (!query) return NONE
 
-    const params = new URLSearchParams({ q, format: 'json', limit: '1' })
-    // Acotar por país cuando se conoce evita que "Luna Park" resuelva al de
-    // otro continente. Nominatim espera el código ISO en minúscula.
-    const cc = venue.country?.trim().toLowerCase()
-    if (cc && cc.length === 2) params.set('countrycodes', cc)
+    const params = new URLSearchParams({ q: query, format: 'json', limit: '1' })
+    if (options.countryCode) params.set('countrycodes', options.countryCode)
 
     try {
         const res = await fetchWithTimeout(
             `${BASE}/search?${params.toString()}`,
             { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } },
-            timeoutMs
+            options.timeoutMs
         )
         if (!res.ok) {
             return { ...NONE, error: `Nominatim respondió con error ${res.status}.` }
@@ -125,4 +117,39 @@ export async function geocodeVenue(
         console.error('Error consultando Nominatim:', e)
         return { ...NONE, error: 'Error al conectar con Nominatim.' }
     }
+}
+
+/**
+ * Coordenadas de una sede. Nunca tira: ante timeout, error de red o respuesta
+ * inesperada devuelve `{ lat: null, lng: null, error }`, igual que el resto de
+ * los clientes externos — ver el ADR 0003. Quien llama decide si guarda la
+ * sede sin coordenadas (que es lo que corresponde: la sede vale igual).
+ */
+export async function geocodeVenue(
+    venue: {
+        name: string
+        address?: string | null
+        city?: string | null
+        country?: string | null
+    },
+    timeoutMs: number = TIMEOUT_INTERACTIVO_MS
+): Promise<GeocodeResult> {
+    const q = buildQuery(venue)
+    // Acotar por país cuando se conoce evita que "Luna Park" resuelva al de
+    // otro continente. Nominatim espera el código ISO en minúscula.
+    const cc = venue.country?.trim().toLowerCase()
+    return searchOne(q, { timeoutMs, countryCode: cc && cc.length === 2 ? cc : undefined })
+}
+
+/**
+ * Coordenadas de una ciudad en texto libre (taste_profiles.city). Mismo
+ * contrato de degradación que geocodeVenue: nunca tira, así que `after()`
+ * después de guardar el perfil y el backfill diario del cron pueden
+ * llamarla sin try/catch — una ciudad sin coordenadas se reintenta después.
+ */
+export async function geocodeCity(
+    text: string,
+    timeoutMs: number = TIMEOUT_INTERACTIVO_MS
+): Promise<GeocodeResult> {
+    return searchOne(text.trim(), { timeoutMs })
 }

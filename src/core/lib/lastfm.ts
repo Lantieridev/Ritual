@@ -8,7 +8,8 @@ import 'server-only'
 import { getLastFmApiKey } from '@/src/core/lib/env'
 import { fetchWithTimeout, isTimeoutError } from '@/src/core/lib/http'
 
-const BASE = 'https://ws.audioscrobbler.com/2.0'
+/** Shared with `src/domains/taste/clients/lastfm.ts` — one Last.fm base URL. */
+export const BASE = 'https://ws.audioscrobbler.com/2.0'
 
 export interface LastFmImage {
     '#text': string
