@@ -4,6 +4,8 @@ import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import Link from 'next/link'
 import { signup } from '@/src/core/auth/actions'
+import { GenrePicker } from '@/src/domains/taste/components/GenrePicker'
+import type { GenreOption } from '@/src/domains/taste/data'
 
 function SubmitButton() {
     const { pending } = useFormStatus()
@@ -18,7 +20,12 @@ function SubmitButton() {
     )
 }
 
-export function SignupForm() {
+export interface SignupFormProps {
+    /** Vocabulario canónico de géneros (query `genres`), para el picker — vacío si el catálogo no resolvió. */
+    genres?: readonly GenreOption[]
+}
+
+export function SignupForm({ genres = [] }: SignupFormProps) {
     const [state, action] = useActionState(signup, null)
 
     if (state?.success) {
@@ -86,6 +93,30 @@ export function SignupForm() {
                 <p className="font-body text-xs text-ritual-gray-text">
                     Para mostrarte shows y buscar cerca tuyo. Se puede cargar después.
                 </p>
+            </div>
+
+            {genres.length > 0 && (
+                <div className="space-y-1.5">
+                    <label className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text">
+                        Géneros favoritos <span className="normal-case text-ritual-gray-mid">(opcional, hasta 5)</span>
+                    </label>
+                    <GenrePicker genres={genres} />
+                </div>
+            )}
+
+            <div className="space-y-1.5">
+                <label className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text" htmlFor="birthYear">
+                    Año de nacimiento <span className="normal-case text-ritual-gray-mid">(opcional)</span>
+                </label>
+                <input
+                    id="birthYear"
+                    name="birthYear"
+                    type="number"
+                    inputMode="numeric"
+                    autoComplete="bday-year"
+                    className="w-full border-0 border-b border-ritual-border bg-transparent px-0 py-2 font-figure text-xl text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none"
+                    placeholder="Ej. 1995"
+                />
             </div>
 
             {state?.error && (

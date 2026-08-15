@@ -15,7 +15,12 @@ vi.mock('next/navigation', () => ({
   redirect: (...args: unknown[]) => mockRedirect(...args),
 }))
 
+vi.mock('@/src/domains/taste/service', () => ({
+  listGenres: vi.fn(),
+}))
+
 import { login, signup, signout, requestPasswordReset, updatePassword } from '@/src/core/auth/actions'
+import { listGenres } from '@/src/domains/taste/service'
 
 function makeSupabase(opts: {
   signInError?: { message: string } | null
@@ -34,9 +39,15 @@ function makeSupabase(opts: {
   }
 }
 
-function makeFormData(fields: Record<string, string>) {
+function makeFormData(fields: Record<string, string | string[]>) {
   const fd = new FormData()
-  for (const [k, v] of Object.entries(fields)) fd.set(k, v)
+  for (const [k, v] of Object.entries(fields)) {
+    if (Array.isArray(v)) {
+      for (const item of v) fd.append(k, item)
+    } else {
+      fd.set(k, v)
+    }
+  }
   return fd
 }
 
@@ -81,6 +92,10 @@ describe('login', () => {
 describe('signup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(listGenres).mockResolvedValue([
+      { key: 'rock-nacional', label: 'Rock Nacional' },
+      { key: 'indie', label: 'Indie' },
+    ])
   })
 
   it('returns a success message on a genuinely new signup', async () => {
@@ -90,6 +105,86 @@ describe('signup', () => {
     const result = await signup(null, makeFormData({ email: 'new@example.com', password: 'secret123' }))
 
     expect(result).toEqual({ success: 'Revisá tu email para confirmar la cuenta.' })
+  })
+
+  it('signs up without any taste metadata when genres and birth year are both left blank', async () => {
+    const supabase = makeSupabase({})
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    await signup(null, makeFormData({ email: 'new@example.com', password: 'secret123' }))
+
+    expect(supabase.auth.signUp).toHaveBeenCalledWith({
+      email: 'new@example.com',
+      password: 'secret123',
+      options: {
+        emailRedirectTo: 'http://localhost:3000/auth/callback',
+      },
+    })
+  })
+
+  it('stores the filtered genres, birth year, and location together in the signup metadata', async () => {
+    const supabase = makeSupabase({})
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    await signup(
+      null,
+      makeFormData({
+        email: 'new@example.com',
+        password: 'secret123',
+        location: 'Buenos Aires, Argentina',
+        genres: ['rock-nacional', 'indie'],
+        birthYear: '1995',
+      })
+    )
+
+    expect(supabase.auth.signUp).toHaveBeenCalledWith({
+      email: 'new@example.com',
+      password: 'secret123',
+      options: {
+        emailRedirectTo: 'http://localhost:3000/auth/callback',
+        data: {
+          location: 'Buenos Aires, Argentina',
+          genres: ['rock-nacional', 'indie'],
+          birth_year: 1995,
+        },
+      },
+    })
+  })
+
+  it('drops genre keys that are not part of the canonical vocabulary', async () => {
+    const supabase = makeSupabase({})
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    await signup(
+      null,
+      makeFormData({
+        email: 'new@example.com',
+        password: 'secret123',
+        genres: ['rock-nacional', 'not-a-real-genre'],
+      })
+    )
+
+    expect(supabase.auth.signUp).toHaveBeenCalledWith({
+      email: 'new@example.com',
+      password: 'secret123',
+      options: {
+        emailRedirectTo: 'http://localhost:3000/auth/callback',
+        data: { genres: ['rock-nacional'] },
+      },
+    })
+  })
+
+  it('returns the bad-year error and never calls signUp, so an implausible year cannot reach the trigger', async () => {
+    const supabase = makeSupabase({})
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await signup(
+      null,
+      makeFormData({ email: 'new@example.com', password: 'secret123', birthYear: '1850' })
+    )
+
+    expect(result).toEqual({ error: 'Revisá el año de nacimiento.' })
+    expect(supabase.auth.signUp).not.toHaveBeenCalled()
   })
 
   it(

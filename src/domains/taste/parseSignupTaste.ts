@@ -7,7 +7,8 @@
  */
 import type { ActionResult } from '@/src/core/types'
 
-const MAX_GENRES = 5
+/** Shared with `GenrePicker`, so the UI cap and the server-side validation never drift apart. */
+export const MAX_GENRES = 5
 const BIRTH_YEAR_PATTERN = /^\d{4}$/
 const MIN_AGE_YEARS = 13
 const MAX_AGE_YEARS = 100

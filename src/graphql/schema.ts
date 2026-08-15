@@ -9,6 +9,7 @@ import './auth'
 import './stats'
 import './events'
 import './moderation'
+import './taste'
 // Cada dominio nuevo se suma aquí con su propio import de efecto lateral,
 // mismo patrón que health.ts — el archivo del dominio llama a
 // builder.queryField/mutationField y no exporta nada directamente.
