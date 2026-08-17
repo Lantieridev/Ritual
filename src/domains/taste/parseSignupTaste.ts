@@ -10,8 +10,9 @@ import type { ActionResult } from '@/src/core/types'
 /** Shared with `GenrePicker`, so the UI cap and the server-side validation never drift apart. */
 export const MAX_GENRES = 5
 const BIRTH_YEAR_PATTERN = /^\d{4}$/
-const MIN_AGE_YEARS = 13
-const MAX_AGE_YEARS = 100
+/** Shared with `updateTasteProfile` (profile edit), so both entry points enforce the same plausible-age window. */
+export const MIN_AGE_YEARS = 13
+export const MAX_AGE_YEARS = 100
 
 export interface SignupTasteInput {
     genres: readonly string[]

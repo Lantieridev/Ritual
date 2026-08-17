@@ -10,7 +10,17 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
+vi.mock('next/server', () => ({
+  after: vi.fn(),
+}))
+
+vi.mock('@/src/domains/taste/syncCityCoordinates', () => ({
+  syncCityCoordinates: vi.fn(),
+}))
+
 import { modifyProfile, assignUserRole, completeOnboarding } from '@/src/domains/auth/service'
+import { after } from 'next/server'
+import { syncCityCoordinates } from '@/src/domains/taste/syncCityCoordinates'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -152,6 +162,48 @@ describe('modifyProfile', () => {
     const upsertMock = supabase.profileBuilder.upsert as ReturnType<typeof vi.fn>
     const upserted = upsertMock.mock.calls[0][0]
     expect(upserted).not.toHaveProperty('role')
+  })
+})
+
+describe('modifyProfile — city geocoding after save', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('schedules syncCityCoordinates via after() when a location is saved, without delaying the response', async () => {
+    const supabase = makeSupabase({ user: { id: 'user-1' }, profileResult: { data: null, error: null } })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await modifyProfile({ location: 'Buenos Aires, Argentina' })
+
+    expect(result).toEqual({})
+    expect(after).toHaveBeenCalledTimes(1)
+    expect(syncCityCoordinates).not.toHaveBeenCalled()
+
+    const scheduled = vi.mocked(after).mock.calls[0][0] as () => unknown
+    await scheduled()
+    expect(syncCityCoordinates).toHaveBeenCalledWith(supabase, 'user-1', 'Buenos Aires, Argentina')
+  })
+
+  it('does not schedule geocoding when no location is provided', async () => {
+    const supabase = makeSupabase({ user: { id: 'user-1' }, profileResult: { data: null, error: null } })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    await modifyProfile({ username: 'martin' })
+
+    expect(after).not.toHaveBeenCalled()
+  })
+
+  it('does not schedule geocoding when the profile write fails', async () => {
+    const supabase = makeSupabase({
+      user: { id: 'user-1' },
+      profileResult: { data: null, error: { message: 'connection reset' } },
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    await modifyProfile({ location: 'Buenos Aires, Argentina' })
+
+    expect(after).not.toHaveBeenCalled()
   })
 })
 

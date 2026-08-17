@@ -5,6 +5,9 @@ import { profilePriorSource } from '@/src/domains/taste/adapters/profilePrior'
 import { attendanceSource } from '@/src/domains/taste/adapters/attendance'
 import { wishlistSource } from '@/src/domains/taste/adapters/wishlist'
 import { lastfmSource } from '@/src/domains/taste/adapters/lastfm'
+import type { ActionResult } from '@/src/core/types'
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
 /** One row of the canonical genre vocabulary (see `genres` in `20260912010000_genre_vocabulary.sql`). */
 export interface GenreOption {
@@ -85,4 +88,91 @@ export async function listGenres(): Promise<GenreOption[]> {
   }
 
   return (data ?? []).map((row) => ({ key: row.key, label: row.label_es }))
+}
+
+/** The editable subset of `taste_profiles`, read for the profile edit page's defaults. */
+export interface TasteProfileRow {
+  genres: string[]
+  birthYear: number | null
+  lastfmUsername: string | null
+}
+
+/** Owner-only read (RLS) — mirrors `getProfile(userId)` in the auth domain. `null` if the row doesn't exist yet. */
+export async function getTasteProfileRow(userId: string): Promise<TasteProfileRow | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('taste_profiles')
+    .select('favorite_genre_keys, birth_year, lastfm_username')
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !data) return null
+
+  return {
+    genres: data.favorite_genre_keys ?? [],
+    birthYear: data.birth_year,
+    lastfmUsername: data.lastfm_username,
+  }
+}
+
+/** Replaces the user's declared genres and birth year in one write — the profile edit form always sends the full picker state, never a partial update. */
+export async function writeTasteProfile(
+  supabase: SupabaseClient,
+  userId: string,
+  input: { genres: string[]; birthYear: number | null }
+): Promise<ActionResult> {
+  const { error } = await supabase.from('taste_profiles').upsert({
+    user_id: userId,
+    favorite_genre_keys: input.genres,
+    birth_year: input.birthYear,
+    updated_at: new Date().toISOString(),
+  })
+
+  if (error) {
+    console.error('Error guardando preferencias de gusto musical:', error)
+    return { error: 'No pudimos guardar tus preferencias.' }
+  }
+  return {}
+}
+
+/** Persists a validated, matched Last.fm username after the import has already run — see `connectLastfm`. */
+export async function setLastfmUsername(
+  supabase: SupabaseClient,
+  userId: string,
+  username: string,
+  syncedAt: string
+): Promise<ActionResult> {
+  const { error } = await supabase
+    .from('taste_profiles')
+    .update({ lastfm_username: username, lastfm_synced_at: syncedAt })
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error guardando el usuario de Last.fm:', error)
+    return { error: 'No pudimos conectar tu cuenta de Last.fm.' }
+  }
+  return {}
+}
+
+/**
+ * Disconnects Last.fm: deletes the imports first, then nulls the username —
+ * in that order, so a failed delete never leaves the username cleared with
+ * stale rows still attributed to it (spec "Disconnect purges data").
+ */
+export async function removeLastfmConnection(supabase: SupabaseClient, userId: string): Promise<ActionResult> {
+  const { error: deleteError } = await supabase.from('lastfm_imports').delete().eq('user_id', userId)
+  if (deleteError) {
+    console.error('Error borrando los imports de Last.fm:', deleteError)
+    return { error: 'No pudimos desconectar tu cuenta de Last.fm.' }
+  }
+
+  const { error } = await supabase
+    .from('taste_profiles')
+    .update({ lastfm_username: null, lastfm_synced_at: null })
+    .eq('user_id', userId)
+  if (error) {
+    console.error('Error desconectando Last.fm:', error)
+    return { error: 'No pudimos desconectar tu cuenta de Last.fm.' }
+  }
+  return {}
 }

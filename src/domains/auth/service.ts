@@ -1,8 +1,10 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import { ActionResult } from '@/src/core/types'
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { getProfile, getUsernamesByIdsBatch } from './data'
+import { syncCityCoordinates } from '@/src/domains/taste/syncCityCoordinates'
 import type { Profile } from '@/src/core/types'
 
 /**
@@ -89,6 +91,17 @@ export async function modifyProfile(input: ProfileUpdateInput): Promise<ActionRe
     }
 
     revalidatePath('/profile')
+
+    // Geocodes the free-text city into taste_profiles.city_lat/lng after the
+    // response is sent — after() (stable since Next 15.1) never delays this
+    // mutation, and syncCityCoordinates never throws, so a Nominatim hiccup
+    // can't turn a successful profile save into an error (the daily cron is
+    // the backstop for anything this misses).
+    if (updates.location) {
+        const city = updates.location as string
+        after(() => syncCityCoordinates(supabase, user.id, city))
+    }
+
     return {}
 }
 
