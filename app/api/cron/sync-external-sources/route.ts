@@ -1,7 +1,6 @@
-import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { externalAdapters } from '@/src/core/lib/external-sources/adapters'
+import { authorizeCron, createCronSupabase, recordCronRun } from '@/src/core/lib/cron'
 
 function slugify(text: string) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
@@ -19,40 +18,13 @@ export const maxDuration = 300 // 5 minutes max duration for vercel cron
  * mantiene fresco con margen. En Pro se puede pasar a cada seis horas.
  */
 
-/**
- * Comparación en tiempo constante para no filtrar el secreto carácter por
- * carácter vía el tiempo de respuesta. `timingSafeEqual` exige buffers del
- * mismo largo, así que la diferencia de longitud se chequea aparte.
- */
-function secretMatches(provided: string, expected: string): boolean {
-  const a = Buffer.from(provided)
-  const b = Buffer.from(expected)
-  return a.length === b.length && timingSafeEqual(a, b)
-}
-
 export async function GET(request: Request) {
-  // Falla cerrado: sin CRON_SECRET configurado el endpoint queda inaccesible en
-  // vez de abierto. Antes la guarda era `if (CRON_SECRET && ...)`, así que un
-  // olvido de la variable en el entorno saltaba el chequeo entero y dejaba la
-  // ruta pública corriendo con la service role key, que bypassa RLS.
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) {
-    console.error('CRON_SECRET no está configurado: se rechaza la corrida del cron.')
-    return NextResponse.json({ error: 'Cron not configured' }, { status: 503 })
-  }
+  const auth = authorizeCron(request)
+  if (!auth.ok) return auth.response
 
-  const authHeader = request.headers.get('authorization') ?? ''
-  if (!authHeader.startsWith('Bearer ') || !secretMatches(authHeader.slice(7), cronSecret)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const supabase = createCronSupabase()
+  if (!supabase) return NextResponse.json({ error: 'Cron not configured' }, { status: 503 })
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('Faltan NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY para el cron.')
-    return NextResponse.json({ error: 'Cron not configured' }, { status: 503 })
-  }
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
   const startedAt = new Date()
 
   const results = await Promise.allSettled(
@@ -104,18 +76,17 @@ export async function GET(request: Request) {
   // inestable. Se persiste la corrida para poder detectarlo sin depender de
   // revisar logs de Vercel a mano — no hay Sentry/Datadog integrados acá.
   const ok = failedCount < externalAdapters.length
-  const { error: cronRunError } = await supabase.from('cron_runs').insert({
+  await recordCronRun(supabase, {
     job: 'sync-external-sources',
-    started_at: startedAt.toISOString(),
-    adapters_total: externalAdapters.length,
-    adapters_failed: failedCount,
-    failed_adapter_ids: failedAdapterIds,
-    events_inserted: insertedCount,
+    startedAt,
     ok,
+    legacy: {
+      adaptersTotal: externalAdapters.length,
+      adaptersFailed: failedCount,
+      failedAdapterIds,
+      eventsInserted: insertedCount,
+    },
   })
-  if (cronRunError) {
-    console.error('No se pudo persistir la corrida del cron:', cronRunError)
-  }
 
   return NextResponse.json({
     success: ok,

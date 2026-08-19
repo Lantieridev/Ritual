@@ -4,7 +4,7 @@ vi.mock('@/src/core/lib/env', () => ({
     getLastFmApiKey: vi.fn(),
 }))
 
-import { getLastFmUserTopArtists, getLastFmGeoTopArtists } from '@/src/domains/taste/clients/lastfm'
+import { getLastFmUserTopArtists, getLastFmGeoTopArtists, getLastFmArtistTags } from '@/src/domains/taste/clients/lastfm'
 import { getLastFmApiKey } from '@/src/core/lib/env'
 
 describe('getLastFmUserTopArtists', () => {
@@ -163,5 +163,61 @@ describe('getLastFmGeoTopArtists', () => {
             error: 'Last.fm respondió con error 429.',
             rateLimited: true,
         })
+    })
+})
+
+describe('getLastFmArtistTags', () => {
+    beforeEach(() => {
+        vi.mocked(getLastFmApiKey).mockReturnValue('test-key')
+        global.fetch = vi.fn()
+    })
+
+    afterEach(() => {
+        vi.restoreAllMocks()
+    })
+
+    it('requests artist.getinfo and returns the artist\'s raw tag names', async () => {
+        vi.mocked(global.fetch).mockResolvedValue({
+            ok: true,
+            json: () =>
+                Promise.resolve({ artist: { tags: { tag: [{ name: 'indie rock' }, { name: 'seen live' }] } } }),
+        } as Response)
+
+        const result = await getLastFmArtistTags('Bandalos Chinos')
+
+        const calledUrl = vi.mocked(global.fetch).mock.calls[0][0] as string
+        expect(calledUrl).toContain('method=artist.getinfo')
+        expect(calledUrl).toContain('artist=Bandalos')
+        expect(result).toEqual({ tags: ['indie rock', 'seen live'] })
+    })
+
+    it('returns an empty tag list when the artist has none, without throwing', async () => {
+        vi.mocked(global.fetch).mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve({ artist: {} }),
+        } as Response)
+
+        const result = await getLastFmArtistTags('Nadie')
+
+        expect(result).toEqual({ tags: [] })
+    })
+
+    it('maps a rate-limited response the same way the top-artists calls do', async () => {
+        vi.mocked(global.fetch).mockResolvedValue({ ok: false, status: 403 } as Response)
+
+        const result = await getLastFmArtistTags('Cualquiera')
+
+        expect(result).toEqual({ tags: null, error: 'Last.fm respondió con error 403.', rateLimited: true })
+    })
+
+    it('maps Last.fm error 6 (artist not found) to notFound', async () => {
+        vi.mocked(global.fetch).mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve({ error: 6, message: 'Artist not found' }),
+        } as Response)
+
+        const result = await getLastFmArtistTags('No Existe')
+
+        expect(result).toEqual({ tags: null, error: 'Artist not found', notFound: true })
     })
 })

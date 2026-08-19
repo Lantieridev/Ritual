@@ -18,6 +18,9 @@ import { fetchWithTimeout, isTimeoutError } from '@/src/core/lib/http'
 /** One day — matches the daily refresh cadence of both crons that read this (JD-006). */
 const TOP_ARTISTS_REVALIDATE_SECONDS = 86400
 
+/** One hour — same cadence as `core/lib/lastfm.ts`'s existing `artist.getinfo` call; tags change rarely. */
+const ARTIST_TAGS_REVALIDATE_SECONDS = 3600
+
 const RATE_LIMIT_ERROR_CODE = 29
 const NOT_FOUND_ERROR_CODE = 6
 
@@ -133,4 +136,29 @@ export async function getLastFmGeoTopArtists(
         TOP_ARTISTS_REVALIDATE_SECONDS
     )
     return toResult(call)
+}
+
+export interface LastFmArtistTagsResult {
+    tags: string[] | null
+    error?: string
+    notFound?: boolean
+    rateLimited?: boolean
+}
+
+/**
+ * An artist's raw Last.fm tags, for the importance-refresh cron's tag-refresh
+ * phase (unit 10). Distinct from `core/lib/lastfm.ts`'s `getLastFmArtistInfo`
+ * (used by the artists domain's enrichment) so that phase also gets this
+ * client's rate-limit classification instead of a silently swallowed 429/403.
+ */
+export async function getLastFmArtistTags(artistName: string): Promise<LastFmArtistTagsResult> {
+    const call = await callLastFm(
+        { method: 'artist.getinfo', artist: artistName.trim(), autocorrect: '1' },
+        ARTIST_TAGS_REVALIDATE_SECONDS
+    )
+    if (!call.body) return { tags: null, error: call.error, notFound: call.notFound, rateLimited: call.rateLimited }
+
+    const artist = call.body.artist as { tags?: { tag?: unknown } } | undefined
+    const rawTags = Array.isArray(artist?.tags?.tag) ? (artist!.tags!.tag as Array<Record<string, unknown>>) : []
+    return { tags: rawTags.map((tag) => String(tag.name ?? '')).filter(Boolean) }
 }
