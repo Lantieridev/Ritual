@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/refresh-artist-importance",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-lastfm-imports",
+      "schedule": "0 13 * * *"
     }
   ]
 }
