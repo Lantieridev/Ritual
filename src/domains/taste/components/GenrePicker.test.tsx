@@ -23,6 +23,17 @@ describe('GenrePicker', () => {
     expect(screen.queryAllByDisplayValue(/./)).toHaveLength(0)
   })
 
+  it('names the chip group after the visible heading passed as labelledBy', () => {
+    render(
+      <>
+        <p id="genres-heading">Géneros favoritos</p>
+        <GenrePicker genres={GENRES} labelledBy="genres-heading" />
+      </>
+    )
+
+    expect(screen.getByRole('group', { name: 'Géneros favoritos' })).toHaveAttribute('aria-labelledby', 'genres-heading')
+  })
+
   it('toggles a chip on click, marking it pressed and mirroring it into a hidden input', async () => {
     render(<GenrePicker genres={GENRES} />)
 

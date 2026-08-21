@@ -21,6 +21,8 @@ export interface GenrePickerProps {
   /** Nombre de los inputs ocultos que arma el picker — el mismo que lee la Server Action con `formData.getAll(...)`. */
   name?: string
   defaultSelected?: readonly string[]
+  /** Id del texto visible que titula el grupo; sin él, el grupo se nombra con un aria-label genérico. */
+  labelledBy?: string
 }
 
 /**
@@ -30,7 +32,7 @@ export interface GenrePickerProps {
  * de Server Action reciba los valores con `formData.getAll(name)` sin JS
  * adicional en el submit.
  */
-export function GenrePicker({ genres, name = 'genres', defaultSelected = [] }: GenrePickerProps) {
+export function GenrePicker({ genres, name = 'genres', defaultSelected = [], labelledBy }: GenrePickerProps) {
   const [selected, setSelected] = useState<string[]>(() => [...defaultSelected])
 
   function toggle(key: string) {
@@ -43,7 +45,11 @@ export function GenrePicker({ genres, name = 'genres', defaultSelected = [] }: G
 
   return (
     <div className="space-y-1.5">
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Géneros favoritos">
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        {...(labelledBy ? { 'aria-labelledby': labelledBy } : { 'aria-label': 'Géneros favoritos' })}
+      >
         {genres.map((genre) => {
           const isSelected = selected.includes(genre.key)
           const disabled = !isSelected && selected.length >= MAX_GENRES

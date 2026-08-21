@@ -97,7 +97,7 @@ flowchart TB
     subgraph NextApp["Next.js App Router"]
         Middleware["proxy.ts\n(auth guard + cookie refresh)"]
         Routes["app/\n(rutas y páginas)"]
-        Domains["src/domains/\nartists · events · expenses\nfestivals · venues · auth · stats"]
+        Domains["src/domains/\nartists · events · expenses\nfestivals · venues · auth · stats · taste"]
         Core["src/core/\nUI base · auth · tipos · lib"]
     end
 
@@ -119,7 +119,7 @@ Decisiones de arquitectura documentadas en [`docs/adr/`](./docs/adr/README.md) �
 - `app/`: Rutas y páginas (Next.js App Router).
 - `src/core/`: Componentes base (UI), librerías (Supabase, API clients) y tipos globales.
 - `src/domains/`: Lógica de negocio dividida por dominio (Artists, Events, Auth, Venues).
-- `supabase/`: Migraciones y configuración de base de datos.
+- `supabase/`: Migraciones, configuración de base de datos y tests pgTAP (`supabase/tests/`).
 - `docs/`: Documentación del proyecto (incluye [`adr/`](./docs/adr/README.md), decisiones de arquitectura).
 
 ## 📜 Licencia

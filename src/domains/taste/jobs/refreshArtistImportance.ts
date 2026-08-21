@@ -7,7 +7,7 @@ import 'server-only'
 import { isLastFmConfigured } from '@/src/core/lib/lastfm'
 import { getLastFmGeoTopArtists, getLastFmArtistTags } from '@/src/domains/taste/clients/lastfm'
 import { createThrottle, type Throttle } from '@/src/core/lib/throttle'
-import { normalizeGenre } from '@/src/domains/taste/normalizeGenre'
+import { classifyGenreTag } from '@/src/domains/taste/normalizeGenre'
 import { computeArtistImportance } from '@/src/domains/taste/importance'
 import { RUN_BUDGET_MS, type CronSupabaseClient } from '@/src/core/lib/cron'
 
@@ -22,6 +22,7 @@ export type StoppedReason = 'deadline' | 'lastfm_rate_limited' | 'lastfm_unconfi
 
 export interface RefreshArtistImportanceDetails {
     geo_pages_processed: number
+    geo_pages_failed: number
     geo_artists_matched: number
     tag_artists_processed: number
     unmapped_tags: number
@@ -53,6 +54,7 @@ export async function refreshArtistImportance(
 ): Promise<RefreshArtistImportanceResult> {
     const details: RefreshArtistImportanceDetails = {
         geo_pages_processed: 0,
+        geo_pages_failed: 0,
         geo_artists_matched: 0,
         tag_artists_processed: 0,
         unmapped_tags: 0,
@@ -72,13 +74,26 @@ export async function refreshArtistImportance(
 
     // Phase A: geo top artists, matched against the catalog by name_key.
     const geoByNameKey = new Map<string, GeoArtist>()
+    let deepestGeoPage = 0
     for (let page = 1; page <= geoPages; page++) {
-        if (deadlineExceeded()) { stoppedReason = 'deadline'; break }
+        if (deadlineExceeded()) {
+            stoppedReason = 'deadline'
+            break
+        }
         await throttle()
         const result = await getLastFmGeoTopArtists({ country: 'Argentina', limit: GEO_PAGE_LIMIT, page })
-        if (result.rateLimited) { stoppedReason = 'lastfm_rate_limited'; rateLimited = true; break }
+        if (result.rateLimited) {
+            stoppedReason = 'lastfm_rate_limited'
+            rateLimited = true
+            break
+        }
+        // Best-effort: a failed page is skipped instead of aborting the run.
+        if (!result.artists) {
+            details.geo_pages_failed += 1
+            continue
+        }
         details.geo_pages_processed += 1
-        if (!result.artists) continue // best-effort: skip a failed page instead of aborting the run
+        deepestGeoPage = page
 
         for (const artist of result.artists) {
             const nameKey = artist.name.toLowerCase()
@@ -87,7 +102,9 @@ export async function refreshArtistImportance(
             }
         }
     }
-    const geoTotal = details.geo_pages_processed * GEO_PAGE_LIMIT
+    // The ranking reaches as deep as the last page that came back: a failed
+    // trailing page must not stretch the scale every rank is measured against.
+    const geoTotal = deepestGeoPage * GEO_PAGE_LIMIT
 
     const geoByArtistId = new Map<string, GeoArtist>()
     if (geoByNameKey.size > 0) {
@@ -136,18 +153,25 @@ export async function refreshArtistImportance(
         const { aliasMap, genreKeys } = await loadGenreVocabulary(supabase)
 
         for (const artist of staleArtists) {
-            if (deadlineExceeded()) { stoppedReason = 'deadline'; break }
+            if (deadlineExceeded()) {
+                stoppedReason = 'deadline'
+                break
+            }
             await throttle()
             const result = await getLastFmArtistTags(artist.name)
-            if (result.rateLimited) { stoppedReason = 'lastfm_rate_limited'; rateLimited = true; break }
+            if (result.rateLimited) {
+                stoppedReason = 'lastfm_rate_limited'
+                rateLimited = true
+                break
+            }
             details.tag_artists_processed += 1
             if (!result.tags) continue
 
             const matchedGenres = new Set<string>()
-            for (const tag of result.tags) {
-                const genreKey = normalizeGenre(tag, aliasMap, genreKeys)
-                if (genreKey) matchedGenres.add(genreKey)
-                else details.unmapped_tags += 1
+            for (const raw of result.tags) {
+                const tag = classifyGenreTag(raw, aliasMap, genreKeys)
+                if (tag.kind === 'genre') matchedGenres.add(tag.key)
+                else if (tag.kind === 'unmapped') details.unmapped_tags += 1
             }
             if (matchedGenres.size === 0) continue
 

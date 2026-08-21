@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom'
 import Link from 'next/link'
 import { signup } from '@/src/core/auth/actions'
 import { GenrePicker } from '@/src/domains/taste/components/GenrePicker'
+import { MAX_GENRES } from '@/src/domains/taste/parseSignupTaste'
 import type { GenreOption } from '@/src/domains/taste/data'
 
 function SubmitButton() {
@@ -97,10 +98,13 @@ export function SignupForm({ genres = [] }: SignupFormProps) {
 
             {genres.length > 0 && (
                 <div className="space-y-1.5">
-                    <label className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text">
-                        Géneros favoritos <span className="normal-case text-ritual-gray-mid">(opcional, hasta 5)</span>
-                    </label>
-                    <GenrePicker genres={genres} />
+                    <p id="signup-genres-heading" className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text">
+                        Géneros favoritos <span className="normal-case text-ritual-gray-mid">(opcional)</span>
+                    </p>
+                    <GenrePicker genres={genres} labelledBy="signup-genres-heading" />
+                    <p className="font-body text-xs text-ritual-gray-text">
+                        Elegí hasta {MAX_GENRES}. Se puede cambiar después.
+                    </p>
                 </div>
             )}
 

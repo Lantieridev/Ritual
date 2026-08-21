@@ -60,7 +60,10 @@ export async function refreshLastfmImports(
     // Phase A: geocode backfill, before any Last.fm call — Nominatim has no rate-limit signal of its own, only the deadline stops it.
     const geocodeCandidates = await selectGeocodeBackfillCandidates(supabase, geocodeBackfillLimit)
     for (const candidate of geocodeCandidates) {
-        if (deadlineExceeded()) { stoppedReason = 'deadline'; break }
+        if (deadlineExceeded()) {
+            stoppedReason = 'deadline'
+            break
+        }
         await throttle()
         await syncCityCoordinates(supabase, candidate.userId, candidate.location)
         details.geocode_backfill_processed += 1
@@ -70,12 +73,19 @@ export async function refreshLastfmImports(
     if (!stoppedReason) {
         const users = await selectUsersForImportRefresh(supabase, usersLimit)
         for (const user of users) {
-            if (deadlineExceeded()) { stoppedReason = 'deadline'; break }
+            if (deadlineExceeded()) {
+                stoppedReason = 'deadline'
+                break
+            }
             const result = await importLastfmForUser(supabase, user.userId, user.username, {
                 runStart: runStart.toISOString(),
                 throttle,
             })
-            if (result.rateLimited) { stoppedReason = 'lastfm_rate_limited'; rateLimited = true; break }
+            if (result.rateLimited) {
+                stoppedReason = 'lastfm_rate_limited'
+                rateLimited = true
+                break
+            }
             details.imports_processed += 1
             if (result.error || result.notFound) details.imports_failed += 1
 

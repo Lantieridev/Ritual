@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useMutation, gql } from 'urql'
 import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { GenrePicker } from '@/src/domains/taste/components/GenrePicker'
+import { MAX_GENRES } from '@/src/domains/taste/parseSignupTaste'
 import { Input } from '@/src/core/components/ui/Input'
 import { Button } from '@/src/core/components/ui/Button'
 import type { GenreOption } from '@/src/domains/taste/data'
@@ -65,10 +66,11 @@ export function TasteProfileForm({ genres, defaultGenres = [], defaultBirthYear 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-1.5">
-                <label className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text">
-                    Géneros favoritos <span className="normal-case text-ritual-gray-mid">(hasta 5)</span>
-                </label>
-                <GenrePicker genres={genres} defaultSelected={defaultGenres} />
+                <p id="taste-genres-heading" className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text">
+                    Géneros favoritos
+                </p>
+                <GenrePicker genres={genres} defaultSelected={defaultGenres} labelledBy="taste-genres-heading" />
+                <p className="font-body text-xs text-ritual-gray-text">Elegí hasta {MAX_GENRES}.</p>
             </div>
 
             <Input

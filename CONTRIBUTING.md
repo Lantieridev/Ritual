@@ -16,6 +16,7 @@
 5.  **Probá antes de abrir el PR**:
     *   `npx tsc --noEmit` (tipos)
     *   `npx vitest run` (tests)
+    *   `npx supabase test db` (tests pgTAP de la base: RLS, triggers y restricciones de `supabase/tests/` — necesita el stack local levantado con `npx supabase start`)
     *   `npm run test:e2e` (Playwright: layout de los estados de Hoy en Chromium, Firefox, WebKit y emulación de celular — necesita `npm run dev` corriendo y los navegadores instalados una vez con `npx playwright install`)
     *   `RITUAL_E2E_BANDA_TOKEN` (opcional, issue #82): habilita `e2e/banda.spec.ts` (la banda de "Tu entrada de hoy" sobre Buscar/Colección/Vos). Es server-only — nunca lo prefijes `NEXT_PUBLIC_` y nunca lo setees en producción. Exportalo en la misma shell antes de correr tanto `npm run dev` como `npm run test:e2e` (Playwright reusa un `next dev` ya corriendo con `reuseExistingServer`, así que si dejaste uno arriba sin el token, hay que reiniciarlo). Sin el token, `banda.spec.ts` se saltea entero en vez de fallar.
     *   `npx eslint app src --ext .ts,.tsx` (lint)

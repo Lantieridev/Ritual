@@ -11,6 +11,7 @@ vi.mock('@/src/domains/taste/clients/lastfm', () => ({
 }))
 
 import { refreshArtistImportance } from './refreshArtistImportance'
+import { computeArtistImportance } from '@/src/domains/taste/importance'
 
 const RUN_START = new Date('2026-08-19T12:00:00.000Z')
 const NOW_WITHIN_BUDGET = () => RUN_START.getTime() + 1_000
@@ -106,6 +107,7 @@ describe('refreshArtistImportance', () => {
             ok: true,
             details: {
                 geo_pages_processed: 0,
+                geo_pages_failed: 0,
                 geo_artists_matched: 0,
                 tag_artists_processed: 0,
                 unmapped_tags: 0,
@@ -138,6 +140,27 @@ describe('refreshArtistImportance', () => {
         const rows = supabase.importanceUpsert.mock.calls[0][0] as Array<{ artist_id: string; geo_rank: number | null }>
         expect(rows).toEqual([expect.objectContaining({ artist_id: 'a-id', geo_rank: 1 })])
         expect(result.ok).toBe(true)
+    })
+
+    it('sizes the geo ranking from the pages that actually came back, so a failed last page does not inflate it', async () => {
+        getLastFmGeoTopArtists
+            .mockResolvedValueOnce(geoPage([]))
+            .mockResolvedValueOnce(geoPage([]))
+            .mockResolvedValueOnce(geoPage(['Artist C']))
+            .mockResolvedValueOnce({ artists: null, error: 'Last.fm respondió con error 503.' })
+        const supabase = makeSupabase({ matchedByNameKey: { 'artist c': 'c-id' } })
+
+        const result = await refreshArtistImportance(supabase as never, {
+            runStart: RUN_START,
+            throttle: vi.fn(),
+            now: NOW_WITHIN_BUDGET,
+        })
+
+        expect(result.details.geo_pages_processed).toBe(3)
+        expect(result.details.geo_pages_failed).toBe(1)
+        const rows = supabase.importanceUpsert.mock.calls[0][0] as Array<{ artist_id: string; geo_rank: number; peso: number }>
+        expect(rows[0]).toEqual(expect.objectContaining({ artist_id: 'c-id', geo_rank: 101 }))
+        expect(rows[0].peso).toBeCloseTo(computeArtistImportance({ geoRank: 101, geoTotal: 150, wentCount: 0, maxWent: 0 }))
     })
 
     it('gives an artist with only in-app went attendance a higher peso than one with neither signal', async () => {
@@ -219,6 +242,24 @@ describe('refreshArtistImportance', () => {
             [{ artist_id: 'never-tagged', genre_key: 'indie', source: 'lastfm', weight: 1, refreshed_at: RUN_START.toISOString() }],
             { onConflict: 'artist_id,genre_key,source' }
         )
+    })
+
+    it('does not count curated noise tags as unmapped, only tags nobody has curated yet', async () => {
+        const supabase = makeSupabase({
+            allArtists: [{ id: 'a', name: 'A' }],
+            aliasRows: [{ alias: 'indie rock', genre_key: 'indie' }, { alias: 'live', genre_key: null }, { alias: 'seen live', genre_key: null }],
+            genreRows: [{ key: 'indie' }],
+        })
+        getLastFmArtistTags.mockResolvedValueOnce({ tags: ['Indie Rock', 'Live', 'seen live', 'some unknown tag'] })
+
+        const result = await refreshArtistImportance(supabase as never, {
+            runStart: RUN_START,
+            throttle: vi.fn(),
+            now: NOW_WITHIN_BUDGET,
+            tagRefreshLimit: 1,
+        })
+
+        expect(result.details.unmapped_tags).toBe(1)
     })
 
     it('stops the tag phase on rate limit without processing the remaining stale artists', async () => {

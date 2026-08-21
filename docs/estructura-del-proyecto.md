@@ -42,6 +42,12 @@ src/
     stats/
       wrapped-view.ts           # Lógica del resumen anual "Wrapped"
     auth/                       # Perfil, login/signup, acciones de sesión
+    taste/                      # Gustos del usuario para las recomendaciones (#80)
+      blend.ts, weights.ts      # Lógica pura: mezcla de señales y su peso
+      adapters/                 # Una fuente de señales por archivo (registro, asistencias, wishlist, Last.fm)
+      importLastfmForUser.ts    # Única importación de Last.fm (conexión y cron)
+      jobs/                     # Crons diarios: importancia de artistas y refresco de Last.fm
+      components/               # GenrePicker, TasteProfileForm, LastfmConnect
 
   graphql/                     # Capa GraphQL (Pothos + Yoga), en migración progresiva
                                 # desde Server Actions — ver issue #23. Un archivo por
@@ -50,6 +56,8 @@ src/
 
 app/                           # Solo rutas y páginas (importan de src/core, src/domains, src/graphql)
   api/graphql/                 # Endpoint único de GraphQL (Yoga)
+  api/cron/                    # Crons de Vercel (vercel.json), protegidos con CRON_SECRET: fuentes
+                               # externas, importancia de artistas y refresco de Last.fm
   page.tsx                     # Home
   layout.tsx
   coleccion/                   # Artistas + Sedes + Festivales unificados
@@ -60,6 +68,9 @@ app/                           # Solo rutas y páginas (importan de src/core, sr
 
 proxy.ts                       # Auth guard + refresh de cookies (antes middleware.ts, ver docs/adr)
 e2e/                           # Playwright (npm run test:e2e): layout de Hoy en 5 navegadores × 7 tamaños
+supabase/
+  migrations/                  # Esquema, RLS y triggers
+  tests/                       # pgTAP (npx supabase test db): RLS, trigger de registro, restricciones
 ```
 
 ### Diseño (Tailwind 4)
