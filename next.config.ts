@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { withSentryConfig } from '@sentry/nextjs'
 import { validateEnv } from './src/core/lib/env'
 
 // Fail fast at build/start time if required env vars are missing
@@ -27,7 +28,7 @@ const securityHeaders = [
   // - default-src 'self': only load resources from same origin by default
   // - script-src: allow Next.js inline scripts (nonces would be better but require middleware)
   // - img-src: allow Spotify and Last.fm image CDNs
-  // - connect-src: allow Supabase API calls from the browser
+  // - connect-src: allow Supabase API calls and Sentry error ingestion from the browser
   {
     key: 'Content-Security-Policy',
     value: [
@@ -37,7 +38,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://i.scdn.co https://lastfm.freetls.fastly.net https://s1.ticketm.net https://images.sk-static.com https://upload.wikimedia.org https://*.supabase.co",
-      `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} https://accounts.spotify.com https://api.spotify.com`,
+      `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''} https://accounts.spotify.com https://api.spotify.com https://*.ingest.sentry.io https://*.sentry.io`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -93,4 +94,10 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  // Suppress warning logs when DSN or auth token is not provided
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  widenClientFileUpload: true,
+})
