@@ -18,6 +18,7 @@ import { AttendanceStatusButtons } from '@/src/domains/events/components/Attenda
 import { RatingAndReviewForm } from '@/src/domains/events/components/RatingAndReviewForm'
 import { PhotoGallery } from '@/src/domains/events/components/PhotoGallery'
 import { searchSpotifyArtist, getBestSpotifyImage, isSpotifyConfigured } from '@/src/core/lib/spotify'
+import { generateEventJsonLd } from '@/src/domains/events/jsonld'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -27,12 +28,21 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   const { id } = await params
   const event = await getEventById(id)
   if (!event) return { title: 'Recital no encontrado | RITUAL' }
+  const mainArtist = event.lineups?.[0]?.artists?.name
+  const title = event.name || mainArtist || 'Recital'
   const venueLabel = event.venues
     ? [event.venues.name, event.venues.city].filter(Boolean).join(', ')
     : 'Sede por confirmar'
+  const description = `${title} — ${formatDate(event.date)} · ${venueLabel}`
+
   return {
-    title: `${event.name || 'Recital'} | RITUAL`,
-    description: `${event.name || 'Recital'} — ${formatDate(event.date)} · ${venueLabel}`,
+    title: `${title} | RITUAL`,
+    description,
+    openGraph: {
+      title: `${title} | RITUAL`,
+      description,
+      type: 'website',
+    },
   }
 }
 
@@ -70,9 +80,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const review = attendance?.review?.trim() || null
   const reviewVariant = !review ? 'none' : review.length > 220 ? 'long' : 'short'
   const expensesTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
+  const jsonLd = generateEventJsonLd(event)
 
   return (
     <main className="min-h-screen bg-ritual-bg text-ritual-bone">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Hero */}
       <div className="relative h-72 md:h-[28rem] w-full overflow-hidden bg-ritual-panel">
         {heroImage ? (
