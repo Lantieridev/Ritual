@@ -86,7 +86,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     <main className="min-h-screen bg-ritual-bg text-ritual-bone">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        // JSON.stringify doesn't escape "<" — a stored event/artist/venue name containing
+        // "</script>" would otherwise break out of this tag and inject arbitrary script.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       {/* Hero */}
       <div className="relative h-72 md:h-[28rem] w-full overflow-hidden bg-ritual-panel">
