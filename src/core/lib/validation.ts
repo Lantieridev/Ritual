@@ -138,11 +138,17 @@ export function sanitizeAuthError(error: { message?: string } | null | undefined
     if (msg.includes('password should be at least') || msg.includes('password is too short')) {
         return 'La contraseña debe tener al menos 6 caracteres.'
     }
+    if (msg.includes('same password') || msg.includes('should be different')) {
+        return 'La nueva contraseña debe ser diferente a la anterior.'
+    }
     if (msg.includes('unable to validate email address') || msg.includes('invalid email')) {
         return 'El email no es válido.'
     }
     if (msg.includes('rate limit') || msg.includes('too many requests')) {
         return 'Demasiados intentos. Probá de nuevo en unos minutos.'
+    }
+    if (msg.includes('token') || msg.includes('expired') || msg.includes('session') || msg.includes('jwt')) {
+        return 'El enlace de recuperación es inválido o venció. Solicitá uno nuevo.'
     }
 
     if (process.env.NODE_ENV === 'development') return error.message

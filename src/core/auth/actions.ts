@@ -9,6 +9,7 @@ import { sanitizeAuthError } from '@/src/core/lib/validation'
 type AuthActionState = { error: string } | { success: string } | null
 
 const SIGNUP_SUCCESS_MESSAGE = 'Revisá tu email para confirmar la cuenta.'
+const RESET_REQUEST_SUCCESS_MESSAGE = 'Si el email está registrado, te enviamos las instrucciones para restablecer tu contraseña.'
 
 export async function login(prevState: AuthActionState, formData: FormData) {
     const supabase = await createClient()
@@ -62,4 +63,50 @@ export async function signout() {
     await supabase.auth.signOut()
     revalidatePath('/', 'layout')
     redirect('/login')
+}
+
+export async function requestPasswordReset(prevState: AuthActionState, formData: FormData) {
+    const supabase = await createClient()
+
+    const email = formData.get('email') as string
+    if (!email) {
+        return { error: 'El email es obligatorio.' }
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/auth/callback?next=${routes.resetPassword}`,
+    })
+
+    if (error) {
+        return { error: sanitizeAuthError(error) }
+    }
+
+    return { success: RESET_REQUEST_SUCCESS_MESSAGE }
+}
+
+export async function updatePassword(prevState: AuthActionState, formData: FormData) {
+    const supabase = await createClient()
+
+    const password = formData.get('password') as string
+    const confirmPassword = formData.get('confirmPassword') as string
+
+    if (!password || !confirmPassword) {
+        return { error: 'Completá todos los campos.' }
+    }
+
+    if (password !== confirmPassword) {
+        return { error: 'Las contraseñas no coinciden.' }
+    }
+
+    if (password.length < 6) {
+        return { error: 'La contraseña debe tener al menos 6 caracteres.' }
+    }
+
+    const { error } = await supabase.auth.updateUser({ password })
+
+    if (error) {
+        return { error: sanitizeAuthError(error) }
+    }
+
+    return { success: 'Tu contraseña fue actualizada correctamente. Ya podés ingresar.' }
 }
