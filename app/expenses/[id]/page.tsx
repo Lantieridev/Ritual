@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getCurrentUserId } from '@/src/core/auth/session'
-import { getExpenseById } from '@/src/domains/expenses/data'
+import { findExpenseById } from '@/src/domains/expenses/service'
 import { deleteExpense } from '@/src/domains/expenses/actions'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
@@ -16,7 +16,7 @@ interface ExpenseDetailPageProps {
 export async function generateMetadata({ params }: ExpenseDetailPageProps): Promise<Metadata> {
   const { id } = await params
   const userId = await getCurrentUserId()
-  const expense = await getExpenseById(id, userId)
+  const expense = await findExpenseById(id, userId)
   if (!expense) return { title: 'Gasto no encontrado | RITUAL' }
   return {
     title: `${expense.category} — $${Number(expense.amount).toLocaleString('es-AR')} | RITUAL`,
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: ExpenseDetailPageProps): Prom
 export default async function ExpenseDetailPage({ params }: ExpenseDetailPageProps) {
   const { id } = await params
   const userId = await getCurrentUserId()
-  const expense = await getExpenseById(id, userId)
+  const expense = await findExpenseById(id, userId)
 
   if (!expense) notFound()
 
