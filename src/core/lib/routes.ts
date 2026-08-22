@@ -49,5 +49,7 @@ export const routes = {
   // Auth
   login: '/login',
   signup: '/signup',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
   profile: '/profile',
 } as const
