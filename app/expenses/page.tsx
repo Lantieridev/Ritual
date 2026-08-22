@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getCurrentUserId } from '@/src/core/auth/session'
-import { getExpenses, getExpensesSummary } from '@/src/domains/expenses/data'
+import { listExpenses, summarizeExpenses } from '@/src/domains/expenses/service'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { getExpenseCategory } from '@/src/domains/expenses/categories'
@@ -20,8 +20,8 @@ function formatARS(amount: number) {
 export default async function ExpensesPage() {
   const userId = await getCurrentUserId()
   const [expenses, summary] = await Promise.all([
-    getExpenses(userId),
-    getExpensesSummary(userId),
+    listExpenses(userId),
+    summarizeExpenses(userId),
   ])
 
   const topCategories = Object.entries(summary.byCategory).sort(([, a], [, b]) => b - a)

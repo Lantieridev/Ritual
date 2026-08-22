@@ -6,7 +6,7 @@ import { getEventById } from '@/src/domains/events/data'
 import { deleteEvent } from '@/src/domains/events/actions'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
 import { getEventPhotos } from '@/src/domains/events/photo-actions'
-import { getExpensesForEvent } from '@/src/domains/expenses/data'
+import { listExpensesForEvent } from '@/src/domains/expenses/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
@@ -57,7 +57,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     getEventById(id),
     getAttendanceForEvent(id),
     getEventPhotos(id),
-    getExpensesForEvent(id, userId),
+    listExpensesForEvent(id, userId),
   ])
 
   if (!event) notFound()

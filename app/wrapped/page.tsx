@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { getPersonalStats } from '@/src/domains/stats/data'
 import { buildWrappedSummary } from '@/src/domains/stats/wrapped-view'
 import { getEventsWithAttendance } from '@/src/domains/events/data'
-import { getExpensesSummary } from '@/src/domains/expenses/data'
+import { summarizeExpenses } from '@/src/domains/expenses/service'
 import { getProfile } from '@/src/domains/auth/data'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
@@ -33,7 +33,7 @@ export default async function WrappedPage({ searchParams }: PageProps) {
     const [stats, allEvents, expensesSummary, profile] = await Promise.all([
         getPersonalStats(),
         getEventsWithAttendance(),
-        getExpensesSummary(userId),
+        summarizeExpenses(userId),
         getProfile(userId ?? undefined),
     ])
 

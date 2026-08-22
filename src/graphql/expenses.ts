@@ -1,6 +1,6 @@
 import { builder } from './builder'
-import { getExpenses, getExpenseById, getExpensesSummary } from '@/src/domains/expenses/data'
-import type { ExpenseSummary } from '@/src/domains/expenses/data'
+import { listExpenses, findExpenseById, summarizeExpenses } from '@/src/domains/expenses/service'
+import type { ExpenseSummary } from '@/src/domains/expenses/service'
 import { insertExpense, modifyExpense, removeExpense } from '@/src/domains/expenses/actions'
 import { MutationResultRef, toMutationResult } from './shared'
 
@@ -45,7 +45,7 @@ ExpenseSummaryRef.implement({
 builder.queryField('expenses', (t) =>
     t.field({
         type: [ExpenseRef],
-        resolve: (_root, _args, ctx) => getExpenses(ctx.userId),
+        resolve: (_root, _args, ctx) => listExpenses(ctx.userId),
     })
 )
 
@@ -56,14 +56,14 @@ builder.queryField('expense', (t) =>
         args: {
             id: t.arg.id({ required: true }),
         },
-        resolve: (_root, args, ctx) => getExpenseById(String(args.id), ctx.userId),
+        resolve: (_root, args, ctx) => findExpenseById(String(args.id), ctx.userId),
     })
 )
 
 builder.queryField('expensesSummary', (t) =>
     t.field({
         type: ExpenseSummaryRef,
-        resolve: (_root, _args, ctx) => getExpensesSummary(ctx.userId),
+        resolve: (_root, _args, ctx) => summarizeExpenses(ctx.userId),
     })
 )
 

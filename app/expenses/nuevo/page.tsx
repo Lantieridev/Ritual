@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getEvents } from '@/src/domains/events/data'
+import { listEventOptionsForExpensePicker } from '@/src/domains/expenses/service'
 import { ExpenseForm } from '@/src/domains/expenses/components'
 import { createExpense } from '@/src/domains/expenses/actions'
 import { PageShell } from '@/src/core/components/layout'
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
  * Carga eventos para opcionalmente asociar el gasto a un recital.
  */
 export default async function NewExpensePage() {
-  const events = await getEvents()
+  const events = await listEventOptionsForExpensePicker()
 
   return (
     <PageShell
