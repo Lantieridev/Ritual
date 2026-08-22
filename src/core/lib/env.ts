@@ -41,6 +41,10 @@ export function getSpotifyClientSecret(): string | undefined {
     return process.env.SPOTIFY_CLIENT_SECRET?.trim() || undefined
 }
 
+export function getSentryDsn(): string | undefined {
+    return process.env.NEXT_PUBLIC_SENTRY_DSN?.trim() || process.env.SENTRY_DSN?.trim() || undefined
+}
+
 
 
 // ─── Dev helpers ─────────────────────────────────────────────────────────────
@@ -70,6 +74,7 @@ export function validateEnv(): void {
         'LASTFM_API_KEY',
         'SPOTIFY_CLIENT_ID',
         'SPOTIFY_CLIENT_SECRET',
+        'NEXT_PUBLIC_SENTRY_DSN',
     ]
     for (const key of optionals) {
         if (!process.env[key]?.trim()) warnings.push(key)
