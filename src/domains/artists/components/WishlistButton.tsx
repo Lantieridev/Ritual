@@ -1,7 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { toggleWishlist } from '@/src/domains/artists/wishlist-actions'
+import { useMutation, gql } from 'urql'
+
+const ToggleWishlistMutation = gql`
+  mutation ToggleWishlist($artistId: ID!) {
+    toggleWishlist(artistId: $artistId) { inWishlist error }
+  }
+`
 
 interface WishlistButtonProps {
     artistId: string
@@ -12,16 +18,18 @@ export function WishlistButton({ artistId, initialInWishlist }: WishlistButtonPr
     const [inWishlist, setInWishlist] = useState(initialInWishlist)
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
+    const [, toggleWishlist] = useMutation(ToggleWishlistMutation)
 
     function handleToggle() {
         // Optimistic update
         setInWishlist((prev) => !prev)
         setError(null)
         startTransition(async () => {
-            const result = await toggleWishlist(artistId)
-            if (result.error) {
+            const { data } = await toggleWishlist({ artistId })
+            const result = data?.toggleWishlist
+            if (!result || result.error) {
                 setInWishlist((prev) => !prev)
-                setError(result.error)
+                setError(result?.error ?? 'No se pudo actualizar la wishlist.')
             } else {
                 setInWishlist(result.inWishlist)
             }

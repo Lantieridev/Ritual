@@ -1,10 +1,39 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { getVenueById } from '@/src/domains/venues/data'
+import { gql } from 'urql'
+import { getClient } from '@/src/graphql/client'
+import type { GraphQLVenueEvent, GraphQLVenueWithEvents } from '@/src/core/types'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
+
+const VenueDetailQuery = gql`
+  query VenueDetail($id: ID!) {
+    venue(id: $id) {
+      id
+      name
+      city
+      country
+      address
+      events {
+        id
+        name
+        date
+        lineups { artist { name } }
+        attendance { status }
+      }
+    }
+  }
+`
+
+async function fetchVenue(id: string): Promise<GraphQLVenueWithEvents | null> {
+    const { data } = await getClient().query<{ venue: GraphQLVenueWithEvents | null }>(
+        VenueDetailQuery,
+        { id }
+    )
+    return data?.venue ?? null
+}
 
 interface VenueDetailPageProps {
     params: Promise<{ id: string }>
@@ -12,7 +41,7 @@ interface VenueDetailPageProps {
 
 export async function generateMetadata({ params }: VenueDetailPageProps): Promise<Metadata> {
     const { id } = await params
-    const venue = await getVenueById(id)
+    const venue = await fetchVenue(id)
     if (!venue) return { title: 'Sede no encontrada | RITUAL' }
     return {
         title: `${venue.name} | RITUAL`,
@@ -22,7 +51,7 @@ export async function generateMetadata({ params }: VenueDetailPageProps): Promis
 
 export default async function VenueDetailPage({ params }: VenueDetailPageProps) {
     const { id } = await params
-    const venue = await getVenueById(id)
+    const venue = await fetchVenue(id)
 
     if (!venue) notFound()
 
@@ -101,12 +130,12 @@ export default async function VenueDetailPage({ params }: VenueDetailPageProps) 
     )
 }
 
-function EventList({ events }: { events: Array<{ id: string; name: string | null; date: string; lineups: Array<{ artists: { name: string } }> }> }) {
+function EventList({ events }: { events: GraphQLVenueEvent[] }) {
     return (
         <ul className="divide-y divide-ritual-border-subtle">
             {events.map((ev) => {
                 const dateObj = new Date(ev.date)
-                const artists = ev.lineups?.map((l) => l.artists?.name).filter(Boolean) ?? []
+                const artists = ev.lineups?.map((l) => l.artist?.name).filter(Boolean) ?? []
                 return (
                     <li key={ev.id}>
                         <Link

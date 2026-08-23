@@ -10,14 +10,28 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
 }))
 
+// Las altas inline de sede/artista dejaron de llegar por prop: el form
+// dispara las mutations directo, asi que el doble se engancha en useMutation
+// y se enruta por el nombre de la operacion.
+const findOrCreateVenueMock = vi.fn()
+const findOrCreateArtistMock = vi.fn()
+
+vi.mock('urql', async () => {
+  const actual = await vi.importActual<typeof import('urql')>('urql')
+  return {
+    ...actual,
+    useMutation: (doc: { definitions?: Array<{ name?: { value?: string } }> }) =>
+      doc.definitions?.[0]?.name?.value === 'FindOrCreateVenue'
+        ? [{ fetching: false }, findOrCreateVenueMock]
+        : [{ fetching: false }, findOrCreateArtistMock],
+  }
+})
+
 const venues = [{ id: 'v1', name: 'Niceto', city: 'CABA' }] as Venue[]
 const artists = [
   { id: 'a1', name: 'Bandalos Chinos', genre: 'Indie' },
   { id: 'a2', name: 'Usted Señalemelo', genre: 'Rock' },
 ] as Artist[]
-
-const noopFindOrCreateVenue = vi.fn()
-const noopFindOrCreateArtist = vi.fn()
 
 async function pickVenue(name: string) {
   await userEvent.type(screen.getByLabelText(/Sede/), name)
@@ -32,6 +46,8 @@ async function pickArtist(name: string) {
 describe('EventForm — create mode', () => {
   beforeEach(() => {
     push.mockClear()
+    findOrCreateVenueMock.mockReset()
+    findOrCreateArtistMock.mockReset()
   })
 
   it('submits name, date, venue, and selected lineup artists, then navigates to the new event', async () => {
@@ -41,8 +57,6 @@ describe('EventForm — create mode', () => {
         venues={venues}
         artists={artists}
         insertEvent={insertEvent}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -76,8 +90,6 @@ describe('EventForm — create mode', () => {
         venues={venues}
         artists={artists}
         insertEvent={insertEvent}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -101,8 +113,6 @@ describe('EventForm — create mode', () => {
         venues={venues}
         artists={artists}
         insertEvent={vi.fn()}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -116,8 +126,6 @@ describe('EventForm — create mode', () => {
         venues={venues}
         artists={artists}
         insertEvent={insertEvent}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -139,14 +147,12 @@ describe('EventForm — create mode', () => {
 
   it('creates a new venue inline via the combobox and uses its id', async () => {
     const insertEvent = vi.fn().mockResolvedValue({ id: 'e-new' })
-    const findOrCreateVenue = vi.fn().mockResolvedValue({ id: 'v-new' })
+    findOrCreateVenueMock.mockResolvedValue({ data: { findOrCreateVenue: { id: 'v-new' } } })
     render(
       <EventForm
         venues={[]}
         artists={artists}
         insertEvent={insertEvent}
-        findOrCreateVenue={findOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -155,7 +161,7 @@ describe('EventForm — create mode', () => {
     await userEvent.type(screen.getByLabelText(/Sede/), 'Movistar Arena')
     await userEvent.click(await screen.findByRole('option', { name: /Crear "Movistar Arena"/ }))
 
-    expect(findOrCreateVenue).toHaveBeenCalledWith('Movistar Arena')
+    expect(findOrCreateVenueMock).toHaveBeenCalledWith({ name: 'Movistar Arena' })
     expect(await screen.findByText('Movistar Arena')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Guardar y generar el talón' }))
@@ -166,14 +172,14 @@ describe('EventForm — create mode', () => {
   })
 
   it('shows the error from the inline venue creation without crashing', async () => {
-    const findOrCreateVenue = vi.fn().mockResolvedValue({ error: 'Ya existe una sede con ese nombre.' })
+    findOrCreateVenueMock.mockResolvedValue({
+      data: { findOrCreateVenue: { error: 'Ya existe una sede con ese nombre.' } },
+    })
     render(
       <EventForm
         venues={venues}
         artists={artists}
         insertEvent={vi.fn()}
-        findOrCreateVenue={findOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -192,8 +198,6 @@ describe('EventForm — create mode', () => {
         venues={venues}
         artists={artists}
         insertEvent={insertEvent}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -212,8 +216,6 @@ describe('EventForm — create mode', () => {
         venues={venues}
         artists={artists}
         insertEvent={insertEvent}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -238,8 +240,6 @@ describe('EventForm — create mode', () => {
         venues={venues}
         artists={artists}
         insertEvent={insertEvent}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
         setAttendanceStatus={setAttendanceStatus}
         saveMemory={saveMemory}
       />
@@ -266,8 +266,6 @@ describe('EventForm — create mode', () => {
         venues={venues}
         artists={artists}
         insertEvent={insertEvent}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -293,8 +291,6 @@ describe('EventForm — create mode', () => {
         venues={venues}
         artists={artists}
         insertEvent={insertEvent}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
         setAttendanceStatus={setAttendanceStatus}
         saveMemory={saveMemory}
       />
@@ -331,8 +327,6 @@ describe('EventForm — edit mode', () => {
         artists={artists}
         event={event}
         updateEvent={vi.fn()}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -348,8 +342,6 @@ describe('EventForm — edit mode', () => {
         artists={artists}
         event={event}
         updateEvent={vi.fn()}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -365,8 +357,6 @@ describe('EventForm — edit mode', () => {
         artists={artists}
         event={event}
         updateEvent={updateEvent}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -393,8 +383,6 @@ describe('EventForm — edit mode', () => {
         artists={artists}
         event={event}
         updateEvent={vi.fn()}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -411,8 +399,6 @@ describe('EventForm — edit mode', () => {
         artists={artists}
         event={{ ...event, ticket_url: 'https://www.passline.com/eventos/show' }}
         updateEvent={vi.fn()}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
 
@@ -426,8 +412,6 @@ describe('EventForm — edit mode', () => {
         artists={artists}
         event={event}
         updateEvent={vi.fn()}
-        findOrCreateVenue={noopFindOrCreateVenue}
-        findOrCreateArtist={noopFindOrCreateArtist}
       />
     )
     expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/events/e1')

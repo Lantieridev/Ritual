@@ -1,12 +1,49 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { findFestivalById } from '@/src/domains/festivals/service'
+import { gql } from 'urql'
+import { getClient } from '@/src/graphql/client'
+import type { GraphQLFestival } from '@/src/core/types'
 import { routes } from '@/src/core/lib/routes'
 import { safeHref } from '@/src/core/lib/validation'
 import { formatDate } from '@/src/core/lib/utils'
 import { todayDateOnly } from '@/src/core/lib/dates'
 import { FestivalAttendanceButton } from '@/src/domains/festivals/components/FestivalAttendanceButton'
+
+const FestivalDetailQuery = gql`
+  query FestivalDetail($id: ID!) {
+    festival(id: $id) {
+      id
+      name
+      edition
+      startDate
+      endDate
+      city
+      country
+      website
+      notes
+      festivalEvents {
+        id
+        dayLabel
+        event {
+          id
+          name
+          date
+          lineups { artist { id name } stage startTime }
+        }
+      }
+      festivalAttendance { status rating review }
+    }
+  }
+`
+
+async function fetchFestival(id: string): Promise<GraphQLFestival | null> {
+    const { data } = await getClient().query<{ festival: GraphQLFestival | null }>(
+        FestivalDetailQuery,
+        { id }
+    )
+    return data?.festival ?? null
+}
 
 interface FestivalDetailPageProps {
     params: Promise<{ id: string }>
@@ -14,7 +51,7 @@ interface FestivalDetailPageProps {
 
 export async function generateMetadata({ params }: FestivalDetailPageProps): Promise<Metadata> {
     const { id } = await params
-    const festival = await findFestivalById(id)
+    const festival = await fetchFestival(id)
     if (!festival) return { title: 'Festival no encontrado | RITUAL' }
     return {
         title: `${festival.name} | RITUAL`,
@@ -24,26 +61,26 @@ export async function generateMetadata({ params }: FestivalDetailPageProps): Pro
 
 export default async function FestivalDetailPage({ params }: FestivalDetailPageProps) {
     const { id } = await params
-    const festival = await findFestivalById(id)
+    const festival = await fetchFestival(id)
     if (!festival) notFound()
 
-    const start = new Date(festival.start_date)
-    const end = festival.end_date ? new Date(festival.end_date) : null
-    const attendance = festival.festival_attendance?.[0]
+    const start = new Date(festival.startDate)
+    const end = festival.endDate ? new Date(festival.endDate) : null
+    const attendance = festival.festivalAttendance?.[0]
     const location = [festival.city, festival.country].filter(Boolean).join(', ')
 
-    const eventsByDay = festival.festival_events?.sort((a, b) => {
-        const dateA = new Date(a.events?.date ?? '').getTime()
-        const dateB = new Date(b.events?.date ?? '').getTime()
+    const eventsByDay = [...(festival.festivalEvents ?? [])].sort((a, b) => {
+        const dateA = new Date(a.event?.date ?? '').getTime()
+        const dateB = new Date(b.event?.date ?? '').getTime()
         return dateA - dateB
-    }) ?? []
+    })
 
     const allArtists = new Set(
-        eventsByDay.flatMap((fe) => fe.events?.lineups?.map((l) => l.artists.name) ?? [])
+        eventsByDay.flatMap((fe) => fe.event?.lineups?.map((l) => l.artist.name) ?? [])
     )
 
     const today = todayDateOnly()
-    const todayIndex = eventsByDay.findIndex((fe) => fe.events?.date?.slice(0, 10) === today)
+    const todayIndex = eventsByDay.findIndex((fe) => fe.event?.date?.slice(0, 10) === today)
     const isRunningToday = todayIndex !== -1
 
     return (
@@ -126,18 +163,18 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                         <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-5">Días del festival</h2>
                         <div className="space-y-4">
                             {eventsByDay.map((fe, i) => {
-                                const ev = fe.events
+                                const ev = fe.event
                                 if (!ev) return null
                                 const date = new Date(ev.date)
-                                const lineup = [...(ev.lineups ?? [])].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
+                                const lineup = [...(ev.lineups ?? [])].sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? ''))
                                 const isToday = i === todayIndex
 
                                 return (
                                     <div key={fe.id} className={`border p-5 ${isToday ? 'border-ritual-red' : 'border-ritual-border'} bg-ritual-surface`}>
                                         <div className="flex items-start justify-between gap-4 mb-2">
                                             <div>
-                                                {fe.day_label && (
-                                                    <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-text mb-1">{fe.day_label}</p>
+                                                {fe.dayLabel && (
+                                                    <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-text mb-1">{fe.dayLabel}</p>
                                                 )}
                                                 <p className="font-subtitle font-black uppercase text-ritual-bone">
                                                     {formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -154,8 +191,8 @@ export default async function FestivalDetailPage({ params }: FestivalDetailPageP
                                             <ul className="mt-3 space-y-1">
                                                 {lineup.map((l, li) => (
                                                     <li key={li} className="flex items-center justify-between font-label text-xs text-ritual-gray-text">
-                                                        <span>{l.artists.name}{l.stage && <span className="text-ritual-gray-text"> · {l.stage}</span>}</span>
-                                                        {l.start_time && <span className="text-ritual-gray-text">{l.start_time}</span>}
+                                                        <span>{l.artist.name}{l.stage && <span className="text-ritual-gray-text"> · {l.stage}</span>}</span>
+                                                        {l.startTime && <span className="text-ritual-gray-text">{l.startTime}</span>}
                                                     </li>
                                                 ))}
                                             </ul>

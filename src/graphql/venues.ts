@@ -1,16 +1,44 @@
 import { builder } from './builder'
-import { getVenues, getVenueById } from '@/src/domains/venues/data'
-import { insertVenue, findOrCreateVenue } from '@/src/domains/venues/actions'
+import { listVenues, findVenueById, insertVenue, findOrCreateVenue } from '@/src/domains/venues/service'
+import { getVenueEvents } from '@/src/domains/venues/data'
+import type { VenueEvent, VenueWithEvents } from '@/src/domains/venues/data'
+import type { Venue } from '@/src/core/types'
 
-export const VenueRef = builder.objectRef<{
-    id: string
-    name: string
-    address?: string | null
-    city?: string | null
-    country?: string | null
-    lat?: number | null
-    lng?: number | null
-}>('Venue')
+const VenueEventLineupArtistRef = builder.objectRef<VenueEvent['lineups'][number]['artists']>(
+    'VenueEventLineupArtist'
+)
+VenueEventLineupArtistRef.implement({
+    fields: (t) => ({
+        name: t.exposeString('name'),
+    }),
+})
+
+const VenueEventLineupRef = builder.objectRef<VenueEvent['lineups'][number]>('VenueEventLineup')
+VenueEventLineupRef.implement({
+    fields: (t) => ({
+        artist: t.field({ type: VenueEventLineupArtistRef, resolve: (l) => l.artists }),
+    }),
+})
+
+const VenueEventAttendanceRef = builder.objectRef<VenueEvent['attendance'][number]>('VenueEventAttendance')
+VenueEventAttendanceRef.implement({
+    fields: (t) => ({
+        status: t.exposeString('status'),
+    }),
+})
+
+const VenueEventRef = builder.objectRef<VenueEvent>('VenueEvent')
+VenueEventRef.implement({
+    fields: (t) => ({
+        id: t.exposeID('id'),
+        name: t.exposeString('name', { nullable: true }),
+        date: t.exposeString('date'),
+        lineups: t.field({ type: [VenueEventLineupRef], resolve: (e) => e.lineups ?? [] }),
+        attendance: t.field({ type: [VenueEventAttendanceRef], resolve: (e) => e.attendance ?? [] }),
+    }),
+})
+
+export const VenueRef = builder.objectRef<Venue | VenueWithEvents>('Venue')
 
 VenueRef.implement({
     fields: (t) => ({
@@ -21,13 +49,21 @@ VenueRef.implement({
         country: t.exposeString('country', { nullable: true }),
         lat: t.exposeFloat('lat', { nullable: true }),
         lng: t.exposeFloat('lng', { nullable: true }),
+        // `getVenues()` no trae la relación y `getVenueById()` sí, así que el
+        // campo la carga bajo demanda solo cuando no vino ya resuelta — para
+        // que pedir `events` desde la query de listado devuelva el historial
+        // real y no un array vacío silencioso.
+        events: t.field({
+            type: [VenueEventRef],
+            resolve: (venue) => ('events' in venue ? venue.events : getVenueEvents(venue.id)),
+        }),
     }),
 })
 
 builder.queryField('venues', (t) =>
     t.field({
         type: [VenueRef],
-        resolve: () => getVenues(),
+        resolve: () => listVenues(),
     })
 )
 
@@ -38,7 +74,7 @@ builder.queryField('venue', (t) =>
         args: {
             id: t.arg.id({ required: true }),
         },
-        resolve: (_root, args) => getVenueById(String(args.id)),
+        resolve: (_root, args) => findVenueById(String(args.id)),
     })
 )
 
@@ -53,7 +89,7 @@ const VenueCreateInput = builder.inputType('VenueCreateInput', {
 
 // Payload en vez de tirar un GraphQL error: un nombre duplicado no es una
 // falla del sistema, es un resultado de negocio esperable — mismo criterio
-// que ya usa insertVenue() del lado de las Server Actions (ActionResult).
+// que ya usaba insertVenue() cuando la llamaba una Server Action.
 const CreateVenueResultRef = builder.objectRef<{ id?: string; existingId?: string; error?: string }>(
     'CreateVenueResult'
 )

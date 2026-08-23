@@ -1,12 +1,13 @@
 import { builder } from './builder'
-import { listFestivals, findFestivalById } from '@/src/domains/festivals/service'
-import type { Festival } from '@/src/domains/festivals/service'
 import {
+    listFestivals,
+    findFestivalById,
     insertFestival,
     removeFestival,
     saveFestivalAttendance,
     linkEventToFestival,
-} from '@/src/domains/festivals/actions'
+} from '@/src/domains/festivals/service'
+import type { Festival } from '@/src/domains/festivals/service'
 import { MutationResultRef, toMutationResult } from './shared'
 import { AttendanceStatusEnum } from './events'
 
@@ -35,6 +36,11 @@ const FestivalLineupEntryRef = builder.objectRef<FestivalLineupEntry>('FestivalL
 FestivalLineupEntryRef.implement({
     fields: (t) => ({
         artist: t.field({ type: FestivalLineupArtistRef, resolve: (l) => l.artists }),
+        // El detalle del festival ordena el lineup por horario y muestra el
+        // escenario al lado del nombre — sin estos dos campos la grilla del
+        // día queda sin horarios y en orden arbitrario.
+        stage: t.exposeString('stage', { nullable: true }),
+        startTime: t.exposeString('start_time', { nullable: true }),
     }),
 })
 

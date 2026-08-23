@@ -2,23 +2,83 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
-import { getArtistById } from '@/src/domains/artists/data'
+import { gql } from 'urql'
+import { getClient } from '@/src/graphql/client'
+import type { GraphQLArtistWithEvents } from '@/src/core/types'
+import type { ArtistWithEvents } from '@/src/domains/artists/data'
 import { routes } from '@/src/core/lib/routes'
 import { searchSpotifyArtist, isSpotifyConfigured } from '@/src/core/lib/spotify'
 import { getLastFmArtistInfo, isLastFmConfigured } from '@/src/core/lib/lastfm'
 import { isTicketmasterConfigured, searchTicketmasterEvents } from '@/src/core/lib/ticketmaster'
 import { WishlistButton } from '@/src/domains/artists/components/WishlistButton'
-import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
 import { ArtistProfile } from '@/src/domains/artists/components/ArtistProfile'
 import { buildArtistEnrichment } from '@/src/domains/artists/enrichment'
+
+const ArtistDetailQuery = gql`
+  query ArtistDetail($id: ID!) {
+    artist(id: $id) {
+      id
+      name
+      genre
+      imageUrl
+      spotifyId
+      events {
+        id
+        name
+        date
+        venue { name city }
+        photos { storagePath caption }
+        attendance { status rating review }
+      }
+    }
+    wishlistArtistIds
+  }
+`
+
+/**
+ * El enrichment y ArtistProfile consumen la forma snake_case del dominio,
+ * así que la respuesta de GraphQL se traduce acá en el borde en vez de
+ * reescribir esos módulos (y sus tests) para el rename de campos.
+ */
+function toDomainArtist(artist: GraphQLArtistWithEvents): ArtistWithEvents {
+    return {
+        id: artist.id,
+        name: artist.name,
+        genre: artist.genre,
+        image_url: artist.imageUrl,
+        spotify_id: artist.spotifyId,
+        events: artist.events.map((event) => ({
+            id: event.id,
+            name: event.name,
+            date: event.date,
+            venues: event.venue,
+            event_photos: event.photos.map((photo) => ({
+                storage_path: photo.storagePath,
+                caption: photo.caption,
+            })),
+            attendance: event.attendance,
+        })),
+    }
+}
 
 interface ArtistDetailPageProps {
     params: Promise<{ id: string }>
 }
 
+async function fetchArtistDetail(id: string) {
+    const { data } = await getClient().query<{
+        artist: GraphQLArtistWithEvents | null
+        wishlistArtistIds: string[]
+    }>(ArtistDetailQuery, { id })
+    return {
+        artist: data?.artist ? toDomainArtist(data.artist) : null,
+        wishlistIds: data?.wishlistArtistIds ?? [],
+    }
+}
+
 export async function generateMetadata({ params }: ArtistDetailPageProps): Promise<Metadata> {
     const { id } = await params
-    const artist = await getArtistById(id)
+    const { artist } = await fetchArtistDetail(id)
     if (!artist) return { title: 'Artista no encontrado | RITUAL' }
     return {
         title: `${artist.name} | RITUAL`,
@@ -28,20 +88,16 @@ export async function generateMetadata({ params }: ArtistDetailPageProps): Promi
 
 export default async function ArtistDetailPage({ params }: ArtistDetailPageProps) {
     const { id } = await params
-    const artist = await getArtistById(id)
+    const { artist, wishlistIds } = await fetchArtistDetail(id)
 
     if (!artist) notFound()
 
-    // Fetch all external data + wishlist in parallel
-    const [[spotifyResult, lastfmResult, tmEventsResult], wishlistIds] = await Promise.all([
-        Promise.allSettled([
-            isSpotifyConfigured() ? searchSpotifyArtist(artist.name) : Promise.resolve({ artist: null }),
-            isLastFmConfigured() ? getLastFmArtistInfo(artist.name) : Promise.resolve({ artist: null }),
-            isTicketmasterConfigured()
-                ? searchTicketmasterEvents({ keyword: artist.name })
-                : Promise.resolve({ events: [] }),
-        ]),
-        getWishlistArtistIds(),
+    const [spotifyResult, lastfmResult, tmEventsResult] = await Promise.allSettled([
+        isSpotifyConfigured() ? searchSpotifyArtist(artist.name) : Promise.resolve({ artist: null }),
+        isLastFmConfigured() ? getLastFmArtistInfo(artist.name) : Promise.resolve({ artist: null }),
+        isTicketmasterConfigured()
+            ? searchTicketmasterEvents({ keyword: artist.name })
+            : Promise.resolve({ events: [] }),
     ])
 
     const spotifyArtist = spotifyResult.status === 'fulfilled' ? spotifyResult.value.artist : null

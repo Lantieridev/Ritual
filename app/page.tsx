@@ -3,9 +3,9 @@ import Link from 'next/link'
 import { getEventsWithAttendance } from '@/src/domains/events/data'
 import { buildHomeFeed, buildHomeHeroState } from '@/src/domains/events/home-view'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
-import { listFestivals } from '@/src/domains/festivals/service'
-import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
-import { createClient } from '@/src/core/lib/supabase/server'
+import { gql } from 'urql'
+import { getClient } from '@/src/graphql/client'
+import type { GraphQLArtist, GraphQLFestival } from '@/src/core/types'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
@@ -32,26 +32,65 @@ interface NearbyCard {
   image: string | null
 }
 
+const HomePageQuery = gql`
+  query HomePage {
+    wishlistArtistIds
+    artists { id name }
+    festivals {
+      id
+      name
+      edition
+      startDate
+      endDate
+      city
+      country
+      festivalAttendance { status }
+    }
+  }
+`
+
+type HomeFestival = Pick<GraphQLFestival, 'id' | 'name' | 'edition' | 'city' | 'country'> & {
+  startDate: string
+  endDate: string | null
+  festivalAttendance: Array<{ status: string }>
+}
+
+/**
+ * buildHomeHeroState y el JSX de abajo consumen la forma snake_case del
+ * dominio, así que la respuesta de GraphQL se traduce acá en el borde en vez
+ * de reescribir home-view (y sus tests) para el rename de campos.
+ */
+function toHeroFestival(festival: HomeFestival) {
+  return {
+    id: festival.id,
+    name: festival.name,
+    edition: festival.edition,
+    city: festival.city,
+    country: festival.country,
+    start_date: festival.startDate,
+    end_date: festival.endDate,
+    festival_attendance: festival.festivalAttendance,
+  }
+}
+
 /**
  * "Cerca tuyo": shows futuros de tus artistas en wishlist, vía Ticketmaster.
  * Acotado a los primeros 6 artistas de la wishlist para no disparar
  * demasiadas llamadas externas en cada carga de Home — si la wishlist crece
  * mucho esto conviene moverlo a un fetch client-side diferido.
  */
-async function getNearbyShows(): Promise<NearbyCard[]> {
+async function getNearbyShows(
+  wishlistArtistIds: string[],
+  catalog: Array<Pick<GraphQLArtist, 'id' | 'name'>>
+): Promise<NearbyCard[]> {
   if (!isTicketmasterConfigured()) return []
+  if (wishlistArtistIds.length === 0) return []
 
-  const artistIds = await getWishlistArtistIds()
-  if (artistIds.length === 0) return []
-
-  const supabase = await createClient()
-  const { data: artists } = await supabase
-    .from('artists')
-    .select('id, name')
-    .in('id', artistIds.slice(0, 6))
+  const wishlisted = new Set(wishlistArtistIds.slice(0, 6))
+  const artists = catalog.filter((a) => wishlisted.has(a.id))
 
   const results = await Promise.allSettled(
-    (artists ?? []).map(async (artist) => {
+    artists.map(async (artist) => {
       const { events } = await searchTicketmasterEvents({ keyword: artist.name })
       return events.slice(0, 2).map((event) => ({ artistName: artist.name, event }))
     })
@@ -74,7 +113,15 @@ async function getNearbyShows(): Promise<NearbyCard[]> {
 }
 
 export default async function HomePage() {
-  const [allEvents, festivals] = await Promise.all([getEventsWithAttendance(), listFestivals()])
+  const [allEvents, { data }] = await Promise.all([
+    getEventsWithAttendance(),
+    getClient().query<{
+      wishlistArtistIds: string[]
+      artists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
+      festivals: HomeFestival[]
+    }>(HomePageQuery, {}),
+  ])
+  const festivals = (data?.festivals ?? []).map(toHeroFestival)
   const now = new Date()
 
   const { nextShow, byYear, years } = buildHomeFeed(allEvents, 'went', now)
@@ -88,7 +135,7 @@ export default async function HomePage() {
       : null
 
   const [nearbyShows, upcomingFestivals] = await Promise.all([
-    getNearbyShows(),
+    getNearbyShows(data?.wishlistArtistIds ?? [], data?.artists ?? []),
     Promise.resolve(
       festivals
         .filter((f) => !isPastEvent(f.end_date ?? f.start_date, now))

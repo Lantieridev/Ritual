@@ -1,12 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Festival } from '@/src/domains/festivals/data'
 
-vi.mock('@/src/domains/festivals/data', () => ({
-  getFestivals: vi.fn(),
-  getFestivalById: vi.fn(),
-}))
-
-vi.mock('@/src/domains/festivals/actions', () => ({
+vi.mock('@/src/domains/festivals/service', () => ({
+  listFestivals: vi.fn(),
+  findFestivalById: vi.fn(),
   insertFestival: vi.fn(),
   removeFestival: vi.fn(),
   saveFestivalAttendance: vi.fn(),
@@ -21,13 +18,14 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue(null),
 }))
 
-import { getFestivals, getFestivalById } from '@/src/domains/festivals/data'
 import {
+  listFestivals,
+  findFestivalById,
   insertFestival,
   removeFestival,
   saveFestivalAttendance,
   linkEventToFestival,
-} from '@/src/domains/festivals/actions'
+} from '@/src/domains/festivals/service'
 import { POST } from '@/app/api/graphql/route'
 
 async function query(source: string) {
@@ -76,7 +74,7 @@ describe('festivals GraphQL schema', () => {
   })
 
   it('resolves the nested festival shape end to end', async () => {
-    vi.mocked(getFestivals).mockResolvedValue([festival])
+    vi.mocked(listFestivals).mockResolvedValue([festival])
 
     const body = await query(`{
       festivals {
@@ -119,13 +117,13 @@ describe('festivals GraphQL schema', () => {
   })
 
   it('resolves a single festival by id, null when it does not exist', async () => {
-    vi.mocked(getFestivalById).mockResolvedValue(null)
+    vi.mocked(findFestivalById).mockResolvedValue(null)
 
     const body = await query('{ festival(id: "missing") { id } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ festival: null })
-    expect(getFestivalById).toHaveBeenCalledWith('missing')
+    expect(findFestivalById).toHaveBeenCalledWith('missing')
   })
 })
 
@@ -195,5 +193,44 @@ describe('festivals GraphQL mutations', () => {
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ linkEventToFestival: { success: true } })
     expect(linkEventToFestival).toHaveBeenCalledWith('f1', 'e1', 'Día 1')
+  })
+})
+
+describe('festivals GraphQL parity additions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  // Regresion de paridad: el detalle ordena el lineup por horario y muestra
+  // el escenario, pero stage/start_time no estaban expuestos en el schema.
+  it('exposes stage and start time on each lineup entry', async () => {
+    vi.mocked(findFestivalById).mockResolvedValue({
+      ...festival,
+      festival_events: [
+        {
+          id: 'fe1',
+          day_label: 'Dia 1',
+          events: {
+            id: 'e1',
+            name: 'Dia 1',
+            date: '2026-01-01',
+            lineups: [
+              { artists: { id: 'a1', name: 'Bandalos Chinos' }, stage: 'Escenario Norte', start_time: '21:30' },
+            ],
+          },
+        },
+      ],
+    })
+
+    const body = await query(`{
+      festival(id: "f1") {
+        festivalEvents { event { lineups { artist { name } stage startTime } } }
+      }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data.festival.festivalEvents[0].event.lineups).toEqual([
+      { artist: { name: 'Bandalos Chinos' }, stage: 'Escenario Norte', startTime: '21:30' },
+    ])
   })
 })

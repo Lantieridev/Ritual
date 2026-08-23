@@ -11,6 +11,8 @@ export interface VenueWithEvents extends Venue {
   }>
 }
 
+export type VenueEvent = VenueWithEvents['events'][number]
+
 export async function getVenues(): Promise<Venue[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -47,4 +49,15 @@ export async function getVenueById(id: string): Promise<VenueWithEvents | null> 
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   )
   return venue
+}
+
+/**
+ * Historial de shows de una sede, sin traer la sede en sí — para resolver
+ * `Venue.events` en GraphQL cuando la fila llegó por `getVenues()`, que no
+ * incluye la relación. Sin esto el campo devolvería siempre `[]` en la query
+ * de listado, que es peor que no exponerlo.
+ */
+export async function getVenueEvents(venueId: string): Promise<VenueEvent[]> {
+  const venue = await getVenueById(venueId)
+  return venue?.events ?? []
 }

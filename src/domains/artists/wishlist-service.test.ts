@@ -14,7 +14,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { getWishlistArtistIds, toggleWishlist } from '@/src/domains/artists/wishlist-actions'
+import { getWishlistArtistIds, toggleWishlist } from '@/src/domains/artists/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 function makeQueryBuilder(

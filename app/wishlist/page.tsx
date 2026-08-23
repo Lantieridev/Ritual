@@ -3,8 +3,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
-import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
-import { createClient } from '@/src/core/lib/supabase/server'
+import { gql } from 'urql'
+import { getClient } from '@/src/graphql/client'
+import type { GraphQLArtist } from '@/src/core/types'
 import {
     getLastFmArtistInfo,
     isLastFmConfigured,
@@ -25,8 +26,19 @@ export const metadata: Metadata = {
     description: 'Artistas que seguís. Mirá si anunciaron shows próximos.',
 }
 
+const WishlistPageQuery = gql`
+  query WishlistPage {
+    wishlistArtistIds
+    artists { id name genre }
+  }
+`
+
 export default async function WishlistPage() {
-    const artistIds = await getWishlistArtistIds()
+    const { data } = await getClient().query<{
+        wishlistArtistIds: string[]
+        artists: GraphQLArtist[]
+    }>(WishlistPageQuery, {})
+    const artistIds = data?.wishlistArtistIds ?? []
 
     if (artistIds.length === 0) {
         return (
@@ -46,17 +58,15 @@ export default async function WishlistPage() {
         )
     }
 
-    // Fetch artist details from DB
-    const supabase = await createClient()
-    const { data: artists } = await supabase
-        .from('artists')
-        .select('id, name, genre')
-        .in('id', artistIds)
-        .order('name')
+    // El catálogo de artistas es compartido y chico, así que se filtra acá
+    // sobre la misma respuesta en vez de pedir una query por id — ya viene
+    // ordenado por nombre desde el resolver.
+    const wishlisted = new Set(artistIds)
+    const artists = (data?.artists ?? []).filter((a) => wishlisted.has(a.id))
 
     // Fetch Spotify images, Last.fm bio data, and Ticketmaster shows for each artist in parallel
     const enriched = await Promise.all(
-        (artists ?? []).map(async (artist) => {
+        artists.map(async (artist) => {
             const [spotifyResult, lastfmResult, tmEventsResult] = await Promise.allSettled([
                 isSpotifyConfigured()
                     ? searchSpotifyArtist(artist.name)

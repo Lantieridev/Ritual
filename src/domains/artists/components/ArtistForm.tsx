@@ -2,18 +2,23 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useMutation, gql } from 'urql'
 import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
-import type { ArtistCreateInput } from '@/src/core/types'
 
-interface ArtistFormProps {
-  createArtist: (data: ArtistCreateInput) => Promise<{ error?: string; existingId?: string }>
-}
+const CreateArtistMutation = gql`
+  mutation CreateArtist($input: ArtistCreateInput!) {
+    createArtist(input: $input) { id existingId error }
+  }
+`
 
-export function ArtistForm({ createArtist }: ArtistFormProps) {
+export function ArtistForm() {
+  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [existingId, setExistingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [, createArtist] = useMutation(CreateArtistMutation)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -21,15 +26,20 @@ export function ArtistForm({ createArtist }: ArtistFormProps) {
     setExistingId(null)
     setIsSubmitting(true)
     const form = e.currentTarget
-    const result = await createArtist({
-      name: (form.elements.namedItem('name') as HTMLInputElement).value,
-      genre: (form.elements.namedItem('genre') as HTMLInputElement).value || undefined,
+    const { data } = await createArtist({
+      input: {
+        name: (form.elements.namedItem('name') as HTMLInputElement).value,
+        genre: (form.elements.namedItem('genre') as HTMLInputElement).value || undefined,
+      },
     })
+    const result = data?.createArtist
     if (result?.error) {
       setError(result.error)
       setExistingId(result.existingId ?? null)
       setIsSubmitting(false)
+      return
     }
+    router.push(routes.artists.list)
   }
 
   return (
