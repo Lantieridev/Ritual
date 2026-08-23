@@ -4,7 +4,7 @@ vi.mock('@/src/domains/auth/data', () => ({
   getProfile: vi.fn(),
 }))
 
-vi.mock('@/src/domains/auth/actions', () => ({
+vi.mock('@/src/domains/auth/service', () => ({
   modifyProfile: vi.fn(),
 }))
 
@@ -17,7 +17,7 @@ vi.mock('@/src/core/auth/session', () => ({
 }))
 
 import { getProfile } from '@/src/domains/auth/data'
-import { modifyProfile } from '@/src/domains/auth/actions'
+import { modifyProfile } from '@/src/domains/auth/service'
 import { POST } from '@/app/api/graphql/route'
 
 async function query(source: string) {
@@ -85,7 +85,22 @@ describe('auth GraphQL mutations', () => {
       bio: undefined,
       website: undefined,
       location: undefined,
+      avatar_url: undefined,
     })
+  })
+
+  // El avatar entra como URL ya subida al bucket por la Server Action — el
+  // archivo en sí no puede viajar por el schema sin un scalar Upload.
+  it('carries an already-uploaded avatar URL into the same profile upsert', async () => {
+    vi.mocked(modifyProfile).mockResolvedValue({})
+
+    await query(`mutation {
+      updateProfile(input: { username: "martin_dev", avatarUrl: "https://cdn.test/a.png" }) { success error }
+    }`)
+
+    expect(modifyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ avatar_url: 'https://cdn.test/a.png' })
+    )
   })
 
   it('reports failure through success:false, not a thrown GraphQL error', async () => {

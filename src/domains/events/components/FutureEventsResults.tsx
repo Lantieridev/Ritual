@@ -1,11 +1,18 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { addExternalEvent } from '@/src/domains/events/actions'
+import { useMutation, gql } from 'urql'
+import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { FutureEvent } from '@/src/core/types'
+
+const AddExternalEventMutation = gql`
+  mutation AddExternalEvent($input: AddExternalEventInput!, $artistNameForLineup: String) {
+    addExternalEvent(input: $input, artistNameForLineup: $artistNameForLineup) { eventId error }
+  }
+`
 
 interface FutureEventsResultsProps {
     events: FutureEvent[]
@@ -22,36 +29,35 @@ export function FutureEventsResults({ events, searchQuery, compact }: FutureEven
     const [loadingId, setLoadingId] = useState<string | null>(null)
     const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
     const [errors, setErrors] = useState<Record<string, string>>({})
-    const [, startTransition] = useTransition()
+    const [, addExternalEvent] = useMutation(AddExternalEventMutation)
 
-    function handleAdd(ev: FutureEvent) {
+    async function handleAdd(ev: FutureEvent) {
         setLoadingId(ev.id)
         setErrors((prev) => { const next = { ...prev }; delete next[ev.id]; return next })
-        startTransition(async () => {
-            try {
-                const result = await addExternalEvent(
-                    {
-                        id: ev.id,
-                        title: ev.title,
-                        datetime: ev.datetime,
-                        venue: ev.venue,
-                        lineup: ev.lineup,
-                        url: ev.url,
-                    },
-                    ev.lineup[0]
-                )
-                if (result.error) {
-                    setErrors((prev) => ({ ...prev, [ev.id]: result.error! }))
-                } else if (result.eventId) {
-                    setAddedIds((prev) => new Set([...prev, ev.id]))
-                    router.push(routes.events.detail(result.eventId))
-                }
-            } catch {
-                setErrors((prev) => ({ ...prev, [ev.id]: 'Error al guardar.' }))
-            } finally {
-                setLoadingId(null)
-            }
-        })
+
+        // Sin `id` ni `url`: son para mostrar el resultado de la búsqueda, la
+        // mutation nunca los lee al importar el show.
+        const result = unwrapMutation<{ eventId?: string; error?: string }>(
+            await addExternalEvent({
+                input: {
+                    title: ev.title,
+                    datetime: ev.datetime,
+                    venue: { name: ev.venue.name, city: ev.venue.city, country: ev.venue.country },
+                    lineup: ev.lineup,
+                },
+                artistNameForLineup: ev.lineup[0],
+            }),
+            'addExternalEvent',
+            'Error al guardar.'
+        )
+
+        if (result.error) {
+            setErrors((prev) => ({ ...prev, [ev.id]: result.error! }))
+        } else if (result.eventId) {
+            setAddedIds((prev) => new Set([...prev, ev.id]))
+            router.push(routes.events.detail(result.eventId))
+        }
+        setLoadingId(null)
     }
 
     if (events.length === 0) {

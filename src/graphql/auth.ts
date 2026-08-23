@@ -1,6 +1,6 @@
 import { builder } from './builder'
 import { getProfile } from '@/src/domains/auth/data'
-import { modifyProfile } from '@/src/domains/auth/actions'
+import { modifyProfile } from '@/src/domains/auth/service'
 import type { Profile } from '@/src/core/types'
 import { MutationResultRef, toMutationResult } from './shared'
 
@@ -39,6 +39,11 @@ builder.queryField('profile', (t) =>
     })
 )
 
+// `avatarUrl` recibe una URL, no el archivo: subir la imagen necesita
+// multipart/Upload scalar en Yoga, que no está configurado, así que el File
+// lo sigue tomando una Server Action (src/domains/auth/avatar-actions.ts) que
+// solo escribe en el bucket. La URL que devuelve vuelve por acá, de modo que
+// la fila de `profiles` se escribe una sola vez, con texto y avatar juntos.
 const ProfileUpdateInput = builder.inputType('ProfileUpdateInput', {
     fields: (t) => ({
         fullName: t.string(),
@@ -46,14 +51,10 @@ const ProfileUpdateInput = builder.inputType('ProfileUpdateInput', {
         bio: t.string(),
         website: t.string(),
         location: t.string(),
+        avatarUrl: t.string(),
     }),
 })
 
-// Sin campo de avatar a propósito: la subida de imagen todavía no está
-// migrada a GraphQL (requiere soporte de multipart/Upload scalar en Yoga,
-// trabajo aparte) — ver el comentario en modifyProfile(), en
-// src/domains/auth/actions.ts. Cambiar el avatar sigue siendo solo desde
-// el formulario web de /profile/editar hasta que eso se resuelva.
 builder.mutationField('updateProfile', (t) =>
     t.field({
         type: MutationResultRef,
@@ -68,6 +69,7 @@ builder.mutationField('updateProfile', (t) =>
                     bio: args.input.bio ?? undefined,
                     website: args.input.website ?? undefined,
                     location: args.input.location ?? undefined,
+                    avatar_url: args.input.avatarUrl ?? undefined,
                 })
             ),
     })

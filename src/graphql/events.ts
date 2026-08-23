@@ -3,7 +3,7 @@ import { getEvents, getEventsWithAttendance, getEventById } from '@/src/domains/
 import type { EventWithAttendance } from '@/src/domains/events/data'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
 import { getEventPhotos, deleteEventPhoto } from '@/src/domains/events/photo-actions'
-import { insertEvent, modifyEvent, removeEvent, addExternalEvent } from '@/src/domains/events/actions'
+import { insertEvent, modifyEvent, removeEvent, addExternalEvent } from '@/src/domains/events/service'
 import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import type { EventWithRelations, LineupRow } from '@/src/core/types'
 import type { FutureEvent } from '@/src/core/types'
@@ -93,6 +93,7 @@ EventRef.implement({
         name: t.exposeString('name', { nullable: true }),
         date: t.exposeString('date'),
         status: t.exposeString('status', { nullable: true }),
+        ticketUrl: t.exposeString('ticket_url', { nullable: true }),
         createdAt: t.exposeString('created_at', { nullable: true }),
         venue: t.field({ type: EventVenueSummaryRef, nullable: true, resolve: (e) => e.venues }),
         lineups: t.field({ type: [LineupRowRef], resolve: (e) => e.lineups ?? [] }),
@@ -155,6 +156,7 @@ const EventCreateInput = builder.inputType('EventCreateInput', {
         date: t.string({ required: true }),
         venueId: t.id({ required: true }),
         artistIds: t.idList(),
+        ticketUrl: t.string(),
     }),
 })
 
@@ -164,6 +166,7 @@ const EventUpdateInput = builder.inputType('EventUpdateInput', {
         date: t.string(),
         venueId: t.id(),
         artistIds: t.idList(),
+        ticketUrl: t.string(),
     }),
 })
 
@@ -187,6 +190,7 @@ builder.mutationField('createEvent', (t) =>
                 date: args.input.date,
                 venue_id: String(args.input.venueId),
                 artist_ids: args.input.artistIds?.map(String),
+                ticket_url: args.input.ticketUrl ?? undefined,
             }),
     })
 )
@@ -205,6 +209,10 @@ builder.mutationField('updateEvent', (t) =>
                     date: args.input.date ?? undefined,
                     venue_id: args.input.venueId ? String(args.input.venueId) : undefined,
                     artist_ids: args.input.artistIds?.map(String),
+                    // `?? undefined` y no truthiness: mandar '' es cómo se
+                    // borra el link de entradas, y `|| undefined` lo leería
+                    // como "no lo toques", dejando el link viejo pegado.
+                    ticket_url: args.input.ticketUrl ?? undefined,
                 })
             ),
     })

@@ -6,15 +6,18 @@ import userEvent from '@testing-library/user-event'
 const mockAddExternalEvent = vi.fn()
 const mockPush = vi.fn()
 
-vi.mock('@/src/domains/events/actions', () => ({
-  addExternalEvent: (...args: unknown[]) => mockAddExternalEvent(...args),
-}))
+vi.mock('urql', async () => {
+  const actual = await vi.importActual<typeof import('urql')>('urql')
+  return { ...actual, useMutation: () => [{ fetching: false }, mockAddExternalEvent] }
+})
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
 import { SetlistResults } from '@/src/domains/events/components/SetlistResults'
+import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
+import { transportError } from '@/src/graphql/transport-failure.testing'
 import type { Setlist } from '@/src/core/lib/setlistfm'
 
 const setlist: Setlist = {
@@ -67,7 +70,9 @@ describe('SetlistResults', () => {
   })
 
   it('adds the show and navigates to its detail page, converting the setlist date to ISO', async () => {
-    mockAddExternalEvent.mockResolvedValue({ eventId: 'new-event-1' })
+    mockAddExternalEvent.mockResolvedValue({
+      data: { addExternalEvent: { eventId: 'new-event-1' } },
+    })
     render(<SetlistResults setlists={[setlist]} />)
 
     await userEvent.click(screen.getByRole('button', { name: /Guardar/ }))
@@ -75,27 +80,37 @@ describe('SetlistResults', () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/events/new-event-1')
     })
-    expect(mockAddExternalEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ datetime: '2024-12-25T00:00:00Z' }),
-      'Bandalos Chinos',
-      '1. Cumbia Rara\n2. Ela'
-    )
+    // Sin `id` ni `url`: la mutation solo lee lo que necesita para importar.
+    expect(mockAddExternalEvent).toHaveBeenCalledWith({
+      input: {
+        title: 'Bandalos Chinos @ Niceto',
+        datetime: '2024-12-25T00:00:00Z',
+        venue: { name: 'Niceto', city: 'CABA', country: 'Argentina' },
+        lineup: ['Bandalos Chinos'],
+      },
+      artistNameForLineup: 'Bandalos Chinos',
+      notes: '1. Cumbia Rara\n2. Ela',
+    })
   })
 
   it('passes undefined notes when the setlist has no songs, instead of an empty string', async () => {
-    mockAddExternalEvent.mockResolvedValue({ eventId: 'new-event-1' })
+    mockAddExternalEvent.mockResolvedValue({
+      data: { addExternalEvent: { eventId: 'new-event-1' } },
+    })
     const emptySetlist = { ...setlist, sets: { set: [] } }
     render(<SetlistResults setlists={[emptySetlist]} />)
 
     await userEvent.click(screen.getByRole('button', { name: /Guardar/ }))
 
     await waitFor(() => {
-      expect(mockAddExternalEvent).toHaveBeenCalledWith(expect.anything(), 'Bandalos Chinos', undefined)
+      expect(mockAddExternalEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ notes: undefined })
+      )
     })
   })
 
   it('shows a per-show error and does not navigate when adding fails', async () => {
-    mockAddExternalEvent.mockResolvedValue({ error: 'boom' })
+    mockAddExternalEvent.mockResolvedValue({ data: { addExternalEvent: { error: 'boom' } } })
     render(<SetlistResults setlists={[setlist]} />)
 
     await userEvent.click(screen.getByRole('button', { name: /Guardar/ }))
@@ -104,5 +119,20 @@ describe('SetlistResults', () => {
       expect(screen.getByText('boom')).toBeInTheDocument()
     })
     expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  // Sin unwrapMutation, `data` undefined se leía como éxito: el botón quedaba
+  // en "Guardado" por un show que nunca se creó.
+  it('reports an error and stays addable when the request never reaches the resolver', async () => {
+    mockAddExternalEvent.mockResolvedValue({ data: undefined, error: transportError() })
+    render(<SetlistResults setlists={[setlist]} />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Guardar/ }))
+
+    await waitFor(() => {
+      expect(screen.getByText(TRANSPORT_ERROR_MESSAGE)).toBeInTheDocument()
+    })
+    expect(mockPush).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /Guardar/ })).toBeEnabled()
   })
 })

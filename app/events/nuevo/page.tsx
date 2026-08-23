@@ -1,9 +1,6 @@
 import type { Metadata } from 'next'
 import { gql } from 'urql'
 import { getClient } from '@/src/graphql/client'
-import { insertEvent } from '@/src/domains/events/actions'
-import { setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
-import { insertExpense } from '@/src/domains/expenses/service'
 import { routes } from '@/src/core/lib/routes'
 import { EventForm } from '@/src/domains/events/components'
 import { PageShell } from '@/src/core/components/layout'
@@ -17,7 +14,7 @@ export const metadata: Metadata = {
  * Página para cargar un recital manualmente — una sola acción, no un wizard:
  * datos + lineup + (si ya fue) puntaje/reseña + gasto, todo en el mismo submit.
  */
-import type { Artist, ExpenseCreateInput, GraphQLArtist, GraphQLVenue, Venue } from '@/src/core/types'
+import type { Artist, GraphQLArtist, GraphQLVenue, Venue } from '@/src/core/types'
 
 const EventFormPickersQuery = gql`
   query EventFormPickers {
@@ -44,10 +41,6 @@ async function fetchPickers() {
 }
 
 export default async function NewEventPage() {
-  async function insertExpenseAction(data: ExpenseCreateInput) {
-    'use server'
-    return insertExpense(data)
-  }
   const { venues, artists } = await fetchPickers()
 
   return (
@@ -57,14 +50,7 @@ export default async function NewEventPage() {
       title="Cargar show"
       description="Datos del recital y, si ya fuiste, puntaje y gasto — todo en una sola acción."
     >
-      <EventForm
-        venues={venues}
-        artists={artists}
-        insertEvent={insertEvent}
-        setAttendanceStatus={setAttendanceStatus}
-        saveMemory={saveMemory}
-        insertExpense={insertExpenseAction}
-      />
+      <EventForm venues={venues} artists={artists} />
     </PageShell>
   )
 }
