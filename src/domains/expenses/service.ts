@@ -3,12 +3,13 @@ import {
   getExpenseById,
   getExpensesForEvent,
   getExpensesSummary,
+  getVenueArtistSpendEstimate,
 } from './data'
-import type { ExpenseSummary } from './data'
+import type { ExpenseSummary, VenueArtistSpendEstimate } from './data'
 import { getEvents } from '@/src/domains/events/data'
 import type { Expense, EventWithRelations } from '@/src/core/types'
 
-export type { ExpenseSummary }
+export type { ExpenseSummary, VenueArtistSpendEstimate }
 
 /**
  * Use-case / application-service layer for the expenses domain.
@@ -59,4 +60,19 @@ export async function summarizeExpenses(userId: string | null): Promise<ExpenseS
  */
 export async function listEventOptionsForExpensePicker(): Promise<EventWithRelations[]> {
   return getEvents()
+}
+
+/**
+ * Issue #7's "soft suggestion": what the user tends to spend at this event's
+ * venue or with this event's artists, based on their own past expenses —
+ * purely informational, never a limit. Extracts venue_id/artist ids from the
+ * already-loaded event so the event page doesn't need to know the shape of
+ * that lookup, matching listEventOptionsForExpensePicker's role above.
+ */
+export async function estimateSpendForEvent(
+  event: EventWithRelations,
+  userId: string | null
+): Promise<VenueArtistSpendEstimate | null> {
+  const artistIds = (event.lineups ?? []).map((row) => row.artists.id)
+  return getVenueArtistSpendEstimate(userId, event.venue_id, artistIds, event.id)
 }

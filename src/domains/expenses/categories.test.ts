@@ -19,4 +19,17 @@ describe('getExpenseCategory', () => {
     const icons = EXPENSE_CATEGORIES.map((c) => getExpenseCategory(c.name).icon)
     expect(new Set(icons).size).toBe(EXPENSE_CATEGORIES.length)
   })
+
+  // Issue #7: "Comida" and "Comida y bebida" are almost always bought
+  // together in one transaction (choripán + gaseosa, birra + picada), so
+  // they were merged into a single category instead of splitting them.
+  it('keeps exactly 6 categories, with "Comida y bebida" replacing the old "Comida"', () => {
+    expect(EXPENSE_CATEGORIES).toHaveLength(6)
+    expect(EXPENSE_CATEGORIES.map((c) => c.name)).toContain('Comida y bebida')
+    expect(EXPENSE_CATEGORIES.map((c) => c.name)).not.toContain('Comida')
+  })
+
+  it('falls back to "Otro" for the old "Comida" name (pre-rename data still resolves to something)', () => {
+    expect(getExpenseCategory('Comida')).toEqual(EXPENSE_CATEGORIES.at(-1))
+  })
 })

@@ -1,2 +1,5 @@
 export { ExpenseForm } from './ExpenseForm'
 export { DeleteExpenseButton } from './DeleteExpenseButton'
+export { ExpenseQuickAdd } from './ExpenseQuickAdd'
+export { ExpenseInlineEdit } from './ExpenseInlineEdit'
+export { EventExpensesPanel } from './EventExpensesPanel'

@@ -31,6 +31,8 @@ export const routes = {
     search: '/buscar',
     detail: (id: string) => `/events/${id}` as const,
     edit: (id: string) => `/events/${id}/editar` as const,
+    /** Vista de detalle de gastos de un recital puntual, con desglose por categoría — issue #7. */
+    expenses: (id: string) => `/events/${id}/gastos` as const,
   },
 
   expenses: {
