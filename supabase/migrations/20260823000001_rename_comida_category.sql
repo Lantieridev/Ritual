@@ -1,0 +1,13 @@
+-- Issue #7: "Comida" is renamed to "Comida y bebida" in
+-- src/domains/expenses/categories.ts (parking, drinks and food are almost
+-- always bought together in the same transaction, so they're no longer
+-- split into separate categories).
+--
+-- Backfilling existing rows matters here beyond cosmetics: ExpenseForm's
+-- category <select> is `required`, and a stored value that no longer
+-- matches any <option> falls back to the blank placeholder option in the
+-- browser — which then fails native HTML5 validation and silently blocks
+-- the whole edit form from submitting (not just the category field). Any
+-- expense already stored with category = 'Comida' would become
+-- un-editable until this backfill runs.
+update public.expenses set category = 'Comida y bebida' where category = 'Comida';
