@@ -5,9 +5,10 @@ import userEvent from '@testing-library/user-event'
 
 const mockToggleWishlist = vi.fn()
 
-vi.mock('@/src/domains/artists/wishlist-actions', () => ({
-  toggleWishlist: (...args: unknown[]) => mockToggleWishlist(...args),
-}))
+vi.mock('urql', async () => {
+  const actual = await vi.importActual<typeof import('urql')>('urql')
+  return { ...actual, useMutation: () => [{ fetching: false }, mockToggleWishlist] }
+})
 
 import { WishlistButton } from '@/src/domains/artists/components/WishlistButton'
 
@@ -27,7 +28,7 @@ describe('WishlistButton', () => {
   })
 
   it('optimistically flips state on click, then confirms it once the action resolves', async () => {
-    mockToggleWishlist.mockResolvedValue({ inWishlist: true })
+    mockToggleWishlist.mockResolvedValue({ data: { toggleWishlist: { inWishlist: true } } })
     render(<WishlistButton artistId="a1" initialInWishlist={false} />)
 
     await userEvent.click(screen.getByRole('button'))
@@ -35,11 +36,13 @@ describe('WishlistButton', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Dejar de seguir este artista' })).toBeInTheDocument()
     })
-    expect(mockToggleWishlist).toHaveBeenCalledWith('a1')
+    expect(mockToggleWishlist).toHaveBeenCalledWith({ artistId: 'a1' })
   })
 
   it('reverts the optimistic update when the action returns an error', async () => {
-    mockToggleWishlist.mockResolvedValue({ inWishlist: false, error: 'No autenticado' })
+    mockToggleWishlist.mockResolvedValue({
+      data: { toggleWishlist: { inWishlist: false, error: 'No autenticado' } },
+    })
     render(<WishlistButton artistId="a1" initialInWishlist={false} />)
 
     await userEvent.click(screen.getByRole('button'))
@@ -52,7 +55,9 @@ describe('WishlistButton', () => {
   // The button rolled back correctly on failure, but never told the user
   // WHY — the star just silently flipped back with zero explanation.
   it('shows the error message when the action fails, not just a silent rollback', async () => {
-    mockToggleWishlist.mockResolvedValue({ inWishlist: false, error: 'No autenticado' })
+    mockToggleWishlist.mockResolvedValue({
+      data: { toggleWishlist: { inWishlist: false, error: 'No autenticado' } },
+    })
     render(<WishlistButton artistId="a1" initialInWishlist={false} />)
 
     await userEvent.click(screen.getByRole('button'))

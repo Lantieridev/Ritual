@@ -12,6 +12,8 @@ export interface ArtistWithEvents extends Artist {
   }>
 }
 
+export type ArtistEvent = ArtistWithEvents['events'][number]
+
 export async function getArtists(): Promise<Artist[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -64,4 +66,15 @@ export async function getArtistById(id: string): Promise<ArtistWithEvents | null
     spotify_id: artist.spotify_id,
     events,
   } as ArtistWithEvents
+}
+
+/**
+ * Historial de shows de un artista, sin traer el artista en sí — para
+ * resolver `Artist.events` en GraphQL cuando la fila llegó por
+ * `getArtists()`, que no incluye la relación. Sin esto el campo devolvería
+ * siempre `[]` en la query de listado, que es peor que no exponerlo.
+ */
+export async function getArtistEvents(artistId: string): Promise<ArtistEvent[]> {
+  const artist = await getArtistById(artistId)
+  return artist?.events ?? []
 }

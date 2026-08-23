@@ -1,14 +1,56 @@
 import { builder } from './builder'
-import { getArtists, getArtistById } from '@/src/domains/artists/data'
-import { insertArtist, findOrCreateArtist } from '@/src/domains/artists/actions'
+import {
+    listArtists,
+    findArtistById,
+    insertArtist,
+    findOrCreateArtist,
+    getWishlistArtistIds,
+    toggleWishlist,
+} from '@/src/domains/artists/service'
+import { getArtistEvents } from '@/src/domains/artists/data'
+import type { ArtistEvent, ArtistWithEvents } from '@/src/domains/artists/data'
+import type { Artist } from '@/src/core/types'
 
-export const ArtistRef = builder.objectRef<{
-    id: string
-    name: string
-    genre?: string | null
-    image_url?: string | null
-    spotify_id?: string | null
-}>('Artist')
+const ArtistEventVenueRef = builder.objectRef<NonNullable<ArtistEvent['venues']>>('ArtistEventVenue')
+ArtistEventVenueRef.implement({
+    fields: (t) => ({
+        name: t.exposeString('name'),
+        city: t.exposeString('city', { nullable: true }),
+    }),
+})
+
+const ArtistEventPhotoRef = builder.objectRef<ArtistEvent['event_photos'][number]>('ArtistEventPhoto')
+ArtistEventPhotoRef.implement({
+    fields: (t) => ({
+        storagePath: t.exposeString('storage_path'),
+        caption: t.exposeString('caption', { nullable: true }),
+    }),
+})
+
+const ArtistEventAttendanceRef = builder.objectRef<ArtistEvent['attendance'][number]>(
+    'ArtistEventAttendance'
+)
+ArtistEventAttendanceRef.implement({
+    fields: (t) => ({
+        status: t.exposeString('status'),
+        rating: t.exposeInt('rating', { nullable: true }),
+        review: t.exposeString('review', { nullable: true }),
+    }),
+})
+
+const ArtistEventRef = builder.objectRef<ArtistEvent>('ArtistEvent')
+ArtistEventRef.implement({
+    fields: (t) => ({
+        id: t.exposeID('id'),
+        name: t.exposeString('name', { nullable: true }),
+        date: t.exposeString('date'),
+        venue: t.field({ type: ArtistEventVenueRef, nullable: true, resolve: (e) => e.venues }),
+        photos: t.field({ type: [ArtistEventPhotoRef], resolve: (e) => e.event_photos ?? [] }),
+        attendance: t.field({ type: [ArtistEventAttendanceRef], resolve: (e) => e.attendance ?? [] }),
+    }),
+})
+
+export const ArtistRef = builder.objectRef<Artist | ArtistWithEvents>('Artist')
 
 ArtistRef.implement({
     fields: (t) => ({
@@ -17,13 +59,21 @@ ArtistRef.implement({
         genre: t.exposeString('genre', { nullable: true }),
         imageUrl: t.exposeString('image_url', { nullable: true }),
         spotifyId: t.exposeString('spotify_id', { nullable: true }),
+        // `getArtists()` no trae la relación y `getArtistById()` sí, así que
+        // el campo la carga bajo demanda solo cuando no vino ya resuelta —
+        // para que pedir `events` desde la query de listado devuelva el
+        // historial real y no un array vacío silencioso.
+        events: t.field({
+            type: [ArtistEventRef],
+            resolve: (artist) => ('events' in artist ? artist.events : getArtistEvents(artist.id)),
+        }),
     }),
 })
 
 builder.queryField('artists', (t) =>
     t.field({
         type: [ArtistRef],
-        resolve: () => getArtists(),
+        resolve: () => listArtists(),
     })
 )
 
@@ -34,7 +84,15 @@ builder.queryField('artist', (t) =>
         args: {
             id: t.arg.id({ required: true }),
         },
-        resolve: (_root, args) => getArtistById(String(args.id)),
+        resolve: (_root, args) => findArtistById(String(args.id)),
+    })
+)
+
+builder.queryField('wishlistArtistIds', (t) =>
+    t.field({
+        type: ['ID'],
+        description: 'IDs de los artistas que el usuario actual sigue. Vacío si no hay sesión.',
+        resolve: () => getWishlistArtistIds(),
     })
 )
 
@@ -87,5 +145,31 @@ builder.mutationField('findOrCreateArtist', (t) =>
             genre: t.arg.string(),
         },
         resolve: (_root, args) => findOrCreateArtist(args.name, args.genre ?? undefined),
+    })
+)
+
+// El estado resultante viaja en el payload en vez de inferirse en el cliente:
+// el toggle es optimista en la UI y necesita el valor real para reconciliar.
+const ToggleWishlistResultRef = builder.objectRef<{ inWishlist: boolean; error?: string }>(
+    'ToggleWishlistResult'
+)
+ToggleWishlistResultRef.implement({
+    fields: (t) => ({
+        inWishlist: t.exposeBoolean('inWishlist'),
+        error: t.exposeString('error', { nullable: true }),
+    }),
+})
+
+builder.mutationField('toggleWishlist', (t) =>
+    t.field({
+        type: ToggleWishlistResultRef,
+        description: 'Agrega o quita un artista de la wishlist del usuario actual.',
+        args: {
+            artistId: t.arg.id({ required: true }),
+        },
+        resolve: async (_root, args) => {
+            const { inWishlist, error } = await toggleWishlist(String(args.artistId))
+            return { inWishlist, error }
+        },
     })
 )

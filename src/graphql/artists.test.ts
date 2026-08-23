@@ -3,11 +3,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/src/domains/artists/data', () => ({
   getArtists: vi.fn(),
   getArtistById: vi.fn(),
+  getArtistEvents: vi.fn(),
 }))
 
-vi.mock('@/src/domains/artists/actions', () => ({
+vi.mock('@/src/domains/artists/service', () => ({
+  listArtists: vi.fn(),
+  findArtistById: vi.fn(),
   insertArtist: vi.fn(),
   findOrCreateArtist: vi.fn(),
+  getWishlistArtistIds: vi.fn(),
+  toggleWishlist: vi.fn(),
 }))
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
@@ -18,8 +23,15 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue(null),
 }))
 
-import { getArtists, getArtistById } from '@/src/domains/artists/data'
-import { insertArtist, findOrCreateArtist } from '@/src/domains/artists/actions'
+import { getArtistEvents } from '@/src/domains/artists/data'
+import {
+  listArtists,
+  findArtistById,
+  insertArtist,
+  findOrCreateArtist,
+  getWishlistArtistIds,
+  toggleWishlist,
+} from '@/src/domains/artists/service'
 import { POST } from '@/app/api/graphql/route'
 
 async function query(source: string) {
@@ -39,7 +51,7 @@ describe('artists GraphQL schema', () => {
   })
 
   it('resolves the artists query, exposing DB snake_case fields as camelCase', async () => {
-    vi.mocked(getArtists).mockResolvedValue([
+    vi.mocked(listArtists).mockResolvedValue([
       { id: 'a1', name: 'Bandalos Chinos', genre: 'Indie', image_url: 'https://x/y.png', spotify_id: 'sp1' },
     ])
 
@@ -52,13 +64,13 @@ describe('artists GraphQL schema', () => {
   })
 
   it('resolves a single artist by id, null when it does not exist', async () => {
-    vi.mocked(getArtistById).mockResolvedValue(null)
+    vi.mocked(findArtistById).mockResolvedValue(null)
 
     const body = await query('{ artist(id: "missing") { id } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ artist: null })
-    expect(getArtistById).toHaveBeenCalledWith('missing')
+    expect(findArtistById).toHaveBeenCalledWith('missing')
   })
 })
 
@@ -104,5 +116,100 @@ describe('artists GraphQL mutations', () => {
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ findOrCreateArtist: { id: 'a-1', error: null } })
     expect(findOrCreateArtist).toHaveBeenCalledWith('Bandalos Chinos', undefined)
+  })
+})
+
+describe('artists GraphQL parity additions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  // Regresion de paridad: el detalle de artista se dibuja enteramente sobre
+  // este historial, que antes no existia en el schema.
+  it('exposes the show history already attached to an artist detail read', async () => {
+    vi.mocked(findArtistById).mockResolvedValue({
+      id: 'a1',
+      name: 'Bandalos Chinos',
+      genre: null,
+      image_url: null,
+      spotify_id: null,
+      events: [
+        {
+          id: 'e1',
+          name: 'Show',
+          date: '2026-01-01',
+          venues: { name: 'Niceto', city: 'CABA' },
+          event_photos: [{ storage_path: 'p/1.jpg', caption: null }],
+          attendance: [{ status: 'went', rating: 5, review: 'brutal' }],
+        },
+      ],
+    })
+
+    const body = await query(`{
+      artist(id: "a1") {
+        events {
+          id
+          venue { name city }
+          photos { storagePath caption }
+          attendance { status rating review }
+        }
+      }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data.artist.events).toEqual([
+      {
+        id: 'e1',
+        venue: { name: 'Niceto', city: 'CABA' },
+        photos: [{ storagePath: 'p/1.jpg', caption: null }],
+        attendance: [{ status: 'went', rating: 5, review: 'brutal' }],
+      },
+    ])
+    expect(getArtistEvents).not.toHaveBeenCalled()
+  })
+
+  it('loads the show history on demand when the row came from the list query', async () => {
+    vi.mocked(listArtists).mockResolvedValue([
+      { id: 'a1', name: 'Bandalos Chinos', genre: null, image_url: null, spotify_id: null },
+    ])
+    vi.mocked(getArtistEvents).mockResolvedValue([
+      { id: 'e1', name: 'Show', date: '2026-01-01', venues: null, event_photos: [], attendance: [] },
+    ])
+
+    const body = await query('{ artists { id events { id } } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ artists: [{ id: 'a1', events: [{ id: 'e1' }] }] })
+    expect(getArtistEvents).toHaveBeenCalledWith('a1')
+  })
+
+  // La wishlist no tenia ninguna representacion en el schema: sin esto el
+  // boton de seguir y /wishlist se quedaban sin backend al migrar.
+  it('resolves the wishlist ids query', async () => {
+    vi.mocked(getWishlistArtistIds).mockResolvedValue(['a1', 'a2'])
+
+    const body = await query('{ wishlistArtistIds }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ wishlistArtistIds: ['a1', 'a2'] })
+  })
+
+  it('returns the resulting wishlist state so the optimistic toggle can reconcile', async () => {
+    vi.mocked(toggleWishlist).mockResolvedValue({ inWishlist: true })
+
+    const body = await query('mutation { toggleWishlist(artistId: "a1") { inWishlist error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ toggleWishlist: { inWishlist: true, error: null } })
+    expect(toggleWishlist).toHaveBeenCalledWith('a1')
+  })
+
+  it('surfaces a toggle failure in the payload instead of throwing', async () => {
+    vi.mocked(toggleWishlist).mockResolvedValue({ inWishlist: false, error: 'No autenticado' })
+
+    const body = await query('mutation { toggleWishlist(artistId: "a1") { inWishlist error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ toggleWishlist: { inWishlist: false, error: 'No autenticado' } })
   })
 })
