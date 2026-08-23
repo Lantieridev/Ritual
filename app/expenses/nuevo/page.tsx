@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { listEventOptionsForExpensePicker } from '@/src/domains/expenses/service'
 import { ExpenseForm } from '@/src/domains/expenses/components'
-import { createExpense } from '@/src/domains/expenses/actions'
+
 import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
 
@@ -24,7 +24,7 @@ export default async function NewExpensePage() {
       title="Nuevo gasto"
       description="Registrá un gasto (entrada, viaje, etc.). Podés asociarlo a un recital."
     >
-      <ExpenseForm events={events} createExpense={createExpense} />
+      <ExpenseForm events={events}  />
     </PageShell>
   )
 }

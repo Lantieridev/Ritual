@@ -3,7 +3,7 @@ import { getVenues } from '@/src/domains/venues/data'
 import { getArtists } from '@/src/domains/artists/data'
 import { insertEvent } from '@/src/domains/events/actions'
 import { setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
-import { insertExpense } from '@/src/domains/expenses/actions'
+import { insertExpense } from '@/src/domains/expenses/service'
 import { findOrCreateVenue } from '@/src/domains/venues/actions'
 import { findOrCreateArtist } from '@/src/domains/artists/actions'
 import { routes } from '@/src/core/lib/routes'
@@ -19,7 +19,13 @@ export const metadata: Metadata = {
  * Página para cargar un recital manualmente — una sola acción, no un wizard:
  * datos + lineup + (si ya fue) puntaje/reseña + gasto, todo en el mismo submit.
  */
+import type { ExpenseCreateInput } from '@/src/core/types'
+
 export default async function NewEventPage() {
+  async function insertExpenseAction(data: ExpenseCreateInput) {
+    'use server'
+    return insertExpense(data)
+  }
   const [venues, artists] = await Promise.all([getVenues(), getArtists()])
 
   return (
@@ -37,7 +43,7 @@ export default async function NewEventPage() {
         findOrCreateArtist={findOrCreateArtist}
         setAttendanceStatus={setAttendanceStatus}
         saveMemory={saveMemory}
-        insertExpense={insertExpense}
+        insertExpense={insertExpenseAction}
       />
     </PageShell>
   )

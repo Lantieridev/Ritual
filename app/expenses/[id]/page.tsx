@@ -1,13 +1,26 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { getCurrentUserId } from '@/src/core/auth/session'
-import { findExpenseById } from '@/src/domains/expenses/service'
-import { deleteExpense } from '@/src/domains/expenses/actions'
+import { getClient } from '@/src/graphql/client'
+import { gql } from 'urql'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { Card, LinkButton } from '@/src/core/components/ui'
-import { DeleteExpenseButton } from '@/src/domains/expenses/components'
+import { DeleteExpenseAction } from '@/src/domains/expenses/components/DeleteExpenseAction'
+import type { GraphQLExpense } from '@/src/core/types'
+
+const ExpenseDetailQuery = gql`
+  query ExpenseDetail($id: ID!) {
+    expense(id: $id) {
+      id
+      amount
+      category
+      note
+      date
+      eventId
+    }
+  }
+`
 
 interface ExpenseDetailPageProps {
   params: Promise<{ id: string }>
@@ -15,8 +28,8 @@ interface ExpenseDetailPageProps {
 
 export async function generateMetadata({ params }: ExpenseDetailPageProps): Promise<Metadata> {
   const { id } = await params
-  const userId = await getCurrentUserId()
-  const expense = await findExpenseById(id, userId)
+  const { data } = await getClient().query<{ expense: GraphQLExpense }>(ExpenseDetailQuery, { id })
+  const expense = data?.expense
   if (!expense) return { title: 'Gasto no encontrado | RITUAL' }
   return {
     title: `${expense.category} — $${Number(expense.amount).toLocaleString('es-AR')} | RITUAL`,
@@ -26,8 +39,8 @@ export async function generateMetadata({ params }: ExpenseDetailPageProps): Prom
 
 export default async function ExpenseDetailPage({ params }: ExpenseDetailPageProps) {
   const { id } = await params
-  const userId = await getCurrentUserId()
-  const expense = await findExpenseById(id, userId)
+  const { data } = await getClient().query<{ expense: GraphQLExpense }>(ExpenseDetailQuery, { id })
+  const expense = data?.expense
 
   if (!expense) notFound()
 
@@ -61,7 +74,7 @@ export default async function ExpenseDetailPage({ params }: ExpenseDetailPagePro
             )}
             <div className="pt-4 border-t border-white/10">
               <p className="text-sm text-zinc-400 uppercase tracking-wider mb-2">Acciones</p>
-              <DeleteExpenseButton expense={expense} deleteExpense={deleteExpense} />
+              <DeleteExpenseAction expense={expense} />
             </div>
           </div>
         </Card>

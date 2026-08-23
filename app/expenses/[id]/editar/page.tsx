@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { findExpenseById, listEventOptionsForExpensePicker } from '@/src/domains/expenses/service'
-import { updateExpense } from '@/src/domains/expenses/actions'
+
 import { ExpenseForm } from '@/src/domains/expenses/components'
 import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
@@ -35,7 +35,7 @@ export default async function EditExpensePage({ params }: EditExpensePageProps) 
       title="Editar gasto"
       description="Modificá monto, categoría, fecha o nota."
     >
-      <ExpenseForm events={events} expense={expense} updateExpense={updateExpense} />
+      <ExpenseForm events={events} expense={expense} />
     </PageShell>
   )
 }

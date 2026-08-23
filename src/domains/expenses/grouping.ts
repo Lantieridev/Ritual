@@ -1,4 +1,6 @@
-import type { Expense } from '@/src/core/types'
+import type { Expense, GraphQLExpense } from '@/src/core/types'
+
+type AnyExpense = Expense | GraphQLExpense
 
 /**
  * One category's worth of expenses, grouped together.
@@ -8,11 +10,11 @@ import type { Expense } from '@/src/core/types'
  * individual expenses available on tap/click — not a flat list where every
  * round of drinks is its own line.
  */
-export interface ExpenseCategoryGroup {
+export interface ExpenseCategoryGroup<T extends AnyExpense = Expense> {
   category: string
   total: number
   count: number
-  expenses: Expense[]
+  expenses: T[]
 }
 
 /**
@@ -25,8 +27,8 @@ export interface ExpenseCategoryGroup {
  * event page's inline panel and the full per-event detail view can reuse it
  * without recomputing the query.
  */
-export function groupExpensesByCategory(expenses: Expense[]): ExpenseCategoryGroup[] {
-  const groups = new Map<string, ExpenseCategoryGroup>()
+export function groupExpensesByCategory<T extends AnyExpense>(expenses: T[]): ExpenseCategoryGroup<T>[] {
+  const groups = new Map<string, ExpenseCategoryGroup<T>>()
 
   for (const expense of expenses) {
     const existing = groups.get(expense.category)

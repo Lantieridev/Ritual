@@ -6,7 +6,7 @@ import { getEventById } from '@/src/domains/events/data'
 import { deleteEvent } from '@/src/domains/events/actions'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
 import { getEventPhotos } from '@/src/domains/events/photo-actions'
-import { listExpensesForEvent, estimateSpendForEvent } from '@/src/domains/expenses/service'
+
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
@@ -21,6 +21,20 @@ import { PhotoGallery } from '@/src/domains/events/components/PhotoGallery'
 import { searchSpotifyArtist, getBestSpotifyImage, isSpotifyConfigured } from '@/src/core/lib/spotify'
 import { generateEventJsonLd } from '@/src/domains/events/jsonld'
 import { getEventWeather } from '@/src/domains/weather/weather-service'
+import { getClient } from '@/src/graphql/client'
+import { gql } from 'urql'
+
+const EventDetailPageQuery = gql`
+  query EventDetailPage($eventId: ID!) {
+    expenses(eventId: $eventId) {
+      id amount category note date eventId
+    }
+    estimateSpendForEvent(eventId: $eventId) {
+      averageTotal
+      eventsConsidered
+    }
+  }
+`
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -51,18 +65,17 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = await params
   const userId = await getCurrentUserId()
-  const [event, attendance, photos, expenses] = await Promise.all([
+  const [event, attendance, photos] = await Promise.all([
     getEventById(id),
     getAttendanceForEvent(id),
     getEventPhotos(id),
-    listExpensesForEvent(id, userId),
   ])
 
   if (!event) notFound()
 
-  // Only fetched once event is known non-null — the spend estimate needs
-  // its venue_id/lineup to look up the user's history at the same venue/artist.
-  const spendEstimate = await estimateSpendForEvent(event, userId)
+  const { data } = await getClient().query(EventDetailPageQuery, { eventId: id })
+  const expenses = data?.expenses ?? []
+  const spendEstimate = data?.estimateSpendForEvent ?? null
 
   const mainArtist = event.lineups?.[0]?.artists
   let heroImage: string | null = null

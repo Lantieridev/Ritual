@@ -13,7 +13,7 @@ interface ExpenseQuickAddProps {
     amount: number
     category: string
     note?: string
-    event_id?: string
+    eventId?: string
     date: string
   }) => Promise<{ error?: string; id?: string }>
   onAdded: (expense: Expense) => void
@@ -49,7 +49,7 @@ export function ExpenseQuickAdd({ eventId, defaultDate, insertExpense, onAdded, 
         amount: parsedAmount,
         category,
         note: trimmedNote || undefined,
-        event_id: eventId,
+        eventId,
         date: defaultDate,
       })
       if (result.error || !result.id) {

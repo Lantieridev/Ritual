@@ -2,18 +2,29 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useMutation, gql } from 'urql'
 import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { EXPENSE_CATEGORIES } from '@/src/domains/expenses/categories'
-import type { ExpenseCreateInput, ExpenseUpdateInput, Expense } from '@/src/core/types'
+import type { Expense, GraphQLExpense } from '@/src/core/types'
 import type { EventWithRelations } from '@/src/core/types'
+
+const CreateExpenseMutation = gql`
+  mutation CreateExpense($input: ExpenseCreateInput!) {
+    createExpense(input: $input) { id error }
+  }
+`
+const UpdateExpenseMutation = gql`
+  mutation UpdateExpense($id: ID!, $input: ExpenseUpdateInput!) {
+    updateExpense(id: $id, input: $input) { error }
+  }
+`
 
 interface ExpenseFormProps {
   events: EventWithRelations[]
-  createExpense?: (data: ExpenseCreateInput) => Promise<{ error?: string }>
-  expense?: Expense
-  updateExpense?: (id: string, data: ExpenseUpdateInput) => Promise<{ error?: string }>
+  expense?: Expense | GraphQLExpense
 }
 
 function todayISO() {
@@ -21,34 +32,45 @@ function todayISO() {
   return d.toISOString().slice(0, 10)
 }
 
-export function ExpenseForm({ events, createExpense, expense, updateExpense }: ExpenseFormProps) {
+export function ExpenseForm({ events, expense }: ExpenseFormProps) {
+  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const isEdit = Boolean(expense?.id && updateExpense)
+  const isEdit = Boolean(expense?.id)
+
+  const [, createExpenseM] = useMutation(CreateExpenseMutation)
+  const [, updateExpenseM] = useMutation(UpdateExpenseMutation)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
     setIsSubmitting(true)
     const form = e.currentTarget
+    
+    // Convert to GraphQL expected shapes (eventId instead of event_id)
     const payload = {
       amount: Number((form.elements.namedItem('amount') as HTMLInputElement).value),
       category: (form.elements.namedItem('category') as HTMLSelectElement).value,
       note: (form.elements.namedItem('note') as HTMLInputElement).value || undefined,
-      event_id: (form.elements.namedItem('event_id') as HTMLSelectElement).value || undefined,
+      eventId: (form.elements.namedItem('event_id') as HTMLSelectElement).value || undefined,
       date: (form.elements.namedItem('date') as HTMLInputElement).value,
     }
+    
     if (isEdit && expense) {
-      const result = await updateExpense!(expense.id, payload)
-      if (result?.error) {
-        setError(result.error)
+      const { data } = await updateExpenseM({ id: expense.id, input: payload })
+      if (data?.updateExpense?.error) {
+        setError(data.updateExpense.error)
         setIsSubmitting(false)
+      } else {
+        router.push(routes.expenses.detail(expense.id))
       }
-    } else if (createExpense) {
-      const result = await createExpense(payload)
-      if (result?.error) {
-        setError(result.error)
+    } else {
+      const { data } = await createExpenseM({ input: payload })
+      if (data?.createExpense?.error) {
+        setError(data.createExpense.error)
         setIsSubmitting(false)
+      } else {
+        router.push(routes.expenses.list)
       }
     }
   }
@@ -65,7 +87,7 @@ export function ExpenseForm({ events, createExpense, expense, updateExpense }: E
       )}
       {isEdit && expense && (
         <p className="font-display leading-[0.8] text-ritual-bone" style={{ fontSize: 'min(16vw, 100px)' }}>
-          ${Number(expense.amount).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+          \${Number(expense.amount).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
         </p>
       )}
       <FormField label="Monto" id="amount" required>
@@ -83,7 +105,7 @@ export function ExpenseForm({ events, createExpense, expense, updateExpense }: E
         <input id="date" name="date" type="date" required className={inputClass} defaultValue={defaultDate} />
       </FormField>
       <FormField label="Recital asociado (opcional)" id="event_id">
-        <select id="event_id" name="event_id" className={inputClass} defaultValue={expense?.event_id ?? ''}>
+        <select id="event_id" name="event_id" className={inputClass} defaultValue={expense ? ('eventId' in expense ? expense.eventId : (expense as Expense).event_id) ?? '' : ''}>
           <option value="">Ninguno</option>
           {events.map((e) => (
             <option key={e.id} value={e.id}>
