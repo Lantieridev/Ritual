@@ -18,6 +18,8 @@ function emptyLifetimeStats(showsByYear: Record<string, number> = {}): StatsData
     topVenues: [],
     averageRating: null,
     totalRated: 0,
+    rainyShows: 0,
+    totalWithWeather: 0,
     recentActivity: [],
   }
 }
