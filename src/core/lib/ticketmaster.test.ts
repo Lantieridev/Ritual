@@ -191,4 +191,16 @@ describe('searchTicketmasterEvents', () => {
 
     expect(result).toEqual({ events: [], total: 0, error: 'Error al conectar con Ticketmaster.' })
   })
+
+  it('returns a specific error when the request times out', async () => {
+    vi.mocked(global.fetch).mockRejectedValue(new DOMException('Aborted', 'AbortError'))
+
+    const result = await searchTicketmasterEvents({ keyword: 'x' })
+
+    expect(result).toEqual({
+      events: [],
+      total: 0,
+      error: 'Ticketmaster tardó demasiado en responder. Probá de nuevo.',
+    })
+  })
 })

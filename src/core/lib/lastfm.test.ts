@@ -121,4 +121,15 @@ describe('getLastFmArtistInfo', () => {
 
     expect(result).toEqual({ artist: null, error: 'Error al conectar con Last.fm.' })
   })
+
+  it('returns a specific error when the request times out', async () => {
+    vi.mocked(global.fetch).mockRejectedValue(new DOMException('Aborted', 'AbortError'))
+
+    const result = await getLastFmArtistInfo('Bandalos Chinos')
+
+    expect(result).toEqual({
+      artist: null,
+      error: 'Last.fm tardó demasiado en responder. Probá de nuevo.',
+    })
+  })
 })

@@ -122,4 +122,17 @@ describe('searchSpotifyArtist', () => {
 
     expect(result).toEqual({ artist: null, error: 'Error al conectar con Spotify.' })
   })
+
+  it('returns a specific error when the search request times out', async () => {
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ access_token: 'tok' }) } as Response)
+      .mockRejectedValueOnce(new DOMException('Aborted', 'AbortError'))
+
+    const result = await searchSpotifyArtist('Bandalos Chinos')
+
+    expect(result).toEqual({
+      artist: null,
+      error: 'Spotify tardó demasiado en responder. Probá de nuevo.',
+    })
+  })
 })
