@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { isPastEvent, isUpcomingEvent, nearestUpcoming, todayDateOnly, eventYear, eventMonth, daysUntil } from './dates'
+import {
+  isPastEvent,
+  isUpcomingEvent,
+  nearestUpcoming,
+  todayDateOnly,
+  eventYear,
+  eventMonth,
+  daysUntil,
+  combineDateAndTime,
+  eventTimeOfDay,
+} from './dates'
 
 // Regression tests for a timezone bug: a date-only string like "2026-07-21"
 // parses as UTC midnight, which is 2026-07-20T21:00 in Argentina (UTC-3).
@@ -148,5 +158,35 @@ describe('nearestUpcoming', () => {
   it('returns undefined when nothing is upcoming', () => {
     const shows = [{ id: 'past', date: '2026-01-01' }]
     expect(nearestUpcoming(shows, (s) => s.date, now)).toBeUndefined()
+  })
+})
+
+// Prerequisito técnico del issue #8 (clima exacto por hora): el form manual
+// solo tenía selector de fecha. Estas dos funciones combinan/extraen la hora
+// del mismo timestamptz sin agregar una columna nueva.
+describe('combineDateAndTime', () => {
+  it('builds a full ISO timestamp anchored to the fixed Argentina offset', () => {
+    expect(combineDateAndTime('2026-07-21', '21:00')).toBe('2026-07-21T21:00:00-03:00')
+  })
+
+  it('preserves single-digit-looking HTML time input values as given (HH:mm)', () => {
+    expect(combineDateAndTime('2026-01-01', '00:05')).toBe('2026-01-01T00:05:00-03:00')
+  })
+})
+
+describe('eventTimeOfDay', () => {
+  it('reads the Argentina local HH:mm from a UTC timestamp', () => {
+    // 2026-07-21T23:30:00Z = 2026-07-21 20:30 ART (UTC-3)
+    expect(eventTimeOfDay('2026-07-21T23:30:00Z')).toBe('20:30')
+  })
+
+  it('handles the midnight-ART edge without rolling over to "24:00"', () => {
+    // 2026-07-21T03:00:00Z = 2026-07-21 00:00 ART exactly
+    expect(eventTimeOfDay('2026-07-21T03:00:00Z')).toBe('00:00')
+  })
+
+  it('round-trips with combineDateAndTime', () => {
+    const iso = combineDateAndTime('2026-07-21', '21:15')
+    expect(eventTimeOfDay(iso)).toBe('21:15')
   })
 })

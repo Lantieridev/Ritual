@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button, FormField, inputClass, Combobox, StarRating, type ComboboxOption } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
+import { combineDateAndTime, eventTimeOfDay } from '@/src/core/lib/dates'
 import { EXPENSE_CATEGORIES } from '@/src/domains/expenses/categories'
 import type {
   Venue,
@@ -119,10 +120,15 @@ export function EventForm({
     setIsSubmitting(true)
     const form = e.currentTarget
     const name = (form.elements.namedItem('name') as HTMLInputElement).value
-    const date = (form.elements.namedItem('date') as HTMLInputElement).value
+    const dateValue = (form.elements.namedItem('date') as HTMLInputElement).value
+    const timeValue = (form.elements.namedItem('time') as HTMLInputElement).value
     const ticket_url = (form.elements.namedItem('ticket_url') as HTMLInputElement).value
     const venue_id = selectedVenue.id
     const artist_ids = selectedArtists.map((a) => a.id)
+    // Combina fecha + hora en un solo timestamp — issue #8 (clima exacto por
+    // hora): antes solo se guardaba la fecha (medianoche UTC), lo que hacía
+    // imposible pedirle a Open-Meteo el clima de la hora real del show.
+    const date = combineDateAndTime(dateValue, timeValue)
 
     if (isEdit && event) {
       const result = await updateEventFn!(event.id, { name, date, venue_id, artist_ids, ticket_url })
@@ -152,7 +158,9 @@ export function EventForm({
       await saveMemory(eventId, { rating: rating > 0 ? rating : undefined, review: review.trim() || undefined })
     }
     if (expenseAmount && Number(expenseAmount) > 0 && insertExpense) {
-      await insertExpense({ amount: Number(expenseAmount), category: expenseCategory, event_id: eventId, date })
+      // El gasto es un dato de nivel "día", no de hora exacta — usa la fecha
+      // sola (dateValue), no el timestamp combinado con hora.
+      await insertExpense({ amount: Number(expenseAmount), category: expenseCategory, event_id: eventId, date: dateValue })
     }
 
     router.push(routes.events.detail(eventId))
@@ -178,9 +186,26 @@ export function EventForm({
           className={inputClass}
         />
       </FormField>
-      <FormField label="Fecha" id="date" required>
-        <input id="date" name="date" type="date" required defaultValue={event?.date ? event.date.slice(0, 10) : ''} className={inputClass} />
-      </FormField>
+      <div className="grid grid-cols-2 gap-4">
+        <FormField label="Fecha" id="date" required>
+          <input id="date" name="date" type="date" required defaultValue={event?.date ? event.date.slice(0, 10) : ''} className={inputClass} />
+        </FormField>
+        <FormField
+          label="Hora"
+          id="time"
+          required
+          hint="Puerta/inicio del show — se usa para pedirle a Open-Meteo el clima de esa hora exacta."
+        >
+          <input
+            id="time"
+            name="time"
+            type="time"
+            required
+            defaultValue={event?.date ? eventTimeOfDay(event.date) : '20:00'}
+            className={inputClass}
+          />
+        </FormField>
+      </div>
       <FormField label="Sede" id="venue-combobox" required>
         {selectedVenue ? (
           <div className="flex items-center justify-between gap-3 border border-ritual-border bg-ritual-surface px-4 py-2.5">

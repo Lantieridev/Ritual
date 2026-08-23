@@ -15,7 +15,13 @@
  * the server is NOT "today in Argentina".
  */
 
-const APP_TIMEZONE = 'America/Argentina/Buenos_Aires'
+/**
+ * Exportado (no solo interno) porque el clima por hora (issue #8) también
+ * necesita anclar sus consultas a Open-Meteo a esta misma timezone — una
+ * sola fuente de verdad para "qué hora es, en términos del show" en vez de
+ * un segundo string hardcodeado que puede divergir de este.
+ */
+export const APP_TIMEZONE = 'America/Argentina/Buenos_Aires'
 
 const BARE_DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -111,4 +117,34 @@ export function nearestUpcoming<T>(
         }
     }
     return best
+}
+
+/**
+ * Combina el valor de un `<input type="date">` ("YYYY-MM-DD") y uno de
+ * `<input type="time">` ("HH:mm") en un timestamp ISO completo, anclado a
+ * la hora de Argentina — ver issue #8. Usa un offset fijo "-03:00" en vez
+ * de convertir vía Intl porque Argentina no tiene horario de verano desde
+ * 2009 (UTC-3 todo el año); un offset fijo es correcto y evita la
+ * complejidad de calcular un offset variable para una timezone que no lo
+ * necesita.
+ */
+export function combineDateAndTime(date: string, time: string): string {
+    return `${date}T${time}:00-03:00`
+}
+
+/**
+ * Hora local "HH:mm" (24hs, timezone de Argentina) de un timestamp
+ * completo — usada para precargar el input de hora del formulario de
+ * edición a partir del valor ya guardado en `events.date` (ver issue #8).
+ */
+export function eventTimeOfDay(dateStr: string): string {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: APP_TIMEZONE,
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+    }).formatToParts(new Date(dateStr))
+    const hour = parts.find((p) => p.type === 'hour')?.value ?? '00'
+    const minute = parts.find((p) => p.type === 'minute')?.value ?? '00'
+    return `${hour}:${minute}`
 }
