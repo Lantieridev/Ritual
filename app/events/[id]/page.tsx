@@ -12,6 +12,7 @@ import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
 import { getExpenseCategory } from '@/src/domains/expenses/categories'
+import { safeHref } from '@/src/core/lib/validation'
 import { LinkButton } from '@/src/core/components/ui'
 import { DeleteEventButton } from '@/src/domains/events/components'
 import { AttendanceStatusButtons } from '@/src/domains/events/components/AttendanceStatusButtons'
@@ -129,6 +130,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </p>
           <AttendanceStatusButtons eventId={event.id} currentStatus={attendance?.status ?? null} isPast={isPast} />
         </section>
+
+        {/* Entradas — link manual (AllAccess, Passline, etc.), no hay búsqueda automática, ver issue #19 */}
+        {!isPast && safeHref(event.ticket_url) && (
+          <section>
+            <a
+              href={safeHref(event.ticket_url)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center font-label text-[10px] tracking-[0.14em] uppercase bg-ritual-red text-ritual-bone hover:bg-ritual-red-hover transition-colors px-6 py-3"
+            >
+              Comprar entradas →
+            </a>
+          </section>
+        )}
 
         {/* Info */}
         <section className="grid sm:grid-cols-2 gap-6 border-t border-ritual-border-subtle pt-8">

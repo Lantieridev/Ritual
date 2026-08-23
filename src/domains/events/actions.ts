@@ -46,6 +46,7 @@ export async function insertEvent(formData: EventCreateInput): Promise<ActionRes
       name,
       date: formData.date,
       venue_id: formData.venue_id,
+      ticket_url: formData.ticket_url?.trim() || null,
     })
     .select('id')
     .single()
@@ -194,7 +195,7 @@ export async function modifyEvent(id: string, formData: EventUpdateInput): Promi
   }
 
   const supabase = await createClient()
-  const payload: { name?: string | null; date?: string; venue_id?: string | null } = {}
+  const payload: { name?: string | null; date?: string; venue_id?: string | null; ticket_url?: string | null } = {}
 
   if (formData.name !== undefined) {
     payload.name = sanitizeText(formData.name, MAX_NAME_LENGTH)
@@ -204,6 +205,9 @@ export async function modifyEvent(id: string, formData: EventUpdateInput): Promi
   }
   if (formData.venue_id !== undefined) {
     payload.venue_id = formData.venue_id || null
+  }
+  if (formData.ticket_url !== undefined) {
+    payload.ticket_url = formData.ticket_url.trim() || null
   }
 
   if (Object.keys(payload).length > 0) {
