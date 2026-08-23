@@ -4,6 +4,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EventForm } from '@/src/domains/events/components/EventForm'
 import type { Venue, Artist, EventWithRelations } from '@/src/core/types'
+import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
+import { transportError } from '@/src/graphql/transport-failure.testing'
 
 const push = vi.fn()
 vi.mock('next/navigation', () => ({
@@ -415,5 +417,50 @@ describe('EventForm — edit mode', () => {
       />
     )
     expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/events/e1')
+  })
+})
+
+/**
+ * Las altas inline de sede/artista fallaban en silencio cuando la mutation no
+ * llegaba al resolver: urql resuelve con `data: undefined`, así que cualquier
+ * chequeo que solo mire `data.<campo>.error` lee la falla como éxito.
+ */
+describe('EventForm — inline creation transport failures', () => {
+  beforeEach(() => {
+    push.mockClear()
+    findOrCreateVenueMock.mockReset()
+    findOrCreateArtistMock.mockReset()
+  })
+
+  it('does not add the venue and surfaces an error when the request never reaches the resolver', async () => {
+    findOrCreateVenueMock.mockResolvedValue({ data: undefined, error: transportError() })
+    const insertEvent = vi.fn()
+    render(<EventForm venues={[]} artists={artists} insertEvent={insertEvent} />)
+
+    await userEvent.type(screen.getByLabelText(/Nombre del recital/), 'Show')
+    await userEvent.type(screen.getByLabelText(/Fecha/), '2024-05-01')
+    await userEvent.type(screen.getByLabelText(/Sede/), 'Movistar Arena')
+    await userEvent.click(await screen.findByRole('option', { name: /Crear "Movistar Arena"/ }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar y generar el talón' }))
+    expect(insertEvent).not.toHaveBeenCalled()
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it('does not add the artist to the lineup and surfaces an error when the request never reaches the resolver', async () => {
+    findOrCreateArtistMock.mockResolvedValue({ data: undefined, error: transportError() })
+    render(<EventForm venues={venues} artists={artists} insertEvent={vi.fn()} />)
+
+    await userEvent.type(screen.getByLabelText(/Artistas en el lineup/), 'El Mató')
+    await userEvent.click(await screen.findByRole('option', { name: /Crear "El Mató"/ }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+    })
+    expect(screen.queryByRole('button', { name: /Quitar El Mató/ })).not.toBeInTheDocument()
   })
 })

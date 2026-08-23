@@ -16,6 +16,8 @@ vi.mock('next/navigation', () => ({
 }))
 
 import { ArtistForm } from '@/src/domains/artists/components/ArtistForm'
+import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
+import { transportError } from '@/src/graphql/transport-failure.testing'
 
 describe('ArtistForm', () => {
   beforeEach(() => {
@@ -73,5 +75,19 @@ describe('ArtistForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Crear artista' }))
 
     await waitFor(() => expect(push).toHaveBeenCalledWith('/artists'))
+  })
+
+  it('stays on the form and surfaces an error when the request never reaches the resolver', async () => {
+    executeMutation.mockResolvedValue({ data: undefined, error: transportError() })
+    render(<ArtistForm />)
+
+    await userEvent.type(screen.getByLabelText(/Nombre del artista/), 'Bandalos Chinos')
+    await userEvent.click(screen.getByRole('button', { name: 'Crear artista' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+    })
+    expect(push).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Crear artista' })).toBeEnabled()
   })
 })

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useMutation, gql } from 'urql'
+import { unwrapMutation } from '@/src/graphql/mutation-result'
 
 const ToggleWishlistMutation = gql`
   mutation ToggleWishlist($artistId: ID!) {
@@ -25,11 +26,14 @@ export function WishlistButton({ artistId, initialInWishlist }: WishlistButtonPr
         setInWishlist((prev) => !prev)
         setError(null)
         startTransition(async () => {
-            const { data } = await toggleWishlist({ artistId })
-            const result = data?.toggleWishlist
-            if (!result || result.error) {
+            const result = unwrapMutation<{ inWishlist?: boolean; error?: string }>(
+                await toggleWishlist({ artistId }),
+                'toggleWishlist',
+                'No se pudo actualizar la wishlist.'
+            )
+            if (result.error || result.inWishlist == null) {
                 setInWishlist((prev) => !prev)
-                setError(result?.error ?? 'No se pudo actualizar la wishlist.')
+                setError(result.error ?? 'No se pudo actualizar la wishlist.')
             } else {
                 setInWishlist(result.inWishlist)
             }

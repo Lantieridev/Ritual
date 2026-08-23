@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMutation, gql } from 'urql'
+import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
 
@@ -26,14 +27,17 @@ export function ArtistForm() {
     setExistingId(null)
     setIsSubmitting(true)
     const form = e.currentTarget
-    const { data } = await createArtist({
-      input: {
-        name: (form.elements.namedItem('name') as HTMLInputElement).value,
-        genre: (form.elements.namedItem('genre') as HTMLInputElement).value || undefined,
-      },
-    })
-    const result = data?.createArtist
-    if (result?.error) {
+    const result = unwrapMutation<{ id?: string; existingId?: string; error?: string }>(
+      await createArtist({
+        input: {
+          name: (form.elements.namedItem('name') as HTMLInputElement).value,
+          genre: (form.elements.namedItem('genre') as HTMLInputElement).value || undefined,
+        },
+      }),
+      'createArtist',
+      'No se pudo crear el artista.'
+    )
+    if (result.error) {
       setError(result.error)
       setExistingId(result.existingId ?? null)
       setIsSubmitting(false)

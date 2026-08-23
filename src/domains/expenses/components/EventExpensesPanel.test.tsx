@@ -25,6 +25,8 @@ vi.mock('urql', async () => {
 })
 
 import { EventExpensesPanel } from '@/src/domains/expenses/components/EventExpensesPanel'
+import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
+import { transportError } from '@/src/graphql/transport-failure.testing'
 
 const baseExpenses: Expense[] = [
   { id: 'x1', user_id: 'u1', amount: 5000, category: 'Comida y bebida', note: null, event_id: 'ev-1', date: '2026-05-01' },
@@ -217,5 +219,63 @@ describe('EventExpensesPanel', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('No se pudo eliminar.')
     })
     expect(screen.getByText('$23.000')).toBeInTheDocument()
+  })
+
+  /**
+   * Cuando la request no llega al resolver (red caída, 500, GraphQL inválido)
+   * urql resuelve con `data: undefined` y `error` seteado. Mirar solo
+   * `data.x.error` leía eso como éxito y aplicaba el cambio optimista sobre
+   * algo que el servidor nunca guardó.
+   */
+  describe('transport failures (data undefined, result.error set)', () => {
+    it('quick-add: does not add the expense and surfaces an error', async () => {
+      createExpenseMock.mockResolvedValue({ data: undefined, error: transportError() })
+      renderPanel()
+
+      await userEvent.click(screen.getByRole('button', { name: '+ Cargar gasto' }))
+      await userEvent.type(screen.getByLabelText('Monto'), '2000')
+      await userEvent.selectOptions(screen.getByLabelText('Categoría'), 'Merch')
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar gasto' }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+      })
+      expect(screen.getByText('$23.000')).toBeInTheDocument()
+      expect(screen.getByText(/3 ítems/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Merch:/ })).not.toBeInTheDocument()
+    })
+
+    it('inline edit: keeps the old amount and surfaces an error', async () => {
+      updateExpenseMock.mockResolvedValue({ data: undefined, error: transportError() })
+      renderPanel()
+
+      await userEvent.click(screen.getByRole('button', { name: /Entrada: \$15\.000/ }))
+      await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
+      const amountInput = screen.getByLabelText('Monto')
+      await userEvent.clear(amountInput)
+      await userEvent.type(amountInput, '16000')
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+      })
+      expect(screen.getByText('$23.000')).toBeInTheDocument()
+      expect(screen.queryByText('$24.000')).not.toBeInTheDocument()
+    })
+
+    it('inline delete: keeps the expense in the list and surfaces an error', async () => {
+      deleteExpenseMock.mockResolvedValue({ data: undefined, error: transportError() })
+      renderPanel()
+
+      await userEvent.click(screen.getByRole('button', { name: /Entrada: \$15\.000/ }))
+      await userEvent.click(screen.getByRole('button', { name: 'Eliminar gasto' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Sí, eliminar' }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+      })
+      expect(screen.getByText('$23.000')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Entrada: \$15\.000/ })).toBeInTheDocument()
+    })
   })
 })

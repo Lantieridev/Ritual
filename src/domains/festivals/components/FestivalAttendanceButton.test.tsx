@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const mockSaveFestivalAttendance = vi.fn()
@@ -11,6 +11,8 @@ vi.mock('urql', async () => {
 })
 
 import { FestivalAttendanceButton } from '@/src/domains/festivals/components/FestivalAttendanceButton'
+import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
+import { transportError } from '@/src/graphql/transport-failure.testing'
 
 describe('FestivalAttendanceButton', () => {
   beforeEach(() => {
@@ -60,5 +62,18 @@ describe('FestivalAttendanceButton', () => {
     await userEvent.keyboard('{Escape}')
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('rolls back the optimistic status and shows an error when the request never reaches the resolver', async () => {
+    mockSaveFestivalAttendance.mockResolvedValue({ data: undefined, error: transportError() })
+    render(<FestivalAttendanceButton festivalId="f1" initialStatus="interested" />)
+
+    await userEvent.click(screen.getByRole('button'))
+    await userEvent.click(screen.getByRole('menuitemradio', { name: /Voy/ }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+    })
+    expect(screen.getByRole('button', { name: /Me interesa/ })).toBeInTheDocument()
   })
 })

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMutation, gql } from 'urql'
+import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
@@ -57,17 +58,17 @@ export function ExpenseForm({ events, expense }: ExpenseFormProps) {
     }
     
     if (isEdit && expense) {
-      const { data } = await updateExpenseM({ id: expense.id, input: payload })
-      if (data?.updateExpense?.error) {
-        setError(data.updateExpense.error)
+      const result = unwrapMutation(await updateExpenseM({ id: expense.id, input: payload }), 'updateExpense')
+      if (result.error) {
+        setError(result.error)
         setIsSubmitting(false)
       } else {
         router.push(routes.expenses.detail(expense.id))
       }
     } else {
-      const { data } = await createExpenseM({ input: payload })
-      if (data?.createExpense?.error) {
-        setError(data.createExpense.error)
+      const result = unwrapMutation(await createExpenseM({ input: payload }), 'createExpense')
+      if (result.error) {
+        setError(result.error)
         setIsSubmitting(false)
       } else {
         router.push(routes.expenses.list)

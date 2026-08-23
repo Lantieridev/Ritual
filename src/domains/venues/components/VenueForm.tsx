@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMutation, gql } from 'urql'
+import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
 
@@ -26,16 +27,19 @@ export function VenueForm() {
     setExistingId(null)
     setIsSubmitting(true)
     const form = e.currentTarget
-    const { data } = await createVenue({
-      input: {
-        name: (form.elements.namedItem('name') as HTMLInputElement).value,
-        city: (form.elements.namedItem('city') as HTMLInputElement).value || undefined,
-        address: (form.elements.namedItem('address') as HTMLInputElement).value || undefined,
-        country: (form.elements.namedItem('country') as HTMLInputElement).value || undefined,
-      },
-    })
-    const result = data?.createVenue
-    if (result?.error) {
+    const result = unwrapMutation<{ id?: string; existingId?: string; error?: string }>(
+      await createVenue({
+        input: {
+          name: (form.elements.namedItem('name') as HTMLInputElement).value,
+          city: (form.elements.namedItem('city') as HTMLInputElement).value || undefined,
+          address: (form.elements.namedItem('address') as HTMLInputElement).value || undefined,
+          country: (form.elements.namedItem('country') as HTMLInputElement).value || undefined,
+        },
+      }),
+      'createVenue',
+      'No se pudo crear la sede.'
+    )
+    if (result.error) {
       setError(result.error)
       setExistingId(result.existingId ?? null)
       setIsSubmitting(false)

@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { useMutation, gql } from 'urql'
+import { unwrapMutation } from '@/src/graphql/mutation-result'
 
 const SaveFestivalAttendanceMutation = gql`
   mutation SaveFestivalAttendance($festivalId: ID!, $status: AttendanceStatus!) {
@@ -33,11 +34,14 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
         setOpen(false)
         setError(null)
         startTransition(async () => {
-            const { data } = await saveFestivalAttendance({ festivalId, status: value })
-            const result = data?.saveFestivalAttendance
-            if (!result || result.error) {
+            const result = unwrapMutation<{ success?: boolean; error?: string }>(
+                await saveFestivalAttendance({ festivalId, status: value }),
+                'saveFestivalAttendance',
+                'No se pudo guardar la asistencia.'
+            )
+            if (result.error || !result.success) {
                 setStatus(previous)
-                setError(result?.error ?? 'No se pudo guardar la asistencia.')
+                setError(result.error ?? 'No se pudo guardar la asistencia.')
             }
         })
     }

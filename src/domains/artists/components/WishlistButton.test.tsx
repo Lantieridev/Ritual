@@ -11,6 +11,8 @@ vi.mock('urql', async () => {
 })
 
 import { WishlistButton } from '@/src/domains/artists/components/WishlistButton'
+import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
+import { transportError } from '@/src/graphql/transport-failure.testing'
 
 describe('WishlistButton', () => {
   beforeEach(() => {
@@ -65,5 +67,17 @@ describe('WishlistButton', () => {
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('No autenticado')
     })
+  })
+
+  it('rolls back the optimistic star and shows an error when the request never reaches the resolver', async () => {
+    mockToggleWishlist.mockResolvedValue({ data: undefined, error: transportError() })
+    render(<WishlistButton artistId="a1" initialInWishlist={false} />)
+
+    await userEvent.click(screen.getByRole('button'))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+    })
+    expect(screen.getByRole('button', { name: 'Seguir este artista' })).toBeInTheDocument()
   })
 })
