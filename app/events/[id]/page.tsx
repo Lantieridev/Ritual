@@ -13,13 +13,14 @@ import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
 import { safeHref } from '@/src/core/lib/validation'
 import { LinkButton } from '@/src/core/components/ui'
-import { DeleteEventButton } from '@/src/domains/events/components'
+import { DeleteEventButton, EventWeather } from '@/src/domains/events/components'
 import { EventExpensesPanel } from '@/src/domains/expenses/components'
 import { AttendanceStatusButtons } from '@/src/domains/events/components/AttendanceStatusButtons'
 import { RatingAndReviewForm } from '@/src/domains/events/components/RatingAndReviewForm'
 import { PhotoGallery } from '@/src/domains/events/components/PhotoGallery'
 import { searchSpotifyArtist, getBestSpotifyImage, isSpotifyConfigured } from '@/src/core/lib/spotify'
 import { generateEventJsonLd } from '@/src/domains/events/jsonld'
+import { getEventWeather } from '@/src/domains/weather/weather-service'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -77,6 +78,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const dateObj = new Date(event.date)
   const dateLabel = formatDate(dateObj, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const isPast = isPastEvent(event.date)
+
+  // Clima exacto del show — ubicación de la sede, hora del evento (issue
+  // #8). Se degrada solo si la sede no tiene lat/lng cargado o Open-Meteo
+  // no responde — getEventWeather nunca lanza.
+  const hasVenueCoords = event.venues?.lat != null && event.venues?.lng != null
+  const weather = await getEventWeather({ date: event.date }, event.venues)
 
   const review = attendance?.review?.trim() || null
   const reviewVariant = !review ? 'none' : review.length > 220 ? 'long' : 'short'
@@ -157,6 +164,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <p className="font-subtitle font-black text-xl uppercase text-ritual-bone">{dateLabel}</p>
           </div>
         </section>
+
+        {/* Clima exacto del show — ver issue #8 */}
+        <EventWeather weather={weather} hasVenueCoords={hasVenueCoords} isPast={isPast} />
 
         {/* Lineup — quién tocó */}
         {event.lineups && event.lineups.length > 0 && (

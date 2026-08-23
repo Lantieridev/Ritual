@@ -49,4 +49,26 @@ describe('aggregateEventStats', () => {
     expect(result.uniqueVenues).toBe(0)
     expect(result.totalRated).toBe(1)
   })
+
+  // Issue #8: el clima queda "enchufable" acá para que una futura tarjeta de
+  // Wrapped ("fuiste a N shows bajo la lluvia") no tenga que reimplementar
+  // el conteo — solo resolver `weather` por evento antes de llamar a esta función.
+  it('counts rainy shows only among events that carry weather data', () => {
+    const result = aggregateEventStats([
+      { rating: 5, weather: { isRain: true } },
+      { rating: 4, weather: { isRain: false } },
+      { rating: 3, weather: null },
+      { rating: 2 }, // sin weather en absoluto (caller que todavía no lo resuelve)
+    ])
+
+    expect(result.rainyShows).toBe(1)
+    expect(result.totalWithWeather).toBe(2)
+  })
+
+  it('defaults rainyShows/totalWithWeather to 0 when no event carries weather', () => {
+    const result = aggregateEventStats([{ rating: 5 }, { rating: 4 }])
+
+    expect(result.rainyShows).toBe(0)
+    expect(result.totalWithWeather).toBe(0)
+  })
 })
