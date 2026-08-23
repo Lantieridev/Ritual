@@ -75,3 +75,20 @@ export async function modifyProfile(input: ProfileUpdateInput): Promise<ActionRe
     revalidatePath('/profile')
     return {}
 }
+
+export async function assignUserRole(userId: string, role: string): Promise<ActionResult> {
+    const supabase = await createClient()
+    // Goes through the assign_user_role RPC, not a raw table update — it's the
+    // only path with a DB-level admin check and column-scoped write. See 02-design.md.
+    const { error } = await supabase.rpc('assign_user_role', {
+        target_user_id: userId,
+        new_role: role,
+    })
+
+    if (error) {
+        console.error('Assign role error:', error)
+        return { error: sanitizeError(error) }
+    }
+
+    return {}
+}

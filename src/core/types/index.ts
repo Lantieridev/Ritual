@@ -266,6 +266,7 @@ export interface FutureEvent {
  */
 export interface Profile {
   id: string
+  role?: 'usuario' | 'moderador' | 'admin' | null
   username?: string | null
   full_name?: string | null
   avatar_url?: string | null

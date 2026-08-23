@@ -1,6 +1,6 @@
 import { builder } from './builder'
 import { getProfile } from '@/src/domains/auth/data'
-import { modifyProfile } from '@/src/domains/auth/service'
+import { modifyProfile, assignUserRole } from '@/src/domains/auth/service'
 import type { Profile } from '@/src/core/types'
 import { MutationResultRef, toMutationResult } from './shared'
 
@@ -16,6 +16,7 @@ ProfileRef.implement({
         bio: t.exposeString('bio', { nullable: true }),
         location: t.exposeString('location', { nullable: true }),
         updatedAt: t.exposeString('updated_at', { nullable: true }),
+        role: t.exposeString('role'),
     }),
 })
 
@@ -72,5 +73,23 @@ builder.mutationField('updateProfile', (t) =>
                     avatar_url: args.input.avatarUrl ?? undefined,
                 })
             ),
+    })
+)
+
+builder.mutationField('assignRole', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            userId: t.arg.id({ required: true }),
+            role: t.arg.string({ required: true }),
+        },
+        resolve: async (_root, args, context) => {
+            if (context.role !== 'admin') {
+                return toMutationResult({ error: 'No tenés permisos para realizar esta acción.' })
+            }
+            return toMutationResult(
+                await assignUserRole(String(args.userId), args.role)
+            )
+        },
     })
 )
