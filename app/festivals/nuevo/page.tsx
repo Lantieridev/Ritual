@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMutation, gql } from 'urql'
+import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { FormField } from '@/src/core/components/ui'
 import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
@@ -26,21 +27,24 @@ export default function NuevoFestivalPage() {
         const formData = new FormData(e.currentTarget)
 
         startTransition(async () => {
-            const { data } = await createFestival({
-                input: {
-                    name: formData.get('name') as string,
-                    edition: formData.get('edition') as string,
-                    startDate: formData.get('start_date') as string,
-                    endDate: (formData.get('end_date') as string) || undefined,
-                    city: formData.get('city') as string,
-                    country: formData.get('country') as string,
-                    website: formData.get('website') as string,
-                    notes: formData.get('notes') as string,
-                },
-            })
-            const result = data?.createFestival
-            if (!result || result.error || !result.id) {
-                setError(result?.error ?? 'No se pudo crear el festival.')
+            const result = unwrapMutation<{ id?: string; error?: string }>(
+                await createFestival({
+                    input: {
+                        name: formData.get('name') as string,
+                        edition: formData.get('edition') as string,
+                        startDate: formData.get('start_date') as string,
+                        endDate: (formData.get('end_date') as string) || undefined,
+                        city: formData.get('city') as string,
+                        country: formData.get('country') as string,
+                        website: formData.get('website') as string,
+                        notes: formData.get('notes') as string,
+                    },
+                }),
+                'createFestival',
+                'No se pudo crear el festival.'
+            )
+            if (result.error || !result.id) {
+                setError(result.error ?? 'No se pudo crear el festival.')
                 return
             }
             router.push(routes.festivals.detail(result.id))

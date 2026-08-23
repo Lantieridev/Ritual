@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useMutation, gql } from 'urql'
+import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { getExpenseCategory } from '@/src/domains/expenses/categories'
 import { groupExpensesByCategory } from '@/src/domains/expenses/grouping'
 import { formatChoripanComparison } from '@/src/domains/expenses/comparisons'
@@ -72,14 +73,14 @@ export function EventExpensesPanel({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function handleInsert(expenseData: any) {
-    const { data } = await createExpenseM({ input: expenseData })
-    return { id: data?.createExpense?.id, error: data?.createExpense?.error }
+    const result = await createExpenseM({ input: expenseData })
+    return unwrapMutation<{ id?: string; error?: string }>(result, 'createExpense')
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function handleModify(id: string, expenseData: any) {
-    const { data } = await updateExpenseM({ id, input: expenseData })
-    return { error: data?.updateExpense?.error }
+    const result = await updateExpenseM({ id, input: expenseData })
+    return unwrapMutation(result, 'updateExpense')
   }
 
   const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
@@ -98,13 +99,11 @@ export function EventExpensesPanel({
   }
 
   async function handleDelete(id: string) {
-    const { data } = await deleteExpenseM({ id })
-    if (!data?.deleteExpense?.error) {
-      setExpenses((prev) => prev.filter((e) => e.id !== id))
-      if (editingId === id) setEditingId(null)
-      return {}
-    }
-    return { error: data.deleteExpense.error }
+    const result = unwrapMutation(await deleteExpenseM({ id }), 'deleteExpense')
+    if (result.error) return { error: result.error }
+    setExpenses((prev) => prev.filter((e) => e.id !== id))
+    if (editingId === id) setEditingId(null)
+    return {}
   }
 
   return (

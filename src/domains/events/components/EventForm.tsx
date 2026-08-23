@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useMutation, gql } from 'urql'
+import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { Button, FormField, inputClass, Combobox, StarRating, type ComboboxOption } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
 import { combineDateAndTime, eventTimeOfDay } from '@/src/core/lib/dates'
@@ -100,18 +101,24 @@ export function EventForm({
   }
 
   async function handleCreateVenue(name: string) {
-    const { data } = await findOrCreateVenue({ name })
-    const result = data?.findOrCreateVenue
-    if (!result || result.error || !result.id) return { error: result?.error ?? 'No se pudo crear la sede.' }
+    const result = unwrapMutation<{ id?: string; error?: string }>(
+      await findOrCreateVenue({ name }),
+      'findOrCreateVenue',
+      'No se pudo crear la sede.'
+    )
+    if (result.error || !result.id) return { error: result.error ?? 'No se pudo crear la sede.' }
     const option: ComboboxOption = { id: result.id, label: name }
     setVenueOptions((prev) => (prev.some((v) => v.id === option.id) ? prev : [...prev, option]))
     return option
   }
 
   async function handleCreateArtist(name: string) {
-    const { data } = await findOrCreateArtist({ name })
-    const result = data?.findOrCreateArtist
-    if (!result || result.error || !result.id) return { error: result?.error ?? 'No se pudo crear el artista.' }
+    const result = unwrapMutation<{ id?: string; error?: string }>(
+      await findOrCreateArtist({ name }),
+      'findOrCreateArtist',
+      'No se pudo crear el artista.'
+    )
+    if (result.error || !result.id) return { error: result.error ?? 'No se pudo crear el artista.' }
     const option: ComboboxOption = { id: result.id, label: name }
     setArtistOptions((prev) => (prev.some((a) => a.id === option.id) ? prev : [...prev, option]))
     return option

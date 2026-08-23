@@ -27,6 +27,8 @@ vi.mock('urql', async () => {
 })
 
 import { ExpenseForm } from '@/src/domains/expenses/components/ExpenseForm'
+import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
+import { transportError } from '@/src/graphql/transport-failure.testing'
 
 const events = [{ id: 'e1', name: 'Show en Niceto', date: '2024-05-01' }] as EventWithRelations[]
 
@@ -203,5 +205,39 @@ describe('ExpenseForm — edit mode', () => {
     render(<ExpenseForm events={events} expense={graphQLExpense} />)
 
     expect(screen.getByLabelText(/Recital asociado/)).toHaveValue('e1')
+  })
+
+  /**
+   * Con `data: undefined` el chequeo viejo (`data?.createExpense?.error`) daba
+   * `undefined`, el form navegaba y el usuario creía que el gasto se guardó.
+   */
+  describe('transport failures (data undefined, result.error set)', () => {
+    it('create: stays on the form and surfaces an error instead of navigating', async () => {
+      createExpenseMock.mockResolvedValue({ data: undefined, error: transportError() })
+      render(<ExpenseForm events={events} />)
+
+      await userEvent.type(screen.getByLabelText(/Monto/), '5000')
+      await userEvent.selectOptions(screen.getByLabelText(/Categoría/), 'Entrada')
+      await userEvent.click(screen.getByRole('button', { name: 'Agregar gasto' }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+      })
+      expect(push).not.toHaveBeenCalled()
+      expect(screen.getByRole('button', { name: 'Agregar gasto' })).toBeEnabled()
+    })
+
+    it('update: stays on the form and surfaces an error instead of navigating', async () => {
+      updateExpenseMock.mockResolvedValue({ data: undefined, error: transportError() })
+      render(<ExpenseForm events={events} expense={expense} />)
+
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+      })
+      expect(push).not.toHaveBeenCalled()
+      expect(screen.getByRole('button', { name: 'Guardar cambios' })).toBeEnabled()
+    })
   })
 })

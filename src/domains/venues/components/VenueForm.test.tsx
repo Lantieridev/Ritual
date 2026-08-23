@@ -16,6 +16,8 @@ vi.mock('next/navigation', () => ({
 }))
 
 import { VenueForm } from '@/src/domains/venues/components/VenueForm'
+import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
+import { transportError } from '@/src/graphql/transport-failure.testing'
 
 describe('VenueForm', () => {
   beforeEach(() => {
@@ -89,5 +91,19 @@ describe('VenueForm', () => {
   it('links "Cancelar" to the venues list', () => {
     render(<VenueForm />)
     expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/venues')
+  })
+
+  it('stays on the form and surfaces an error when the request never reaches the resolver', async () => {
+    executeMutation.mockResolvedValue({ data: undefined, error: transportError() })
+    render(<VenueForm />)
+
+    await userEvent.type(screen.getByLabelText(/Nombre de la sede/), 'Niceto Club')
+    await userEvent.click(screen.getByRole('button', { name: 'Crear sede' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+    })
+    expect(push).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Crear sede' })).toBeEnabled()
   })
 })

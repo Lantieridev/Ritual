@@ -16,6 +16,8 @@ vi.mock('urql', async () => {
 })
 
 import { DeleteExpenseAction } from '@/src/domains/expenses/components/DeleteExpenseAction'
+import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
+import { transportError } from '@/src/graphql/transport-failure.testing'
 
 const expense = { id: 'x1', amount: 1500, category: 'Entrada' } as Expense
 
@@ -65,6 +67,19 @@ describe('DeleteExpenseAction', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
 
     expect(deleteExpenseMock).not.toHaveBeenCalled()
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it('stays on the page and surfaces an error when the request never reaches the resolver', async () => {
+    deleteExpenseMock.mockResolvedValue({ data: undefined, error: transportError() })
+    render(<DeleteExpenseAction expense={expense} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Eliminar gasto' }))
+    await userEvent.click(screen.getByRole('button', { name: /Sí, eliminar/ }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
+    })
     expect(push).not.toHaveBeenCalled()
   })
 })
