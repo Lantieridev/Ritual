@@ -1,11 +1,9 @@
 import type { Metadata } from 'next'
-import { getVenues } from '@/src/domains/venues/data'
-import { getArtists } from '@/src/domains/artists/data'
+import { gql } from 'urql'
+import { getClient } from '@/src/graphql/client'
 import { insertEvent } from '@/src/domains/events/actions'
 import { setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import { insertExpense } from '@/src/domains/expenses/service'
-import { findOrCreateVenue } from '@/src/domains/venues/actions'
-import { findOrCreateArtist } from '@/src/domains/artists/actions'
 import { routes } from '@/src/core/lib/routes'
 import { EventForm } from '@/src/domains/events/components'
 import { PageShell } from '@/src/core/components/layout'
@@ -19,14 +17,38 @@ export const metadata: Metadata = {
  * Página para cargar un recital manualmente — una sola acción, no un wizard:
  * datos + lineup + (si ya fue) puntaje/reseña + gasto, todo en el mismo submit.
  */
-import type { ExpenseCreateInput } from '@/src/core/types'
+import type { Artist, ExpenseCreateInput, GraphQLArtist, GraphQLVenue, Venue } from '@/src/core/types'
+
+const EventFormPickersQuery = gql`
+  query EventFormPickers {
+    venues { id name city country address }
+    artists { id name genre imageUrl spotifyId }
+  }
+`
+
+/** El form consume la forma snake_case del dominio para sedes y artistas. */
+async function fetchPickers() {
+  const { data } = await getClient().query<{
+    venues: GraphQLVenue[]
+    artists: GraphQLArtist[]
+  }>(EventFormPickersQuery, {})
+  const venues: Venue[] = data?.venues ?? []
+  const artists: Artist[] = (data?.artists ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    genre: a.genre,
+    image_url: a.imageUrl,
+    spotify_id: a.spotifyId,
+  }))
+  return { venues, artists }
+}
 
 export default async function NewEventPage() {
   async function insertExpenseAction(data: ExpenseCreateInput) {
     'use server'
     return insertExpense(data)
   }
-  const [venues, artists] = await Promise.all([getVenues(), getArtists()])
+  const { venues, artists } = await fetchPickers()
 
   return (
     <PageShell
@@ -39,8 +61,6 @@ export default async function NewEventPage() {
         venues={venues}
         artists={artists}
         insertEvent={insertEvent}
-        findOrCreateVenue={findOrCreateVenue}
-        findOrCreateArtist={findOrCreateArtist}
         setAttendanceStatus={setAttendanceStatus}
         saveMemory={saveMemory}
         insertExpense={insertExpenseAction}

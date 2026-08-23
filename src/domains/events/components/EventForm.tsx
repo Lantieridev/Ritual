@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useMutation, gql } from 'urql'
 import { Button, FormField, inputClass, Combobox, StarRating, type ComboboxOption } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
 import { combineDateAndTime, eventTimeOfDay } from '@/src/core/lib/dates'
@@ -18,11 +19,22 @@ import type {
 
 type InsertEvent = (data: EventCreateInput) => Promise<{ error?: string; id?: string }>
 type UpdateSubmit = (id: string, data: EventUpdateInput) => Promise<{ error?: string }>
-type FindOrCreateVenue = (name: string) => Promise<{ error?: string; id?: string }>
-type FindOrCreateArtist = (name: string) => Promise<{ error?: string; id?: string }>
 type SetAttendanceStatus = (eventId: string, status: 'went') => Promise<{ error?: string }>
 type SaveMemory = (eventId: string, data: { rating?: number; review?: string }) => Promise<{ error?: string }>
 type InsertExpense = (data: ExpenseCreateInput) => Promise<{ error?: string; id?: string }>
+
+// Sedes y artistas se crean inline desde el combobox: ya no llegan como
+// Server Actions inyectadas por prop, el form dispara la mutation directo.
+const FindOrCreateVenueMutation = gql`
+  mutation FindOrCreateVenue($name: String!) {
+    findOrCreateVenue(name: $name) { id error }
+  }
+`
+const FindOrCreateArtistMutation = gql`
+  mutation FindOrCreateArtist($name: String!) {
+    findOrCreateArtist(name: $name) { id error }
+  }
+`
 
 interface EventFormProps {
   venues: Venue[]
@@ -31,11 +43,6 @@ interface EventFormProps {
   insertEvent?: InsertEvent
   event?: EventWithRelations
   updateEvent?: UpdateSubmit
-  // Recibidas como prop, no importadas directo: un Client Component no
-  // puede importar un módulo 'use server' que arrastre 'server-only' vía
-  // core/auth/session.ts (mismo patrón en todas las server actions de acá).
-  findOrCreateVenue: FindOrCreateVenue
-  findOrCreateArtist: FindOrCreateArtist
   setAttendanceStatus?: SetAttendanceStatus
   saveMemory?: SaveMemory
   insertExpense?: InsertExpense
@@ -51,8 +58,6 @@ export function EventForm({
   insertEvent,
   event,
   updateEvent: updateEventFn,
-  findOrCreateVenue,
-  findOrCreateArtist,
   setAttendanceStatus,
   saveMemory,
   insertExpense,
@@ -60,6 +65,8 @@ export function EventForm({
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [, findOrCreateVenue] = useMutation(FindOrCreateVenueMutation)
+  const [, findOrCreateArtist] = useMutation(FindOrCreateArtistMutation)
 
   const [venueOptions, setVenueOptions] = useState<ComboboxOption[]>(() => venues.map(toOption))
   const [selectedVenue, setSelectedVenue] = useState<ComboboxOption | null>(() => {
@@ -93,16 +100,18 @@ export function EventForm({
   }
 
   async function handleCreateVenue(name: string) {
-    const result = await findOrCreateVenue(name)
-    if (result.error || !result.id) return { error: result.error ?? 'No se pudo crear la sede.' }
+    const { data } = await findOrCreateVenue({ name })
+    const result = data?.findOrCreateVenue
+    if (!result || result.error || !result.id) return { error: result?.error ?? 'No se pudo crear la sede.' }
     const option: ComboboxOption = { id: result.id, label: name }
     setVenueOptions((prev) => (prev.some((v) => v.id === option.id) ? prev : [...prev, option]))
     return option
   }
 
   async function handleCreateArtist(name: string) {
-    const result = await findOrCreateArtist(name)
-    if (result.error || !result.id) return { error: result.error ?? 'No se pudo crear el artista.' }
+    const { data } = await findOrCreateArtist({ name })
+    const result = data?.findOrCreateArtist
+    if (!result || result.error || !result.id) return { error: result?.error ?? 'No se pudo crear el artista.' }
     const option: ComboboxOption = { id: result.id, label: name }
     setArtistOptions((prev) => (prev.some((a) => a.id === option.id) ? prev : [...prev, option]))
     return option

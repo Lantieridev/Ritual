@@ -154,6 +154,87 @@ export interface GraphQLExpenseSummary {
   byYear: Record<string, number>
 }
 
+/** Respuesta GraphQL para una sede. */
+export interface GraphQLVenue {
+  id: string
+  name: string
+  address?: string | null
+  city?: string | null
+  country?: string | null
+  lat?: number | null
+  lng?: number | null
+}
+
+/** Show del historial de una sede, tal como lo devuelve `Venue.events`. */
+export interface GraphQLVenueEvent {
+  id: string
+  name: string | null
+  date: string
+  lineups: Array<{ artist: { name: string } }>
+  attendance: Array<{ status: string }>
+}
+
+/** Respuesta GraphQL para el detalle de una sede, con su historial de shows. */
+export interface GraphQLVenueWithEvents extends GraphQLVenue {
+  events: GraphQLVenueEvent[]
+}
+
+/** Respuesta GraphQL para un artista. */
+export interface GraphQLArtist {
+  id: string
+  name: string
+  genre?: string | null
+  imageUrl?: string | null
+  spotifyId?: string | null
+}
+
+/** Show del historial de un artista, tal como lo devuelve `Artist.events`. */
+export interface GraphQLArtistEvent {
+  id: string
+  name: string | null
+  date: string
+  venue: { name: string; city: string | null } | null
+  photos: Array<{ storagePath: string; caption: string | null }>
+  attendance: Array<{ status: string; rating: number | null; review: string | null }>
+}
+
+/** Respuesta GraphQL para el detalle de un artista, con su historial de shows. */
+export interface GraphQLArtistWithEvents extends GraphQLArtist {
+  events: GraphQLArtistEvent[]
+}
+
+/** Respuesta GraphQL para un festival, con sus días y tu asistencia. */
+export interface GraphQLFestival {
+  id: string
+  name: string
+  edition: string | null
+  startDate: string
+  endDate: string | null
+  venueId: string | null
+  city: string | null
+  country: string | null
+  website: string | null
+  posterUrl: string | null
+  notes: string | null
+  createdAt: string
+  venue: { name: string; city: string | null } | null
+  festivalEvents: Array<{
+    id: string
+    dayLabel: string | null
+    event: {
+      id: string
+      name: string | null
+      date: string
+      lineups: Array<{
+        artist: { id: string; name: string }
+        stage: string | null
+        startTime: string | null
+      }>
+    }
+  }>
+  festivalAttendance: Array<{ status: string; rating: number | null; review: string | null }>
+}
+
 /**
  * Formato normalizado para eventos provenientes de APIs externas
  * (Ticketmaster, Setlist.fm, etc.). Usado por addExternalEvent en actions.ts.

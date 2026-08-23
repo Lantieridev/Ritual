@@ -1,12 +1,35 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { gql } from 'urql'
+import { getClient } from '@/src/graphql/client'
 import { getEventById } from '@/src/domains/events/data'
-import { getVenues } from '@/src/domains/venues/data'
-import { getArtists } from '@/src/domains/artists/data'
 import { updateEvent } from '@/src/domains/events/actions'
-import { findOrCreateVenue } from '@/src/domains/venues/actions'
-import { findOrCreateArtist } from '@/src/domains/artists/actions'
 import { routes } from '@/src/core/lib/routes'
+import type { Artist, GraphQLArtist, GraphQLVenue, Venue } from '@/src/core/types'
+
+const EventFormPickersQuery = gql`
+  query EventFormPickers {
+    venues { id name city country address }
+    artists { id name genre imageUrl spotifyId }
+  }
+`
+
+/** El form consume la forma snake_case del dominio para sedes y artistas. */
+async function fetchPickers() {
+  const { data } = await getClient().query<{
+    venues: GraphQLVenue[]
+    artists: GraphQLArtist[]
+  }>(EventFormPickersQuery, {})
+  const venues: Venue[] = data?.venues ?? []
+  const artists: Artist[] = (data?.artists ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    genre: a.genre,
+    image_url: a.imageUrl,
+    spotify_id: a.spotifyId,
+  }))
+  return { venues, artists }
+}
 import { EventForm } from '@/src/domains/events/components'
 import { PageShell } from '@/src/core/components/layout'
 
@@ -27,11 +50,7 @@ export async function generateMetadata({ params }: EditEventPageProps): Promise<
  */
 export default async function EditEventPage({ params }: EditEventPageProps) {
   const { id } = await params
-  const [event, venues, artists] = await Promise.all([
-    getEventById(id),
-    getVenues(),
-    getArtists(),
-  ])
+  const [event, { venues, artists }] = await Promise.all([getEventById(id), fetchPickers()])
 
   if (!event) {
     notFound()
@@ -49,8 +68,6 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
         artists={artists}
         event={event}
         updateEvent={updateEvent}
-        findOrCreateVenue={findOrCreateVenue}
-        findOrCreateArtist={findOrCreateArtist}
       />
     </PageShell>
   )

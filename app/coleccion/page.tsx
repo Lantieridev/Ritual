@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getArtists } from '@/src/domains/artists/data'
-import { getVenues } from '@/src/domains/venues/data'
-import { listFestivals } from '@/src/domains/festivals/service'
+import { gql } from 'urql'
+import { getClient } from '@/src/graphql/client'
+import type { GraphQLArtist, GraphQLFestival, GraphQLVenue } from '@/src/core/types'
+import type { Artist } from '@/src/core/types'
 import { getEventsWithAttendance } from '@/src/domains/events/data'
-import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
 import { aggregateEventStats } from '@/src/domains/stats/aggregate'
 import { buildArtistShelves, buildCollectionTerritory, type CollectionArtist } from '@/src/domains/artists/collection-view'
 import { routes } from '@/src/core/lib/routes'
@@ -61,12 +61,34 @@ export default async function CollectionPage({ searchParams }: PageProps) {
     )
 }
 
+const ArtistsTabQuery = gql`
+  query CollectionArtists {
+    artists { id name genre imageUrl spotifyId }
+    wishlistArtistIds
+  }
+`
+
+/** buildArtistShelves/buildCollectionTerritory consumen la forma del dominio. */
+function toDomainArtist(artist: GraphQLArtist): Artist {
+    return {
+        id: artist.id,
+        name: artist.name,
+        genre: artist.genre,
+        image_url: artist.imageUrl,
+        spotify_id: artist.spotifyId,
+    }
+}
+
 async function ArtistsShelvesView() {
-    const [artists, wentEvents, wishlistIds] = await Promise.all([
-        getArtists(),
+    const [{ data }, wentEvents] = await Promise.all([
+        getClient().query<{ artists: GraphQLArtist[]; wishlistArtistIds: string[] }>(
+            ArtistsTabQuery,
+            {}
+        ),
         getEventsWithAttendance().then((events) => events.filter((e) => e.attendance?.[0]?.status === 'went')),
-        getWishlistArtistIds(),
     ])
+    const artists = (data?.artists ?? []).map(toDomainArtist)
+    const wishlistIds = data?.wishlistArtistIds ?? []
 
     if (artists.length === 0) {
         return (
@@ -170,8 +192,15 @@ function ArtistShelf({ title, artists }: { title: string; artists: Array<Collect
     )
 }
 
+const VenuesTabQuery = gql`
+  query CollectionVenues {
+    venues { id name city country address }
+  }
+`
+
 async function VenuesTab() {
-    const venues = await getVenues()
+    const { data } = await getClient().query<{ venues: GraphQLVenue[] }>(VenuesTabQuery, {})
+    const venues = data?.venues ?? []
 
     if (venues.length === 0) {
         return (
@@ -214,10 +243,33 @@ const FESTIVAL_STATUS_LABEL: Record<string, string> = {
     went: 'Fui ✓',
 }
 
+const FestivalsTabQuery = gql`
+  query CollectionFestivals {
+    festivals {
+      id
+      name
+      edition
+      startDate
+      city
+      country
+      festivalAttendance { status }
+    }
+  }
+`
+
+type CollectionFestival = Pick<GraphQLFestival, 'id' | 'name' | 'edition' | 'city' | 'country'> & {
+    startDate: string
+    festivalAttendance: Array<{ status: string }>
+}
+
 async function FestivalsTab() {
-    const festivals = await listFestivals()
-    const upcoming = festivals.filter((f) => !isPastEvent(f.start_date))
-    const past = festivals.filter((f) => isPastEvent(f.start_date))
+    const { data } = await getClient().query<{ festivals: CollectionFestival[] }>(
+        FestivalsTabQuery,
+        {}
+    )
+    const festivals = data?.festivals ?? []
+    const upcoming = festivals.filter((f) => !isPastEvent(f.startDate))
+    const past = festivals.filter((f) => isPastEvent(f.startDate))
 
     if (festivals.length === 0) {
         return (
@@ -240,13 +292,13 @@ async function FestivalsTab() {
     )
 }
 
-function FestivalList({ title, festivals }: { title: string; festivals: Awaited<ReturnType<typeof listFestivals>> }) {
+function FestivalList({ title, festivals }: { title: string; festivals: CollectionFestival[] }) {
     return (
         <section>
             <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">{title}</h2>
             <ul className="divide-y divide-ritual-border-subtle">
                 {festivals.map((festival) => {
-                    const status = festival.festival_attendance?.[0]?.status
+                    const status = festival.festivalAttendance?.[0]?.status
                     return (
                         <li key={festival.id}>
                             <Link href={routes.festivals.detail(festival.id)} className="group flex items-center gap-5 py-4">
