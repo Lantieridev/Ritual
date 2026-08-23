@@ -12,6 +12,8 @@ export const routes = {
   wrapped: '/wrapped',
   /** Unifica los catálogos de artistas/sedes/festivales en pestañas. */
   collection: '/coleccion',
+  /** Ajustes del modo recital activo: ventana y plantilla del checklist — issue #9. */
+  showMode: '/modo-recital',
 
   artists: {
     list: '/artists',

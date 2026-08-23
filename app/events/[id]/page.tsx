@@ -23,6 +23,19 @@ import { generateEventJsonLd } from '@/src/domains/events/jsonld'
 import { getEventWeather } from '@/src/domains/weather/weather-service'
 import { getClient } from '@/src/graphql/client'
 import { gql } from 'urql'
+import { getEventShowModeState } from '@/src/domains/showmode/service'
+import { buildMemoryCard } from '@/src/domains/showmode/memory-card'
+import {
+  setChecklistItemChecked,
+  addEventChecklistItem,
+  removeEventChecklistItem,
+} from '@/src/domains/showmode/actions'
+import {
+  ShowModeBanner,
+  PreShowChecklist,
+  PendingShowPrompt,
+  MemoryCard,
+} from '@/src/domains/showmode/components'
 
 const EventDetailPageQuery = gql`
   query EventDetailPage($eventId: ID!) {
@@ -103,6 +116,32 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const jsonLd = generateEventJsonLd(event)
   const expensesDefaultDate = String(event.date).slice(0, 10)
 
+  // Modo recital activo — issue #9. La ventana se resuelve contra el rango
+  // real del show (el festival completo si el evento es un día de uno) y con
+  // la configuración del usuario. Recibe la asistencia y los gastos ya
+  // cargados arriba en vez de volver a pedirlos.
+  const showMode = await getEventShowModeState(event, userId, {
+    attendanceStatus: attendance?.status ?? null,
+    expenseCount: expenses.length,
+    rating: attendance?.rating ?? null,
+    review: attendance?.review ?? null,
+  })
+  const showsChecklist =
+    userId !== null && (showMode.window.phase === 'before' || showMode.window.phase === 'during')
+  // La tarjeta recuerdo tiene sentido recién con el show pasado y confirmado:
+  // antes de eso no hay nada que recordar. Se ofrece incluso con pendientes
+  // (avisando cuáles), en vez de esconderla hasta que esté todo perfecto.
+  const showsMemoryCard = userId !== null && isPast && attendance?.status === 'went'
+  const memoryCard = showsMemoryCard
+    ? buildMemoryCard({
+        event,
+        expenses,
+        rating: attendance?.rating ?? null,
+        review: attendance?.review ?? null,
+        weather,
+      })
+    : null
+
   return (
     <main className="min-h-screen bg-ritual-bg text-ritual-bone">
       <script
@@ -143,6 +182,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       </div>
 
       <div className="max-w-3xl mx-auto px-6 md:px-8 py-10 space-y-10">
+        {/* Modo recital activo — issue #9. Solo aparece dentro de la ventana. */}
+        {userId && <ShowModeBanner window={showMode.window} phaseLabel={showMode.phaseLabel} />}
+
+        {/* Recordatorio post-show, todo junto en un solo aviso in-app — issue #9 */}
+        {userId && showMode.window.phase === 'after' && (
+          <PendingShowPrompt pending={showMode.pending} />
+        )}
+
         {/* Banda de asistencia */}
         <section>
           <p className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-3">
@@ -180,6 +227,22 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
         {/* Clima exacto del show — ver issue #8 */}
         <EventWeather weather={weather} hasVenueCoords={hasVenueCoords} isPast={isPast} />
+
+        {/* Checklist pre-show — issue #9, solo mientras la ventana previa está abierta */}
+        {showsChecklist && (
+          <section className="border-t border-ritual-border-subtle pt-8">
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">
+              Antes de salir
+            </h2>
+            <PreShowChecklist
+              eventId={event.id}
+              initialItems={showMode.checklist}
+              setChecked={setChecklistItemChecked}
+              addItem={addEventChecklistItem}
+              removeItem={removeEventChecklistItem}
+            />
+          </section>
+        )}
 
         {/* Lineup — quién tocó */}
         {event.lineups && event.lineups.length > 0 && (
@@ -273,6 +336,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               initialRating={attendance?.rating}
               initialReview={attendance?.review}
               initialNotes={attendance?.notes}
+            />
+          </section>
+        )}
+
+        {/* Tarjeta recuerdo — issue #9. Stub de entrada digital, descargable
+            como imagen. No es una función social: no se publica ni se comparte. */}
+        {memoryCard && (
+          <section className="border-t border-ritual-border-subtle pt-8">
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">
+              Tarjeta recuerdo
+            </h2>
+            <MemoryCard
+              card={memoryCard}
+              pendingLabels={showMode.pending.map((item) => item.label)}
             />
           </section>
         )}

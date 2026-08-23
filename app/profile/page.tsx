@@ -77,9 +77,13 @@ export default async function ProfilePage() {
                         </div>
                     </div>
 
-                    <div className="pt-4 mt-4 border-t border-ritual-border-subtle">
+                    <div className="pt-4 mt-4 border-t border-ritual-border-subtle flex flex-wrap gap-3">
                         <LinkButton href={routes.profile + '/edit'} variant="secondary" className="px-5 py-2">
                             Editar carnet
+                        </LinkButton>
+                        {/* Ventana y plantilla del checklist pre-show — issue #9 */}
+                        <LinkButton href={routes.showMode} variant="secondary" className="px-5 py-2">
+                            Modo recital
                         </LinkButton>
                     </div>
                 </section>

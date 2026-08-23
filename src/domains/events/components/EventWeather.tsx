@@ -1,22 +1,11 @@
 import type { EventWeather as EventWeatherData } from '@/src/domains/weather/weather-service'
+import { weatherEmoji } from '@/src/domains/weather/icons'
 
 interface EventWeatherProps {
   weather: EventWeatherData | null
   /** Sede sin lat/lng cargado — mensaje distinto a "no se pudo calcular". */
   hasVenueCoords: boolean
   isPast: boolean
-}
-
-function weatherEmoji(code: number | null, isRain: boolean): string {
-  if (isRain) return '🌧️'
-  if (code === null) return '🌡️'
-  if (code === 0) return '☀️'
-  if (code <= 2) return '🌤️'
-  if (code === 3) return '☁️'
-  if (code === 45 || code === 48) return '🌫️'
-  if (code >= 71 && code <= 86) return '❄️'
-  if (code >= 95) return '⛈️'
-  return '🌡️'
 }
 
 /**
