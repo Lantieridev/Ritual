@@ -14,6 +14,8 @@ Ritual tiene dos roles reales hoy: **visitante sin sesión** y **usuario autenti
 | Gastos personales | ❌ No tiene sentido sin cuenta | ✅ Propios únicamente |
 | Fotos de eventos | ✅ Ve todas | ✅ Ve todas, borra solo las propias |
 | Perfil de usuario | — | ✅ Propio únicamente |
+| Modo recital activo (preferencias, checklist pre-show) | ❌ No tiene sentido sin cuenta | ✅ Propio únicamente |
+| Clima exacto de un show | ✅ Ve todo (si la sede tiene lat/lng) | ✅ Ve todo (si la sede tiene lat/lng) |
 
 ## Por qué la nav se separó en dos grupos
 
@@ -23,6 +25,6 @@ El catálogo compartido (Artistas, Sedes, Festivales, Buscar, Stats) tiene senti
 
 ## Cómo se aplica en el backend
 
-Todo lo de la tabla de arriba está reforzado con Row Level Security en Postgres, no solo en la UI — un usuario no puede escribir datos de otro aunque manipule la request directamente. Cada Server Action de escritura además valida la sesión de entrada (`getCurrentUserId()`) antes de tocar la base, para fallar con un mensaje claro en vez de depender solo del rechazo silencioso de RLS.
+Todo lo de la tabla de arriba está reforzado con Row Level Security en Postgres, no solo en la UI — un usuario no puede escribir datos de otro aunque manipule la request directamente. Cada operación de escritura además valida la sesión de entrada (`getCurrentUserId()`) antes de tocar la base, para fallar con un mensaje claro en vez de depender solo del rechazo silencioso de RLS — da igual si esa escritura llega por una Server Action o por un resolver de mutación GraphQL (`src/graphql/`): ambos caminos llaman al mismo `service.ts` del dominio, que es donde vive esa validación (ver [ADR 0004](./adr/0004-graphql-migration-strangler-fig.md)).
 
 No existe hoy ningún concepto de "administrador" ni de contenido moderado por la app — cualquier fila del catálogo compartido (evento, artista, sede, festival) puede ser creada o editada por cualquier usuario autenticado, no solo por quien la creó originalmente. Si en el futuro se agrega un rol de administrador (por ejemplo, para publicar noticias o moderar el catálogo), este documento es el lugar para registrar esa distinción.

@@ -10,7 +10,7 @@ RITUAL no es un CRUD simple: mezcla itinerarios, gastos, perfiles, festivales/gi
 Separar el código en dos capas:
 
 - **`src/core/`**: lo transversal — componentes de UI reutilizables, clientes de Supabase, autenticación, tipos globales, utilidades. No conoce ningún dominio específico.
-- **`src/domains/<dominio>/`**: la lógica de negocio agrupada por dominio (`artists`, `events`, `expenses`, `festivals`, `venues`, `auth`, `stats`). Cada dominio tiene sus propios `actions.ts`, `data.ts` y componentes.
+- **`src/domains/<dominio>/`**: la lógica de negocio agrupada por dominio (`artists`, `events`, `expenses`, `festivals`, `venues`, `auth`, `stats`, y luego `showmode` y `weather`). Cada dominio tiene sus propios `data.ts` y componentes; `actions.ts` era universal al momento de este ADR pero dejó de serlo con la migración a GraphQL — ver [ADR 0004](./0004-graphql-migration-strangler-fig.md).
 - **`app/`**: solo rutas y composición de página, importando de `core/` y `domains/`.
 
 ## Consecuencias

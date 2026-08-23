@@ -43,7 +43,8 @@ Porque la música es cultura compartida. Queremos que RITUAL sea construido por 
 - **Frontend**: [Next.js 16](https://nextjs.org/) (App Router) + TypeScript.
 - **Estilos**: [Tailwind CSS 4](https://tailwindcss.com/) + CSS Variables.
 - **Backend**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Storage).
-- **APIs Externas**: Last.fm, Spotify, Setlist.fm, Ticketmaster.
+- **API**: GraphQL ([GraphQL Yoga](https://the-guild.dev/graphql/yoga-server) + [Pothos](https://pothos-graphql.dev/), code-first) consumido con [urql](https://commerce.nearform.com/open-source/urql/) — reemplazando Server Actions dominio por dominio (migración en curso, ver [issue #23](https://github.com/Lantieridev/Ritual/issues/23) y [ADR 0004](./docs/adr/0004-graphql-migration-strangler-fig.md)).
+- **APIs Externas**: Last.fm, Spotify, Setlist.fm, Ticketmaster, Open-Meteo.
 
 ## 🚀 Instalación Local
 
@@ -92,28 +93,34 @@ flowchart TB
     subgraph NextApp["Next.js App Router"]
         Middleware["proxy.ts\n(auth guard + cookie refresh)"]
         Routes["app/\n(rutas y páginas)"]
-        Domains["src/domains/\nartists · events · expenses\nfestivals · venues · auth · stats"]
+        GraphQL["src/graphql/\nYoga + Pothos schema\n(artists · auth · events · expenses\nfestivals · stats · venues)"]
+        Domains["src/domains/\nartists · auth · events · expenses\nfestivals · showmode · stats · venues · weather"]
         Core["src/core/\nUI base · auth · tipos · lib"]
     end
 
     Supabase[("Supabase\nPostgreSQL + Auth + Storage")]
-    External["APIs externas\nLast.fm · Spotify\nSetlist.fm · Ticketmaster"]
+    External["APIs externas\nLast.fm · Spotify\nSetlist.fm · Ticketmaster · Open-Meteo"]
 
     Browser -->|request| Middleware
     Middleware -->|user autenticado?| Routes
-    Routes --> Domains
+    Routes -->|reads/writes ya migrados: urql + yoga.fetch in-process| GraphQL
+    Routes -->|resto: Server Actions| Domains
+    GraphQL --> Domains
     Domains --> Core
-    Core -->|server.ts / client.ts| Supabase
+    Core -->|server.ts| Supabase
     Domains -.->|opcional, degrada sin key| External
 ```
 
-Decisiones de arquitectura documentadas en [`docs/adr/`](./docs/adr/README.md) — por qué `core/` vs `domains/`, por qué el cliente de Supabase está partido en tres, y por qué las API keys externas son opcionales.
+Cuatro de seis dominios con escritura (`artists`, `expenses`, `festivals`, `venues`) ya migraron por completo a GraphQL. `events` y `auth` son híbridos: alta/edición/borrado de eventos y edición de perfil pasan por GraphQL, pero asistencia, fotos, avatar, login/signup/signout y reset de contraseña siguen siendo Server Actions. `showmode` (modo recital activo) es 100% Server Actions por ahora — no migró en esta tanda.
+
+Decisiones de arquitectura documentadas en [`docs/adr/`](./docs/adr/README.md) — por qué `core/` vs `domains/`, por qué el cliente de Supabase está partido por contexto de ejecución, por qué las API keys externas son opcionales, y por qué el backend está migrando de Server Actions a GraphQL.
 
 ## 📂 Estructura del Proyecto
 
-- `app/`: Rutas y páginas (Next.js App Router).
+- `app/`: Rutas y páginas (Next.js App Router), incluye `app/api/graphql/` (endpoint único de GraphQL).
 - `src/core/`: Componentes base (UI), librerías (Supabase, API clients) y tipos globales.
-- `src/domains/`: Lógica de negocio dividida por dominio (Artists, Events, Auth, Venues).
+- `src/domains/`: Lógica de negocio dividida por dominio (Artists, Auth, Events, Expenses, Festivals, Show Mode, Stats, Venues, Weather).
+- `src/graphql/`: Schema GraphQL (Pothos) y servidor (Yoga) — un archivo por dominio migrado, ver [`docs/estructura-del-proyecto.md`](./docs/estructura-del-proyecto.md).
 - `supabase/`: Migraciones y configuración de base de datos.
 - `docs/`: Documentación del proyecto (incluye [`adr/`](./docs/adr/README.md), decisiones de arquitectura).
 
