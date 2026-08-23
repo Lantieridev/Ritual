@@ -10,7 +10,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { updateProfile, modifyProfile } from '@/src/domains/auth/actions'
+import { modifyProfile } from '@/src/domains/auth/service'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -41,152 +41,6 @@ function makeSupabase(opts: {
     uploadMock,
   }
 }
-
-function makeFile(name: string, size: number, type: string): File {
-  const bytes = new Uint8Array(size)
-  return new File([bytes], name, { type })
-}
-
-describe('updateProfile', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('requires a logged-in user', async () => {
-    const supabase = makeSupabase({ user: null })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const result = await updateProfile({}, new FormData())
-
-    expect(result).toEqual({ error: 'No estás autenticado.' })
-  })
-
-  it('trims and caps text fields before upserting', async () => {
-    const supabase = makeSupabase({
-      user: { id: 'user-1' },
-      profileResult: { data: null, error: null },
-    })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const formData = new FormData()
-    formData.set('full_name', '  Martin  ')
-    formData.set('username', '  martin_dev  ')
-    formData.set('bio', '  Fan del rock  ')
-    formData.set('website', '  https://example.com  ')
-    formData.set('location', '  CABA  ')
-    formData.set('current_avatar_url', '')
-
-    await updateProfile({}, formData)
-
-    expect(supabase.profileBuilder.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        full_name: 'Martin',
-        username: 'martin_dev',
-        bio: 'Fan del rock',
-        website: 'https://example.com',
-        location: 'CABA',
-      })
-    )
-  })
-
-  it('rejects an avatar larger than 5MB without uploading', async () => {
-    const supabase = makeSupabase({ user: { id: 'user-1' } })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const formData = new FormData()
-    formData.set('avatar', makeFile('big.png', 6 * 1024 * 1024, 'image/png'))
-
-    const result = await updateProfile({}, formData)
-
-    expect(result).toEqual({ error: 'La imagen no puede superar 5MB.' })
-    expect(supabase.uploadMock).not.toHaveBeenCalled()
-  })
-
-  it('rejects an unsupported avatar mime type without uploading', async () => {
-    const supabase = makeSupabase({ user: { id: 'user-1' } })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const formData = new FormData()
-    formData.set('avatar', makeFile('avatar.svg', 1024, 'image/svg+xml'))
-
-    const result = await updateProfile({}, formData)
-
-    expect(result).toEqual({ error: 'Formato no soportado. Usá JPG, PNG, WebP o GIF.' })
-    expect(supabase.uploadMock).not.toHaveBeenCalled()
-  })
-
-  it('uploads a valid avatar and stores its public URL', async () => {
-    const supabase = makeSupabase({
-      user: { id: 'user-1' },
-      profileResult: { data: null, error: null },
-    })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const formData = new FormData()
-    formData.set('avatar', makeFile('avatar.png', 1024, 'image/png'))
-
-    await updateProfile({}, formData)
-
-    expect(supabase.uploadMock).toHaveBeenCalledTimes(1)
-    expect(supabase.profileBuilder.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ avatar_url: 'https://cdn.test/avatar.png' })
-    )
-  })
-
-  it('returns a friendly error when the avatar upload fails', async () => {
-    const supabase = makeSupabase({
-      user: { id: 'user-1' },
-      uploadError: { message: 'bucket not found' },
-    })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const formData = new FormData()
-    formData.set('avatar', makeFile('avatar.png', 1024, 'image/png'))
-
-    const result = await updateProfile({}, formData)
-
-    expect(result.error).toContain('bucket "avatars"')
-  })
-
-  it('returns a specific error for a duplicate username', async () => {
-    const supabase = makeSupabase({
-      user: { id: 'user-1' },
-      profileResult: { data: null, error: { code: '23505' } },
-    })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const formData = new FormData()
-    formData.set('username', 'taken')
-
-    const result = await updateProfile({}, formData)
-
-    expect(result).toEqual({ error: 'Ese nombre de usuario ya está en uso.' })
-  })
-
-  it('sanitizes an unrecognized DB error instead of returning it raw', async () => {
-    const supabase = makeSupabase({
-      user: { id: 'user-1' },
-      profileResult: { data: null, error: { message: 'relation "profiles" does not exist' } },
-    })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const result = await updateProfile({}, new FormData())
-
-    expect(result).toEqual({ error: 'Ocurrió un error inesperado. Intentá de nuevo.' })
-  })
-
-  it('returns success and revalidates the profile path on a clean update', async () => {
-    const supabase = makeSupabase({
-      user: { id: 'user-1' },
-      profileResult: { data: null, error: null },
-    })
-    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-
-    const result = await updateProfile({}, new FormData())
-
-    expect(result).toEqual({ success: 'Perfil actualizado correctamente.' })
-  })
-})
 
 describe('modifyProfile', () => {
   beforeEach(() => {
@@ -263,5 +117,21 @@ describe('modifyProfile', () => {
     const result = await modifyProfile({ username: 'martin' })
 
     expect(result).toEqual({ error: 'Ocurrió un error inesperado. Intentá de nuevo.' })
+  })
+
+  // El avatar viaja como URL ya subida (ver ./avatar-actions.ts) y entra en
+  // el mismo upsert que el texto, para no partir el guardado en dos.
+  it('writes avatar_url in the same upsert when one is provided', async () => {
+    const supabase = makeSupabase({
+      user: { id: 'user-1' },
+      profileResult: { data: null, error: null },
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    await modifyProfile({ username: 'martin', avatar_url: 'https://cdn.test/avatar.png' })
+
+    expect(supabase.profileBuilder.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ avatar_url: 'https://cdn.test/avatar.png' })
+    )
   })
 })
