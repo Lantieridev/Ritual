@@ -13,10 +13,10 @@
     *   Seguí el estilo de código existente (TypeScript estricto, Tailwind CSS).
     *   Usá Server Components por defecto, `use client` solo cuando sea necesario (interactividad).
     *   Los comentarios tienen que valerse por sí solos — explicá el POR QUÉ cuando no sea obvio, nunca dejes referencias a discusiones o sesiones internas que alguien de afuera no puede ver.
-5.  **Probá antes de abrir el PR**:
+5.  **Probá antes de abrir el PR** (mismos comandos que corre la CI en `.github/workflows/ci.yml`):
+    *   `npm run lint` (ESLint, flat config)
     *   `npx tsc --noEmit` (tipos)
-    *   `npx vitest run` (tests)
-    *   `npx eslint app src --ext .ts,.tsx` (lint)
+    *   `npm test` (Vitest — `npm run test:coverage` si querés ver cobertura)
 6.  **Pull Request**:
     *   Describí qué cambios hiciste y por qué.
     *   Adjuntá capturas de pantalla si cambiaste algo visual.
@@ -24,14 +24,17 @@
 ## 🏗 Estructura y Convenciones
 
 ### Estructura de Directorios
-Adoptamos una estructura basada en **Dominios** dentro de `src/domains`. Cada dominio (ej: `artists`, `events`) debe contener:
+Adoptamos una estructura basada en **Dominios** dentro de `src/domains`. Cada dominio (ej: `artists`, `events`) suele contener:
 - `components/`: Componentes UI específicos.
-- `actions.ts`: Server Actions (ver nota de migración abajo).
-- `data.ts`: Fetching de datos.
+- `data.ts`: Fetching de datos (lecturas).
+- `service.ts`: Casos de uso de escritura — el seam del que cuelgan tanto los resolvers de GraphQL (`src/graphql/<dominio>.ts`) como, si todavía existen, las Server Actions del dominio.
+- `actions.ts`: Server Actions. **Ya no es universal** — `artists`, `expenses`, `festivals` y `venues` no tienen `actions.ts`, migraron por completo a GraphQL. Solo sigue existiendo donde GraphQL no puede resolver el caso (ver abajo) o donde todavía no se migró.
 - `types.ts`: Tipos específicos (si no están en `core/types`).
 
 ### ⚠️ Migración en curso: Server Actions → GraphQL
-El backend está migrando de Server Actions a una API GraphQL real (ver [issue de la migración](https://github.com/Lantieridev/Ritual/issues/23)) — es normal encontrar ambos patrones conviviendo en el código por ahora. **Si tu contribución necesita un endpoint de backend nuevo, agregalo en `src/graphql/`, no como una Server Action nueva** — evita sumar más deuda a lo que después hay que migrar.
+El backend está migrando de Server Actions a una API GraphQL real (ver [issue #23](https://github.com/Lantieridev/Ritual/issues/23) y [ADR 0004](./docs/adr/0004-graphql-migration-strangler-fig.md)) — es normal encontrar ambos patrones conviviendo en el código por ahora. **Si tu contribución necesita un endpoint de backend nuevo, agregalo en `src/graphql/`, no como una Server Action nueva** — evita sumar más deuda a lo que después hay que migrar.
+
+Estado real al momento de escribir esto: `artists`, `expenses`, `festivals` y `venues` ya son 100% GraphQL. `events` y `auth` son híbridos (alta/edición/borrado de evento y edición de perfil ya son GraphQL; asistencia, fotos, avatar, login/signup/signout y reset de contraseña siguen como Server Action). `showmode` (modo recital activo) todavía no migró. Una Server Action nueva solo se justifica si el caso no puede pasar por un resolver — por ejemplo, subir un archivo (`FormData`) sin un scalar `Upload` configurado en Yoga, como pasa hoy con el avatar (`src/domains/auth/avatar-actions.ts`).
 
 ### Stack
 - **Next.js 16**: Usamos App Router.

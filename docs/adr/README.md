@@ -7,6 +7,7 @@ Registro de decisiones de arquitectura de RITUAL. Cada ADR documenta una decisi�
 | [0001](./0001-domain-based-folder-structure.md) | Estructura de carpetas por dominio (`core/` vs `domains/`) | Aceptada |
 | [0002](./0002-supabase-client-split-by-execution-context.md) | Cliente Supabase separado por contexto de ejecución (browser/server/middleware) | Aceptada |
 | [0003](./0003-optional-external-api-keys-graceful-degradation.md) | Las API keys externas opcionales degradan sin romper el build | Aceptada |
+| [0004](./0004-graphql-migration-strangler-fig.md) | Migración de Server Actions a GraphQL (Yoga + Pothos + urql), patrón strangler fig | Aceptada — en curso |
 
 ## Cuándo agregar un ADR nuevo
 

@@ -40,6 +40,17 @@ No existe el concepto de "gira" (tour): se evaluó en el diseño original pero n
 * **`festival_attendance`**: Asistencia del usuario a un `festival` (independiente de la de sus `events` individuales, si los tiene vinculados). Mismo patrón plano que `attendance`.
     * `festival_id`, `user_id`, `status`, `rating`, `review`.
 
+### E. Modo Recital Activo (Show Mode)
+Cuatro tablas nuevas (migración `20260823100000_show_mode.sql`, issue #9), todas por usuario y con RLS de dueño — no hay lectura pública acá, a diferencia del catálogo:
+* **`user_preferences`**: una fila por usuario (PK = `id` = `auth.users.id`). Ventana configurable del modo recital: `show_mode_days_before` (default 7), `show_mode_days_after` (default 2). Genérica a propósito — no `show_mode_preferences` — porque es el primer lugar del proyecto donde vive una preferencia de usuario; las que vengan después entran acá como columnas nuevas.
+* **`checklist_template_items`**: la plantilla base del usuario (`label`, `position`), configurada una vez y reusada en todos los shows.
+* **`event_checklist_items`**: ítems ad-hoc de un show puntual (no vienen de la plantilla), con su propio `checked`.
+* **`event_checklist_checks`**: el tilde de un ítem de la *plantilla* para un show específico — PK compuesta `(user_id, event_id, template_item_id)`, `ON DELETE CASCADE` en las tres. No se copian los textos de la plantilla a cada show: si se copiaran, editar la plantilla no se reflejaría en shows futuros y borrar un ítem dejaría copias huérfanas. Guardando solo el tilde por `(evento, ítem)`, la plantilla sigue siendo la única fuente de verdad del texto.
+
+La ventana de tiempo en sí (qué shows "están en modo recital activo" ahora) es una función pura sobre `events.date` + `user_preferences`, no una columna ni una vista — ver `src/domains/showmode/window.ts`.
+
+El clima exacto del show (feature separada, mismo momento) no agrega tablas: `weather-service.ts` llama a Open-Meteo en cada request usando `venues.lat`/`venues.lng` + `events.date`, sin persistir nada.
+
 ## 3. Flujos de Usuario
 
 ### Caso 1: Asistir a un Festival (con días vinculados)

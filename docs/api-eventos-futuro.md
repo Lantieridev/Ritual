@@ -5,7 +5,7 @@
 - **Objetivo**: Buscar recitales futuros por artista o por ciudad sin cargar la base de datos. Solo se persiste lo que el usuario agrega.
 - **Config**: `TICKETMASTER_API_KEY` en `.env.local` (opcional; sin ella la búsqueda de shows futuros no está disponible, pero el resto de la app funciona igual).
 - **Ruta**: `/buscar` (tab "Shows futuros"). También alimenta el badge de próximos shows en `/wishlist`.
-- **Código**: `src/core/lib/ticketmaster.ts` (cliente), `src/domains/events/actions.ts` → `addExternalEvent`, página `app/buscar/page.tsx`.
+- **Código**: `src/core/lib/ticketmaster.ts` (cliente), `src/domains/events/service.ts` → `addExternalEvent` (expuesta como mutación GraphQL en `src/graphql/events.ts`, ya no como Server Action — ver [ADR 0004](./adr/0004-graphql-migration-strangler-fig.md)), página `app/buscar/page.tsx`.
 - **Historial pasado**: usa Setlist.fm por separado (`src/core/lib/setlistfm.ts`), tab "Historial pasado" en la misma página.
 
 Cada resultado tiene "Agregar", que crea evento + sede + artista en nuestra DB si no existen (`findOrCreateByName` en `src/core/lib/find-or-create.ts`).
