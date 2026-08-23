@@ -7,6 +7,7 @@ import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { Card, LinkButton } from '@/src/core/components/ui'
 import { DeleteExpenseAction } from '@/src/domains/expenses/components/DeleteExpenseAction'
+import type { GraphQLExpense } from '@/src/core/types'
 
 const ExpenseDetailQuery = gql`
   query ExpenseDetail($id: ID!) {
@@ -27,7 +28,7 @@ interface ExpenseDetailPageProps {
 
 export async function generateMetadata({ params }: ExpenseDetailPageProps): Promise<Metadata> {
   const { id } = await params
-  const { data } = await getClient().query<{ expense: any }>(ExpenseDetailQuery, { id })
+  const { data } = await getClient().query<{ expense: GraphQLExpense }>(ExpenseDetailQuery, { id })
   const expense = data?.expense
   if (!expense) return { title: 'Gasto no encontrado | RITUAL' }
   return {
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: ExpenseDetailPageProps): Prom
 
 export default async function ExpenseDetailPage({ params }: ExpenseDetailPageProps) {
   const { id } = await params
-  const { data } = await getClient().query<{ expense: any }>(ExpenseDetailQuery, { id })
+  const { data } = await getClient().query<{ expense: GraphQLExpense }>(ExpenseDetailQuery, { id })
   const expense = data?.expense
 
   if (!expense) notFound()
@@ -73,7 +74,7 @@ export default async function ExpenseDetailPage({ params }: ExpenseDetailPagePro
             )}
             <div className="pt-4 border-t border-white/10">
               <p className="text-sm text-zinc-400 uppercase tracking-wider mb-2">Acciones</p>
-              <DeleteExpenseAction expense={expense as any} />
+              <DeleteExpenseAction expense={expense} />
             </div>
           </div>
         </Card>

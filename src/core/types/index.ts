@@ -134,6 +134,26 @@ export interface ExpenseUpdateInput {
   date?: string
 }
 
+/** Respuesta GraphQL para un gasto. */
+export interface GraphQLExpense {
+  id: string
+  userId: string
+  amount: number
+  category: string
+  note?: string | null
+  eventId?: string | null
+  date: string
+  createdAt?: string | null
+}
+
+/** Respuesta GraphQL para el resumen de gastos. */
+export interface GraphQLExpenseSummary {
+  total: number
+  count: number
+  byCategory: Record<string, number>
+  byYear: Record<string, number>
+}
+
 /**
  * Formato normalizado para eventos provenientes de APIs externas
  * (Ticketmaster, Setlist.fm, etc.). Usado por addExternalEvent en actions.ts.

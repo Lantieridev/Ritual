@@ -8,7 +8,7 @@ import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { EXPENSE_CATEGORIES } from '@/src/domains/expenses/categories'
-import type { Expense } from '@/src/core/types'
+import type { Expense, GraphQLExpense } from '@/src/core/types'
 import type { EventWithRelations } from '@/src/core/types'
 
 const CreateExpenseMutation = gql`
@@ -24,7 +24,7 @@ const UpdateExpenseMutation = gql`
 
 interface ExpenseFormProps {
   events: EventWithRelations[]
-  expense?: Expense
+  expense?: Expense | GraphQLExpense
 }
 
 function todayISO() {
@@ -32,7 +32,7 @@ function todayISO() {
   return d.toISOString().slice(0, 10)
 }
 
-export function ExpenseForm({ events, expense, createExpense, updateExpense }: ExpenseFormProps & { createExpense?: any, updateExpense?: any }) {
+export function ExpenseForm({ events, expense }: ExpenseFormProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -105,7 +105,7 @@ export function ExpenseForm({ events, expense, createExpense, updateExpense }: E
         <input id="date" name="date" type="date" required className={inputClass} defaultValue={defaultDate} />
       </FormField>
       <FormField label="Recital asociado (opcional)" id="event_id">
-        <select id="event_id" name="event_id" className={inputClass} defaultValue={(expense as any)?.eventId ?? expense?.event_id ?? ''}>
+        <select id="event_id" name="event_id" className={inputClass} defaultValue={expense ? ('eventId' in expense ? expense.eventId : (expense as Expense).event_id) ?? '' : ''}>
           <option value="">Ninguno</option>
           {events.map((e) => (
             <option key={e.id} value={e.id}>

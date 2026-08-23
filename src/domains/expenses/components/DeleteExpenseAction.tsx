@@ -4,7 +4,7 @@ import { useMutation, gql } from 'urql'
 import { useRouter } from 'next/navigation'
 import { routes } from '@/src/core/lib/routes'
 import { DeleteExpenseButton } from './DeleteExpenseButton'
-import type { Expense } from '@/src/core/types'
+import type { Expense, GraphQLExpense } from '@/src/core/types'
 
 const DeleteExpenseQuery = gql`
   mutation DeleteExpense($id: ID!) {
@@ -12,7 +12,7 @@ const DeleteExpenseQuery = gql`
   }
 `
 
-export function DeleteExpenseAction({ expense }: { expense: Expense }) {
+export function DeleteExpenseAction({ expense }: { expense: Expense | GraphQLExpense }) {
   const router = useRouter()
   const [, deleteExpense] = useMutation(DeleteExpenseQuery)
 

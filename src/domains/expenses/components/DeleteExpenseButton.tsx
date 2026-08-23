@@ -1,10 +1,10 @@
 'use client'
 
 import { ConfirmDeleteButton } from '@/src/core/components/ui'
-import type { Expense } from '@/src/core/types'
+import type { Expense, GraphQLExpense } from '@/src/core/types'
 
 interface DeleteExpenseButtonProps {
-  expense: Expense
+  expense: Expense | GraphQLExpense
   deleteExpense: (id: string) => Promise<{ error?: string }>
 }
 

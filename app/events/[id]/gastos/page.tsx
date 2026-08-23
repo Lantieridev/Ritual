@@ -54,11 +54,11 @@ export default async function EventExpensesPage({ params }: EventExpensesPagePro
   const event = await getEventById(id)
   if (!event) notFound()
 
-  const { data } = await getClient().query<{ expenses: any[], estimateSpendForEvent: any }>(EventExpensesPageQuery, { eventId: id })
+  const { data } = await getClient().query<{ expenses: import('@/src/core/types').GraphQLExpense[], estimateSpendForEvent: { averageTotal: number, eventsConsidered: number } | null }>(EventExpensesPageQuery, { eventId: id })
   const expenses = data?.expenses ?? []
   const spendEstimate = data?.estimateSpendForEvent ?? null
 
-  const total = expenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0)
+  const total = expenses.reduce((sum: number, e: import('@/src/core/types').GraphQLExpense) => sum + Number(e.amount), 0)
   const groups = groupExpensesByCategory(expenses)
   const choripanLine = formatChoripanComparison(total)
   const mainArtist = event.lineups?.[0]?.artists

@@ -4,7 +4,10 @@ import { yoga } from './yoga'
 
 const makeClient = () => {
   return createClient({
-    url: 'http://localhost/graphql', // Dummy URL for in-process routing
+    // Never dialed: `fetch` below short-circuits to yoga in-process. The path
+    // must still match yoga's own `graphqlEndpoint`, though — yoga routes on it
+    // and 404s anything else, which would silently break every server-side read.
+    url: 'http://localhost/api/graphql',
     fetch: yoga.fetch as typeof fetch,
     exchanges: [cacheExchange, fetchExchange],
   })
