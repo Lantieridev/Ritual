@@ -3,7 +3,6 @@ import type { Metadata } from 'next'
 import { gql } from 'urql'
 import { getClient } from '@/src/graphql/client'
 import { getEventById } from '@/src/domains/events/data'
-import { updateEvent } from '@/src/domains/events/actions'
 import { routes } from '@/src/core/lib/routes'
 import type { Artist, GraphQLArtist, GraphQLVenue, Venue } from '@/src/core/types'
 
@@ -46,7 +45,7 @@ export async function generateMetadata({ params }: EditEventPageProps): Promise<
 
 /**
  * Página para editar un recital (datos + lineup).
- * Server Component: carga evento, sedes y artistas; el form llama a updateEvent.
+ * Server Component: carga evento, sedes y artistas; el form guarda por GraphQL.
  */
 export default async function EditEventPage({ params }: EditEventPageProps) {
   const { id } = await params
@@ -63,12 +62,7 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
       title="Editar recital"
       description="Modificá nombre, fecha, sede o artistas del lineup."
     >
-      <EventForm
-        venues={venues}
-        artists={artists}
-        event={event}
-        updateEvent={updateEvent}
-      />
+      <EventForm venues={venues} artists={artists} event={event} />
     </PageShell>
   )
 }

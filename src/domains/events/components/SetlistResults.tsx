@@ -1,12 +1,19 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { addExternalEvent } from '@/src/domains/events/actions'
+import { useMutation, gql } from 'urql'
+import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import type { Setlist } from '@/src/core/lib/setlistfm'
 import { parseSetlistDate } from '@/src/core/lib/setlistfm'
+
+const AddExternalEventMutation = gql`
+  mutation AddExternalEvent($input: AddExternalEventInput!, $artistNameForLineup: String, $notes: String) {
+    addExternalEvent(input: $input, artistNameForLineup: $artistNameForLineup, notes: $notes) { eventId error }
+  }
+`
 
 interface SetlistResultsProps {
     setlists: Setlist[]
@@ -26,46 +33,46 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
     const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
     const [expandedId, setExpandedId] = useState<string | null>(null)
     const [errors, setErrors] = useState<Record<string, string>>({})
-    const [, startTransition] = useTransition()
+    const [, addExternalEvent] = useMutation(AddExternalEventMutation)
 
-    function handleAdd(setlist: Setlist) {
+    async function handleAdd(setlist: Setlist) {
         setLoadingId(setlist.id)
         setErrors((prev) => { const next = { ...prev }; delete next[setlist.id]; return next })
-        startTransition(async () => {
-            try {
-                const isoDate = parseSetlistDate(setlist.eventDate)
-                const songs = getSongs(setlist)
-                const notes = songs.length > 0
-                    ? songs.map((song, i) => `${i + 1}. ${song}`).join('\n')
-                    : undefined
-                const result = await addExternalEvent(
-                    {
-                        id: setlist.id,
-                        title: `${setlist.artist.name} @ ${setlist.venue.name}`,
-                        datetime: isoDate + 'T00:00:00Z',
-                        venue: {
-                            name: setlist.venue.name,
-                            city: setlist.venue.city.name,
-                            country: setlist.venue.city.country.name,
-                        },
-                        lineup: [setlist.artist.name],
-                        url: setlist.url,
+
+        const isoDate = parseSetlistDate(setlist.eventDate)
+        const songs = getSongs(setlist)
+        const notes = songs.length > 0
+            ? songs.map((song, i) => `${i + 1}. ${song}`).join('\n')
+            : undefined
+
+        // Sin `id` ni `url`: son para mostrar el resultado de la búsqueda, la
+        // mutation nunca los lee al importar el show.
+        const result = unwrapMutation<{ eventId?: string; error?: string }>(
+            await addExternalEvent({
+                input: {
+                    title: `${setlist.artist.name} @ ${setlist.venue.name}`,
+                    datetime: isoDate + 'T00:00:00Z',
+                    venue: {
+                        name: setlist.venue.name,
+                        city: setlist.venue.city.name,
+                        country: setlist.venue.city.country.name,
                     },
-                    setlist.artist.name,
-                    notes
-                )
-                if (result.error) {
-                    setErrors((prev) => ({ ...prev, [setlist.id]: result.error! }))
-                } else if (result.eventId) {
-                    setAddedIds((prev) => new Set([...prev, setlist.id]))
-                    router.push(routes.events.detail(result.eventId))
-                }
-            } catch {
-                setErrors((prev) => ({ ...prev, [setlist.id]: 'Error al guardar. Intentá de nuevo.' }))
-            } finally {
-                setLoadingId(null)
-            }
-        })
+                    lineup: [setlist.artist.name],
+                },
+                artistNameForLineup: setlist.artist.name,
+                notes,
+            }),
+            'addExternalEvent',
+            'Error al guardar. Intentá de nuevo.'
+        )
+
+        if (result.error) {
+            setErrors((prev) => ({ ...prev, [setlist.id]: result.error! }))
+        } else if (result.eventId) {
+            setAddedIds((prev) => new Set([...prev, setlist.id]))
+            router.push(routes.events.detail(result.eventId))
+        }
+        setLoadingId(null)
     }
 
     if (setlists.length === 0) {

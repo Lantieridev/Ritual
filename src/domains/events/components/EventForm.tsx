@@ -9,23 +9,10 @@ import { Button, FormField, inputClass, Combobox, StarRating, type ComboboxOptio
 import { routes } from '@/src/core/lib/routes'
 import { combineDateAndTime, eventTimeOfDay } from '@/src/core/lib/dates'
 import { EXPENSE_CATEGORIES } from '@/src/domains/expenses/categories'
-import type {
-  Venue,
-  EventCreateInput,
-  EventUpdateInput,
-  EventWithRelations,
-  Artist,
-  ExpenseCreateInput,
-} from '@/src/core/types'
+import type { Venue, EventWithRelations, Artist } from '@/src/core/types'
 
-type InsertEvent = (data: EventCreateInput) => Promise<{ error?: string; id?: string }>
-type UpdateSubmit = (id: string, data: EventUpdateInput) => Promise<{ error?: string }>
-type SetAttendanceStatus = (eventId: string, status: 'went') => Promise<{ error?: string }>
-type SaveMemory = (eventId: string, data: { rating?: number; review?: string }) => Promise<{ error?: string }>
-type InsertExpense = (data: ExpenseCreateInput) => Promise<{ error?: string; id?: string }>
-
-// Sedes y artistas se crean inline desde el combobox: ya no llegan como
-// Server Actions inyectadas por prop, el form dispara la mutation directo.
+// Todo lo que el form escribe pasa por GraphQL: ya no llegan Server Actions
+// inyectadas por prop, dispara las mutations directo.
 const FindOrCreateVenueMutation = gql`
   mutation FindOrCreateVenue($name: String!) {
     findOrCreateVenue(name: $name) { id error }
@@ -36,38 +23,54 @@ const FindOrCreateArtistMutation = gql`
     findOrCreateArtist(name: $name) { id error }
   }
 `
+const CreateEventMutation = gql`
+  mutation CreateEvent($input: EventCreateInput!) {
+    createEvent(input: $input) { id error }
+  }
+`
+const UpdateEventMutation = gql`
+  mutation UpdateEvent($id: ID!, $input: EventUpdateInput!) {
+    updateEvent(id: $id, input: $input) { error }
+  }
+`
+const SetAttendanceStatusMutation = gql`
+  mutation SetAttendanceStatus($eventId: ID!, $status: AttendanceStatus!) {
+    setAttendanceStatus(eventId: $eventId, status: $status) { error }
+  }
+`
+const SaveMemoryMutation = gql`
+  mutation SaveMemory($eventId: ID!, $rating: Int, $review: String) {
+    saveMemory(eventId: $eventId, rating: $rating, review: $review) { error }
+  }
+`
+const CreateExpenseMutation = gql`
+  mutation CreateExpense($input: ExpenseCreateInput!) {
+    createExpense(input: $input) { id error }
+  }
+`
 
 interface EventFormProps {
   venues: Venue[]
   artists: Artist[]
-  /** Alta: crea sin redirigir, esta pantalla decide a dónde ir después de encadenar rating/gasto. */
-  insertEvent?: InsertEvent
+  /** Presente sólo al editar; sin él el form está en modo alta. */
   event?: EventWithRelations
-  updateEvent?: UpdateSubmit
-  setAttendanceStatus?: SetAttendanceStatus
-  saveMemory?: SaveMemory
-  insertExpense?: InsertExpense
 }
 
 function toOption(v: { id: string; name: string; city?: string | null }): ComboboxOption {
   return { id: v.id, label: v.name, sublabel: v.city ?? undefined }
 }
 
-export function EventForm({
-  venues,
-  artists,
-  insertEvent,
-  event,
-  updateEvent: updateEventFn,
-  setAttendanceStatus,
-  saveMemory,
-  insertExpense,
-}: EventFormProps) {
+export function EventForm({ venues, artists, event }: EventFormProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [, findOrCreateVenue] = useMutation(FindOrCreateVenueMutation)
   const [, findOrCreateArtist] = useMutation(FindOrCreateArtistMutation)
+  const [, createEvent] = useMutation(CreateEventMutation)
+  const [, updateEvent] = useMutation(UpdateEventMutation)
+  const [, setAttendanceStatus] = useMutation(SetAttendanceStatusMutation)
+  const [, saveMemory] = useMutation(SaveMemoryMutation)
+  const [, createExpense] = useMutation(CreateExpenseMutation)
 
   const [venueOptions, setVenueOptions] = useState<ComboboxOption[]>(() => venues.map(toOption))
   const [selectedVenue, setSelectedVenue] = useState<ComboboxOption | null>(() => {
@@ -84,7 +87,7 @@ export function EventForm({
     return event.lineups.map((row) => ({ id: row.artists.id, label: row.artists.name, sublabel: row.artists.genre ?? undefined }))
   })
 
-  const isEdit = Boolean(event?.id && updateEventFn)
+  const isEdit = Boolean(event?.id)
 
   // Campos de "ya fui" — solo tienen sentido al cargar un show, no al editarlo.
   const [rating, setRating] = useState(0)
@@ -147,17 +150,30 @@ export function EventForm({
     const date = combineDateAndTime(dateValue, timeValue)
 
     if (isEdit && event) {
-      const result = await updateEventFn!(event.id, { name, date, venue_id, artist_ids, ticket_url })
-      if (result?.error) {
-        setError(result.error)
+      const updated = unwrapMutation(
+        await updateEvent({
+          id: event.id,
+          input: { name, date, venueId: venue_id, artistIds: artist_ids, ticketUrl: ticket_url },
+        }),
+        'updateEvent',
+        'No se pudo guardar el recital.'
+      )
+      if (updated.error) {
+        setError(updated.error)
         setIsSubmitting(false)
+        return
       }
+      router.push(routes.events.detail(event.id))
       return
     }
 
-    if (!insertEvent) return
-
-    const created = await insertEvent({ name, date, venue_id, artist_ids, ticket_url })
+    const created = unwrapMutation<{ id?: string; error?: string }>(
+      await createEvent({
+        input: { name, date, venueId: venue_id, artistIds: artist_ids, ticketUrl: ticket_url },
+      }),
+      'createEvent',
+      'No se pudo crear el recital.'
+    )
     if (created.error || !created.id) {
       setError(created.error ?? 'No se pudo crear el recital.')
       setIsSubmitting(false)
@@ -167,16 +183,35 @@ export function EventForm({
 
     // Puntaje/reseña y gasto son opcionales — si el usuario los cargó (ya fue
     // al show), se encadenan acá para que sea una sola acción de principio a
-    // fin. Errores acá no bloquean: el recital ya se creó, se puede completar
-    // esto después desde su ficha.
-    if ((rating > 0 || review.trim()) && setAttendanceStatus && saveMemory) {
-      await setAttendanceStatus(eventId, 'went')
-      await saveMemory(eventId, { rating: rating > 0 ? rating : undefined, review: review.trim() || undefined })
+    // fin. Errores acá no bloquean: el recital ya se creó, y volver al form
+    // sería invitarlo a crearlo de nuevo; se completa desde su ficha. Pasan
+    // igual por unwrapMutation para que una falla de transporte no se lea
+    // como éxito y quede registrada en desarrollo.
+    if (rating > 0 || review.trim()) {
+      unwrapMutation(await setAttendanceStatus({ eventId, status: 'went' }), 'setAttendanceStatus')
+      unwrapMutation(
+        await saveMemory({
+          eventId,
+          rating: rating > 0 ? rating : undefined,
+          review: review.trim() || undefined,
+        }),
+        'saveMemory'
+      )
     }
-    if (expenseAmount && Number(expenseAmount) > 0 && insertExpense) {
+    if (expenseAmount && Number(expenseAmount) > 0) {
       // El gasto es un dato de nivel "día", no de hora exacta — usa la fecha
       // sola (dateValue), no el timestamp combinado con hora.
-      await insertExpense({ amount: Number(expenseAmount), category: expenseCategory, event_id: eventId, date: dateValue })
+      unwrapMutation(
+        await createExpense({
+          input: {
+            amount: Number(expenseAmount),
+            category: expenseCategory,
+            eventId,
+            date: dateValue,
+          },
+        }),
+        'createExpense'
+      )
     }
 
     router.push(routes.events.detail(eventId))

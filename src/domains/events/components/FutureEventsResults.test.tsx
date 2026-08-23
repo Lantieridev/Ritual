@@ -6,15 +6,18 @@ import userEvent from '@testing-library/user-event'
 const mockAddExternalEvent = vi.fn()
 const mockPush = vi.fn()
 
-vi.mock('@/src/domains/events/actions', () => ({
-  addExternalEvent: (...args: unknown[]) => mockAddExternalEvent(...args),
-}))
+vi.mock('urql', async () => {
+  const actual = await vi.importActual<typeof import('urql')>('urql')
+  return { ...actual, useMutation: () => [{ fetching: false }, mockAddExternalEvent] }
+})
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
 import { FutureEventsResults } from '@/src/domains/events/components/FutureEventsResults'
+import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
+import { transportError } from '@/src/graphql/transport-failure.testing'
 import type { FutureEvent } from '@/src/core/types'
 
 const event: FutureEvent = {
@@ -47,7 +50,9 @@ describe('FutureEventsResults', () => {
   })
 
   it('adds the event and navigates to its detail page on success', async () => {
-    mockAddExternalEvent.mockResolvedValue({ eventId: 'new-event-1' })
+    mockAddExternalEvent.mockResolvedValue({
+      data: { addExternalEvent: { eventId: 'new-event-1' } },
+    })
     render(<FutureEventsResults events={[event]} />)
 
     await userEvent.click(screen.getByRole('button'))
@@ -55,14 +60,22 @@ describe('FutureEventsResults', () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/events/new-event-1')
     })
-    expect(mockAddExternalEvent).toHaveBeenCalledWith(
-      { id: 'ev-1', title: event.title, datetime: event.datetime, venue: event.venue, lineup: event.lineup, url: undefined },
-      'Bandalos Chinos'
-    )
+    // Sin `id` ni `url`: la mutation solo lee lo que necesita para importar.
+    expect(mockAddExternalEvent).toHaveBeenCalledWith({
+      input: {
+        title: event.title,
+        datetime: event.datetime,
+        venue: { name: 'Niceto', city: 'CABA', country: 'AR' },
+        lineup: event.lineup,
+      },
+      artistNameForLineup: 'Bandalos Chinos',
+    })
   })
 
   it('shows a per-event error and does not navigate when adding fails', async () => {
-    mockAddExternalEvent.mockResolvedValue({ error: 'Ya existe un evento similar.' })
+    mockAddExternalEvent.mockResolvedValue({
+      data: { addExternalEvent: { error: 'Ya existe un evento similar.' } },
+    })
     render(<FutureEventsResults events={[event]} />)
 
     await userEvent.click(screen.getByRole('button'))
@@ -74,7 +87,9 @@ describe('FutureEventsResults', () => {
   })
 
   it('disables the button once the event has been added', async () => {
-    mockAddExternalEvent.mockResolvedValue({ eventId: 'new-event-1' })
+    mockAddExternalEvent.mockResolvedValue({
+      data: { addExternalEvent: { eventId: 'new-event-1' } },
+    })
     render(<FutureEventsResults events={[event]} />)
 
     await userEvent.click(screen.getByRole('button'))
@@ -82,5 +97,20 @@ describe('FutureEventsResults', () => {
     await waitFor(() => {
       expect(screen.getByRole('button')).toBeDisabled()
     })
+  })
+
+  // Sin unwrapMutation, `data` undefined se leía como éxito: el botón quedaba
+  // marcado como agregado por un show que nunca se creó.
+  it('reports an error and keeps the event addable when the request never reaches the resolver', async () => {
+    mockAddExternalEvent.mockResolvedValue({ data: undefined, error: transportError() })
+    render(<FutureEventsResults events={[event]} />)
+
+    await userEvent.click(screen.getByRole('button'))
+
+    await waitFor(() => {
+      expect(screen.getByText(TRANSPORT_ERROR_MESSAGE)).toBeInTheDocument()
+    })
+    expect(mockPush).not.toHaveBeenCalled()
+    expect(screen.getByRole('button')).toBeEnabled()
   })
 })

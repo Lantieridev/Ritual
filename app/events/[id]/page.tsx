@@ -3,7 +3,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { getEventById } from '@/src/domains/events/data'
-import { deleteEvent } from '@/src/domains/events/actions'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
 import { getEventPhotos } from '@/src/domains/events/photo-actions'
 
@@ -13,7 +12,7 @@ import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
 import { safeHref } from '@/src/core/lib/validation'
 import { LinkButton } from '@/src/core/components/ui'
-import { DeleteEventButton, EventWeather } from '@/src/domains/events/components'
+import { DeleteEventAction, EventWeather } from '@/src/domains/events/components'
 import { EventExpensesPanel } from '@/src/domains/expenses/components'
 import { AttendanceStatusButtons } from '@/src/domains/events/components/AttendanceStatusButtons'
 import { RatingAndReviewForm } from '@/src/domains/events/components/RatingAndReviewForm'
@@ -357,7 +356,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* Zona de peligro */}
         <section className="border-t border-ritual-border-subtle pt-8">
           <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-3">Acciones</h2>
-          <DeleteEventButton event={event} deleteEvent={deleteEvent} />
+          <DeleteEventAction event={event} />
         </section>
       </div>
     </main>

@@ -16,7 +16,7 @@ vi.mock('@/src/domains/events/photo-actions', () => ({
   deleteEventPhoto: vi.fn(),
 }))
 
-vi.mock('@/src/domains/events/actions', () => ({
+vi.mock('@/src/domains/events/service', () => ({
   insertEvent: vi.fn(),
   modifyEvent: vi.fn(),
   removeEvent: vi.fn(),
@@ -40,7 +40,7 @@ vi.mock('@/src/core/auth/session', () => ({
 import { getEvents, getEventsWithAttendance, getEventById } from '@/src/domains/events/data'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
 import { getEventPhotos, deleteEventPhoto } from '@/src/domains/events/photo-actions'
-import { insertEvent, modifyEvent, removeEvent, addExternalEvent } from '@/src/domains/events/actions'
+import { insertEvent, modifyEvent, removeEvent, addExternalEvent } from '@/src/domains/events/service'
 import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import { POST } from '@/app/api/graphql/route'
 
@@ -62,6 +62,7 @@ const event: EventWithAttendance = {
   venue_id: 'v1',
   status: 'confirmed',
   created_at: '2026-01-01T00:00:00Z',
+  ticket_url: 'https://allaccess.com.ar/e/1',
   venues: { name: 'Niceto', city: 'CABA', country: 'AR' },
   lineups: [{ artists: { id: 'a1', name: 'Bandalos Chinos', genre: 'Indie' }, is_headliner: true }],
 }
@@ -88,6 +89,18 @@ describe('events GraphQL schema', () => {
       ],
     })
     expect(getAttendanceForEvent).not.toHaveBeenCalled()
+  })
+
+  // El link de entradas se carga a mano por evento (issue #19) y la ficha
+  // dibuja el botón "Comprar entradas" con él — sin este campo un cliente
+  // que no sea la web no tiene con qué dibujarlo.
+  it('exposes the ticket link on an event', async () => {
+    vi.mocked(getEventById).mockResolvedValue(event)
+
+    const body = await query('{ event(id: "e1") { ticketUrl } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ event: { ticketUrl: 'https://allaccess.com.ar/e/1' } })
   })
 
   it('resolves eventsWithAttendance from the batched join, without calling getAttendanceForEvent per event (no N+1)', async () => {
@@ -190,7 +203,20 @@ describe('events GraphQL mutations', () => {
       date: '2026-03-01',
       venue_id: 'v1',
       artist_ids: ['a1', 'a2'],
+      ticket_url: undefined,
     })
+  })
+
+  it('carries the ticket link through createEvent', async () => {
+    vi.mocked(insertEvent).mockResolvedValue({ id: 'e-new' })
+
+    await query(`mutation {
+      createEvent(input: { name: "Show", date: "2026-03-01", venueId: "v1", ticketUrl: "https://allaccess.com.ar/e/1" }) { id error }
+    }`)
+
+    expect(insertEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ ticket_url: 'https://allaccess.com.ar/e/1' })
+    )
   })
 
   it('updates an event', async () => {
@@ -205,7 +231,18 @@ describe('events GraphQL mutations', () => {
       date: undefined,
       venue_id: undefined,
       artist_ids: undefined,
+      ticket_url: undefined,
     })
+  })
+
+  // Mandar '' es cómo se borra el link: si el resolver lo mapeara por
+  // truthiness llegaría como undefined y modifyEvent dejaría el link viejo.
+  it('passes an empty ticket link through as an empty string, so it can be cleared', async () => {
+    vi.mocked(modifyEvent).mockResolvedValue({})
+
+    await query('mutation { updateEvent(id: "e1", input: { ticketUrl: "" }) { success error } }')
+
+    expect(modifyEvent).toHaveBeenCalledWith('e1', expect.objectContaining({ ticket_url: '' }))
   })
 
   it('deletes an event', async () => {
