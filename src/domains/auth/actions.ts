@@ -3,7 +3,7 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import { ActionResult } from '@/src/core/types'
 import { revalidatePath } from 'next/cache'
-import { sanitizeText } from '@/src/core/lib/validation'
+import { sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 
 const MAX_FULL_NAME = 200
 const MAX_USERNAME = 50
@@ -63,7 +63,7 @@ export async function modifyProfile(input: ProfileUpdateInput): Promise<ActionRe
         if (error.code === '23505') {
             return { error: 'Ese nombre de usuario ya está en uso.' }
         }
-        return { error: 'Error al actualizar el perfil.' }
+        return { error: sanitizeError(error) }
     }
 
     revalidatePath('/profile')
@@ -137,7 +137,7 @@ export async function updateProfile(prevState: ProfileState, formData: FormData)
         if (error.code === '23505') { // Unique violation for username
             return { error: 'Ese nombre de usuario ya está en uso.' }
         }
-        return { error: 'Error al actualizar el perfil.' }
+        return { error: sanitizeError(error) }
     }
 
     revalidatePath('/profile')

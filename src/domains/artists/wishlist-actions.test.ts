@@ -87,4 +87,22 @@ describe('toggleWishlist', () => {
     expect(builder.insert).toHaveBeenCalledWith({ user_id: 'user-1', artist_id: VALID_ARTIST_ID })
     expect(result).toEqual({ inWishlist: true })
   })
+
+  it('sanitizes an unexpected error while checking wishlist membership', async () => {
+    const builder = makeQueryBuilder({
+      data: null,
+      error: { message: 'relation "wishlist" does not exist' },
+    })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+
+    const result = await toggleWishlist(VALID_ARTIST_ID)
+
+    expect(result).toEqual({
+      inWishlist: false,
+      error: 'Ocurrió un error inesperado. Intentá de nuevo.',
+    })
+    expect(builder.insert).not.toHaveBeenCalled()
+  })
 })
