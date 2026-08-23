@@ -120,11 +120,12 @@ export function EventForm({
     const form = e.currentTarget
     const name = (form.elements.namedItem('name') as HTMLInputElement).value
     const date = (form.elements.namedItem('date') as HTMLInputElement).value
+    const ticket_url = (form.elements.namedItem('ticket_url') as HTMLInputElement).value
     const venue_id = selectedVenue.id
     const artist_ids = selectedArtists.map((a) => a.id)
 
     if (isEdit && event) {
-      const result = await updateEventFn!(event.id, { name, date, venue_id, artist_ids })
+      const result = await updateEventFn!(event.id, { name, date, venue_id, artist_ids, ticket_url })
       if (result?.error) {
         setError(result.error)
         setIsSubmitting(false)
@@ -134,7 +135,7 @@ export function EventForm({
 
     if (!insertEvent) return
 
-    const created = await insertEvent({ name, date, venue_id, artist_ids })
+    const created = await insertEvent({ name, date, venue_id, artist_ids, ticket_url })
     if (created.error || !created.id) {
       setError(created.error ?? 'No se pudo crear el recital.')
       setIsSubmitting(false)
@@ -236,6 +237,20 @@ export function EventForm({
             onCreate={handleCreateArtist}
           />
         </div>
+      </FormField>
+      <FormField
+        label="Link de entradas"
+        id="ticket_url"
+        hint="Opcional — AllAccess, Passline o donde se consigan. No hay búsqueda automática, pegá el link del evento a mano."
+      >
+        <input
+          id="ticket_url"
+          name="ticket_url"
+          type="url"
+          defaultValue={event?.ticket_url ?? ''}
+          placeholder="https://www.allaccess.com.ar/event/..."
+          className={inputClass}
+        />
       </FormField>
 
       {!isEdit && (

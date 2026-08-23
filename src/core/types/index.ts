@@ -66,6 +66,13 @@ export interface Event {
   venue_id: string | null
   status?: string
   created_at?: string
+  /**
+   * Link manual a un proveedor de ticketing (AllAccess, Passline, etc.).
+   * No auto-generado: ninguno de los dos expone una API o un patrón de URL
+   * de búsqueda documentado (a diferencia de Ticketmaster), así que lo
+   * completa quien carga el evento — ver issue #19.
+   */
+  ticket_url?: string | null
 }
 
 /**
@@ -83,6 +90,7 @@ export interface EventCreateInput {
   date: string
   venue_id: string
   artist_ids?: string[]
+  ticket_url?: string
 }
 
 /** Payload para actualizar un evento; artist_ids reemplaza todo el lineup. */
@@ -91,6 +99,7 @@ export interface EventUpdateInput {
   date?: string
   venue_id?: string
   artist_ids?: string[]
+  ticket_url?: string
 }
 
 /** Gasto personal (no compartido con otros usuarios). Tabla expenses. */

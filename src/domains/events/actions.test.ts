@@ -424,6 +424,33 @@ describe('insertEvent / modifyEvent / removeEvent', () => {
     expect(mockRedirect).not.toHaveBeenCalled()
   })
 
+  // AllAccess/Passline no tienen API de búsqueda — issue #19 lo resuelve con
+  // un link manual por evento en vez de una integración inventada.
+  it('insertEvent trims and stores a provided ticket_url', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    await insertEvent({
+      name: 'Show',
+      date: '2024-01-01',
+      venue_id: VALID_VENUE_ID,
+      ticket_url: '  https://www.allaccess.com.ar/event/show  ',
+    } as never)
+
+    expect(eventsBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ ticket_url: 'https://www.allaccess.com.ar/event/show' })
+    )
+  })
+
+  it('insertEvent stores null when ticket_url is omitted', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    await insertEvent({ name: 'Show', date: '2024-01-01', venue_id: VALID_VENUE_ID } as never)
+
+    expect(eventsBuilder.insert).toHaveBeenCalledWith(expect.objectContaining({ ticket_url: null }))
+  })
+
   it('modifyEvent updates without redirecting', async () => {
     const eventsBuilder = makeQueryBuilder({ data: null, error: null }) as Record<string, unknown>
     eventsBuilder.update = vi.fn(() => eventsBuilder)
@@ -433,6 +460,29 @@ describe('insertEvent / modifyEvent / removeEvent', () => {
 
     expect(result).toEqual({})
     expect(mockRedirect).not.toHaveBeenCalled()
+    expect(eventsBuilder.update).toHaveBeenCalledWith(expect.not.objectContaining({ ticket_url: expect.anything() }))
+  })
+
+  it('modifyEvent trims and stores a provided ticket_url', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: null, error: null }) as Record<string, unknown>
+    eventsBuilder.update = vi.fn(() => eventsBuilder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    await modifyEvent(VALID_EVENT_ID, { ticket_url: '  https://www.passline.com/eventos/show  ' })
+
+    expect(eventsBuilder.update).toHaveBeenCalledWith(
+      expect.objectContaining({ ticket_url: 'https://www.passline.com/eventos/show' })
+    )
+  })
+
+  it('modifyEvent clears ticket_url to null when set to an empty string', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: null, error: null }) as Record<string, unknown>
+    eventsBuilder.update = vi.fn(() => eventsBuilder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    await modifyEvent(VALID_EVENT_ID, { ticket_url: '   ' })
+
+    expect(eventsBuilder.update).toHaveBeenCalledWith(expect.objectContaining({ ticket_url: null }))
   })
 
   it('removeEvent deletes lineups and the event without redirecting', async () => {

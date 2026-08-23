@@ -58,6 +58,7 @@ describe('EventForm — create mode', () => {
         date: '2024-05-01',
         venue_id: 'v1',
         artist_ids: ['a1'],
+        ticket_url: '',
       })
     })
     await waitFor(() => {
@@ -213,6 +214,33 @@ describe('EventForm — create mode', () => {
     })
   })
 
+  // AllAccess/Passline no tienen API de búsqueda — issue #19 lo resuelve con
+  // un link manual por evento en vez de una integración inventada.
+  it('includes the ticket link when filled', async () => {
+    const insertEvent = vi.fn().mockResolvedValue({ id: 'e-new' })
+    render(
+      <EventForm
+        venues={venues}
+        artists={artists}
+        insertEvent={insertEvent}
+        findOrCreateVenue={noopFindOrCreateVenue}
+        findOrCreateArtist={noopFindOrCreateArtist}
+      />
+    )
+
+    await userEvent.type(screen.getByLabelText(/Nombre del recital/), 'Show')
+    await userEvent.type(screen.getByLabelText(/Fecha/), '2024-05-01')
+    await pickVenue('Niceto')
+    await userEvent.type(screen.getByLabelText(/Link de entradas/), 'https://www.allaccess.com.ar/event/show')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar y generar el talón' }))
+
+    await waitFor(() => {
+      expect(insertEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ ticket_url: 'https://www.allaccess.com.ar/event/show' })
+      )
+    })
+  })
+
   it('does not touch attendance/memory when no rating was set', async () => {
     const insertEvent = vi.fn().mockResolvedValue({ id: 'e-new' })
     const setAttendanceStatus = vi.fn()
@@ -305,6 +333,23 @@ describe('EventForm — edit mode', () => {
         expect.objectContaining({ name: 'Show existente', artist_ids: ['a1'] })
       )
     })
+  })
+
+  // AllAccess/Passline no tienen API de búsqueda — issue #19 lo resuelve con
+  // un link manual por evento en vez de una integración inventada.
+  it('pre-fills the ticket link when the event already has one', () => {
+    render(
+      <EventForm
+        venues={venues}
+        artists={artists}
+        event={{ ...event, ticket_url: 'https://www.passline.com/eventos/show' }}
+        updateEvent={vi.fn()}
+        findOrCreateVenue={noopFindOrCreateVenue}
+        findOrCreateArtist={noopFindOrCreateArtist}
+      />
+    )
+
+    expect(screen.getByLabelText(/Link de entradas/)).toHaveValue('https://www.passline.com/eventos/show')
   })
 
   it('links "Cancelar" to the event detail page', () => {
