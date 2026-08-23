@@ -24,11 +24,25 @@ describe('WrappedStories', () => {
 
   it('triggers download when Descargar button is clicked', async () => {
     render(<WrappedStories slides={slides} handle="testuser" />)
-    
+
     const downloadButton = screen.getByRole('button', { name: 'Descargar' })
     await userEvent.click(downloadButton)
-    
+
     const { toPng } = await import('html-to-image')
     expect(toPng).toHaveBeenCalled()
+  })
+
+  it('shows a visible error message when the export fails, instead of failing silently', async () => {
+    const { toPng } = await import('html-to-image')
+    vi.mocked(toPng).mockRejectedValueOnce(new Error('tainted canvas'))
+
+    render(<WrappedStories slides={slides} handle="testuser" />)
+
+    const downloadButton = screen.getByRole('button', { name: 'Descargar' })
+    await userEvent.click(downloadButton)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No se pudo descargar la imagen. Probá de nuevo.'
+    )
   })
 })
