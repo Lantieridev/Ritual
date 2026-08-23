@@ -6,15 +6,15 @@ import { getEventById } from '@/src/domains/events/data'
 import { deleteEvent } from '@/src/domains/events/actions'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
 import { getEventPhotos } from '@/src/domains/events/photo-actions'
-import { listExpensesForEvent } from '@/src/domains/expenses/service'
+import { listExpensesForEvent, estimateSpendForEvent } from '@/src/domains/expenses/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
-import { getExpenseCategory } from '@/src/domains/expenses/categories'
 import { safeHref } from '@/src/core/lib/validation'
 import { LinkButton } from '@/src/core/components/ui'
 import { DeleteEventButton } from '@/src/domains/events/components'
+import { EventExpensesPanel } from '@/src/domains/expenses/components'
 import { AttendanceStatusButtons } from '@/src/domains/events/components/AttendanceStatusButtons'
 import { RatingAndReviewForm } from '@/src/domains/events/components/RatingAndReviewForm'
 import { PhotoGallery } from '@/src/domains/events/components/PhotoGallery'
@@ -47,10 +47,6 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   }
 }
 
-function formatARS(amount: number) {
-  return `$${amount.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
-}
-
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = await params
   const userId = await getCurrentUserId()
@@ -62,6 +58,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   ])
 
   if (!event) notFound()
+
+  // Only fetched once event is known non-null — the spend estimate needs
+  // its venue_id/lineup to look up the user's history at the same venue/artist.
+  const spendEstimate = await estimateSpendForEvent(event, userId)
 
   const mainArtist = event.lineups?.[0]?.artists
   let heroImage: string | null = null
@@ -80,8 +80,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   const review = attendance?.review?.trim() || null
   const reviewVariant = !review ? 'none' : review.length > 220 ? 'long' : 'short'
-  const expensesTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
   const jsonLd = generateEventJsonLd(event)
+  const expensesDefaultDate = String(event.date).slice(0, 10)
 
   return (
     <main className="min-h-screen bg-ritual-bg text-ritual-bone">
@@ -221,25 +221,17 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </p>
         </section>
 
-        {/* La cuenta de esa noche */}
-        {expenses.length > 0 && (
+        {/* La cuenta de esa noche — issue #7: resumen inline + carga rápida, sin salir de la página */}
+        {userId && (
           <section className="border-t border-ritual-border-subtle pt-8">
             <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">La cuenta de esa noche</h2>
-            <div className="bg-ritual-paper text-ritual-paper-ink px-6 py-6 border-l-[3px] border-ritual-paper-red">
-              <ul className="divide-y divide-ritual-paper-2">
-                {expenses.map((ex) => (
-                  <li key={ex.id} className="flex items-center justify-between py-2 font-label text-sm">
-                    <span>{getExpenseCategory(ex.category).icon} {ex.category}</span>
-                    <span>{formatARS(Number(ex.amount))}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex items-center justify-between pt-3 mt-2 border-t border-dashed border-ritual-paper-2 font-figure text-2xl">
-                <span>TOTAL</span>
-                <span>{formatARS(expensesTotal)}</span>
-              </div>
-              <p className="font-label text-[9px] tracking-[0.1em] uppercase text-ritual-paper-ink/50 mt-3">no se aceptan devoluciones</p>
-            </div>
+            <EventExpensesPanel
+              eventId={event.id}
+              initialExpenses={expenses}
+              defaultDate={expensesDefaultDate}
+              spendEstimate={spendEstimate}
+              detailHref={routes.events.expenses(event.id)}
+            />
           </section>
         )}
 
