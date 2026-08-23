@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockCreateClient = vi.fn()
-const mockRedirect = vi.fn()
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
@@ -11,11 +10,13 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn(),
 }))
 
-vi.mock('next/navigation', () => ({
-  redirect: (...args: unknown[]) => mockRedirect(...args),
+vi.mock('@/src/domains/venues/data', () => ({
+  getVenues: vi.fn(),
+  getVenueById: vi.fn(),
 }))
 
-import { createVenue, insertVenue } from '@/src/domains/venues/actions'
+import { listVenues, findVenueById, insertVenue, findOrCreateVenue } from '@/src/domains/venues/service'
+import { getVenues, getVenueById } from '@/src/domains/venues/data'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
@@ -31,11 +32,29 @@ function makeLookupBuilder(result: { data: unknown; error: unknown }) {
   const chain = () => builder
   builder.select = vi.fn(chain)
   builder.ilike = vi.fn(chain)
+  builder.eq = vi.fn(chain)
+  builder.limit = vi.fn(chain)
+  builder.maybeSingle = vi.fn(() => Promise.resolve(result))
   builder.single = vi.fn(() => Promise.resolve(result))
   return builder
 }
 
-describe('createVenue', () => {
+describe('listVenues / findVenueById', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('delegates the catalog read to the data layer', async () => {
+    vi.mocked(getVenues).mockResolvedValue([{ id: 'v-1', name: 'Niceto Club' }])
+    await expect(listVenues()).resolves.toEqual([{ id: 'v-1', name: 'Niceto Club' }])
+  })
+
+  it('delegates the detail read to the data layer', async () => {
+    vi.mocked(getVenueById).mockResolvedValue(null)
+    await expect(findVenueById('v-1')).resolves.toBeNull()
+    expect(getVenueById).toHaveBeenCalledWith('v-1')
+  })
+})
+
+describe('insertVenue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
@@ -43,28 +62,28 @@ describe('createVenue', () => {
 
   it('rejects an unauthenticated caller', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue(null)
-    const result = await createVenue({ name: 'Niceto Club' } as never)
+    const result = await insertVenue({ name: 'Niceto Club' })
     expect(result.error).toBeTruthy()
     expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('rejects a missing or whitespace-only name without touching the database', async () => {
-    const result = await createVenue({ name: '   ' } as never)
+    const result = await insertVenue({ name: '   ' })
 
     expect(result).toEqual({ error: 'El nombre de la sede es obligatorio.' })
     expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
-  it('trims and inserts optional fields, then redirects to the list', async () => {
+  it('trims and inserts optional fields, returning the new id', async () => {
     const fromMock = vi.fn(() => makeQueryBuilder({ data: { id: 'v-new' }, error: null }))
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
 
-    await createVenue({
+    const result = await insertVenue({
       name: '  Niceto Club  ',
       city: '  CABA  ',
       address: '  Cordoba 5500  ',
       country: '  Argentina  ',
-    } as never)
+    })
 
     const builder = fromMock.mock.results[0].value as { insert: ReturnType<typeof vi.fn> }
     expect(builder.insert).toHaveBeenCalledWith({
@@ -73,7 +92,7 @@ describe('createVenue', () => {
       address: 'Cordoba 5500',
       country: 'Argentina',
     })
-    expect(mockRedirect).toHaveBeenCalledWith('/venues')
+    expect(result).toEqual({ id: 'v-new' })
   })
 
   it('truncates a name longer than 200 characters', async () => {
@@ -81,7 +100,7 @@ describe('createVenue', () => {
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
     const longName = 'A'.repeat(250)
 
-    await createVenue({ name: longName } as never)
+    await insertVenue({ name: longName })
 
     const builder = fromMock.mock.results[0].value as { insert: ReturnType<typeof vi.fn> }
     const inserted = builder.insert.mock.calls[0][0] as { name: string }
@@ -94,10 +113,9 @@ describe('createVenue', () => {
     )
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
 
-    const result = await createVenue({ name: 'Niceto Club' } as never)
+    const result = await insertVenue({ name: 'Niceto Club' })
 
     expect(result?.error).toBe('Ya existe un registro con esos datos.')
-    expect(mockRedirect).not.toHaveBeenCalled()
   })
 
   // A name-collision used to dead-end on the same generic message as any
@@ -116,27 +134,29 @@ describe('createVenue', () => {
     })
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
 
-    const result = await createVenue({ name: 'Niceto Club' } as never)
+    const result = await insertVenue({ name: 'Niceto Club' })
 
     expect(lookupBuilder.ilike).toHaveBeenCalledWith('name', 'Niceto Club')
     expect(result).toEqual({ error: 'Ya existe una sede con ese nombre.', existingId: 'existing-venue-1' })
-    expect(mockRedirect).not.toHaveBeenCalled()
   })
 })
 
-describe('insertVenue', () => {
+describe('findOrCreateVenue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
   })
 
-  it('returns the new id without redirecting, for callers other than the form submit flow', async () => {
-    const fromMock = vi.fn(() => makeQueryBuilder({ data: { id: 'v-new' }, error: null }))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await findOrCreateVenue('Niceto Club')
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
 
-    const result = await insertVenue({ name: 'Niceto Club' } as never)
-
-    expect(result).toEqual({ id: 'v-new' })
-    expect(mockRedirect).not.toHaveBeenCalled()
+  it('rejects a whitespace-only name without touching the database', async () => {
+    const result = await findOrCreateVenue('   ')
+    expect(result).toEqual({ error: 'El nombre de la sede es obligatorio.' })
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 })

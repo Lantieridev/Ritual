@@ -3,9 +3,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/src/domains/venues/data', () => ({
   getVenues: vi.fn(),
   getVenueById: vi.fn(),
+  getVenueEvents: vi.fn(),
 }))
 
-vi.mock('@/src/domains/venues/actions', () => ({
+vi.mock('@/src/domains/venues/service', () => ({
+  listVenues: vi.fn(),
+  findVenueById: vi.fn(),
   insertVenue: vi.fn(),
   findOrCreateVenue: vi.fn(),
 }))
@@ -18,8 +21,13 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue(null),
 }))
 
-import { getVenues, getVenueById } from '@/src/domains/venues/data'
-import { insertVenue, findOrCreateVenue } from '@/src/domains/venues/actions'
+import { getVenueEvents } from '@/src/domains/venues/data'
+import {
+  listVenues,
+  findVenueById,
+  insertVenue,
+  findOrCreateVenue,
+} from '@/src/domains/venues/service'
 import { POST } from '@/app/api/graphql/route'
 
 async function query(source: string) {
@@ -38,8 +46,8 @@ describe('venues GraphQL schema', () => {
     vi.clearAllMocks()
   })
 
-  it('resolves the venues query through the existing data layer', async () => {
-    vi.mocked(getVenues).mockResolvedValue([
+  it('resolves the venues query through the service layer', async () => {
+    vi.mocked(listVenues).mockResolvedValue([
       { id: 'v1', name: 'Niceto', city: 'CABA', country: null, address: null, lat: null, lng: null },
     ])
 
@@ -50,13 +58,68 @@ describe('venues GraphQL schema', () => {
   })
 
   it('resolves a single venue by id, null when it does not exist', async () => {
-    vi.mocked(getVenueById).mockResolvedValue(null)
+    vi.mocked(findVenueById).mockResolvedValue(null)
 
     const body = await query('{ venue(id: "missing") { id } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ venue: null })
-    expect(getVenueById).toHaveBeenCalledWith('missing')
+    expect(findVenueById).toHaveBeenCalledWith('missing')
+  })
+
+  // Regresion de paridad: el detalle de sede se dibuja enteramente sobre el
+  // historial de shows, que antes no existia en el schema.
+  it('exposes the show history already attached to a venue detail read', async () => {
+    vi.mocked(findVenueById).mockResolvedValue({
+      id: 'v1',
+      name: 'Niceto',
+      city: null,
+      country: null,
+      address: null,
+      lat: null,
+      lng: null,
+      events: [
+        {
+          id: 'e1',
+          name: 'Show',
+          date: '2026-01-01',
+          lineups: [{ artists: { name: 'Coldplay' } }],
+          attendance: [{ status: 'went' }],
+        },
+      ],
+    })
+
+    const body = await query(
+      '{ venue(id: "v1") { events { id date lineups { artist { name } } attendance { status } } } }'
+    )
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data.venue.events).toEqual([
+      {
+        id: 'e1',
+        date: '2026-01-01',
+        lineups: [{ artist: { name: 'Coldplay' } }],
+        attendance: [{ status: 'went' }],
+      },
+    ])
+    expect(getVenueEvents).not.toHaveBeenCalled()
+  })
+
+  // La query de listado no trae la relacion, asi que el campo la carga bajo
+  // demanda en vez de devolver [] y perder el dato en silencio.
+  it('loads the show history on demand when the row came from the list query', async () => {
+    vi.mocked(listVenues).mockResolvedValue([
+      { id: 'v1', name: 'Niceto', city: null, country: null, address: null, lat: null, lng: null },
+    ])
+    vi.mocked(getVenueEvents).mockResolvedValue([
+      { id: 'e1', name: 'Show', date: '2026-01-01', lineups: [], attendance: [] },
+    ])
+
+    const body = await query('{ venues { id events { id } } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ venues: [{ id: 'v1', events: [{ id: 'e1' }] }] })
+    expect(getVenueEvents).toHaveBeenCalledWith('v1')
   })
 })
 

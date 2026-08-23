@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { VenueForm } from '@/src/domains/venues/components'
-import { createVenue } from '@/src/domains/venues/actions'
 import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
 
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
 
 /**
  * Página para agregar una sede.
- * Server Component; el form (Client) llama a createVenue.
+ * Server Component; el form (Client) dispara la mutation createVenue.
  */
 export default function NewVenuePage() {
   return (
@@ -21,7 +20,7 @@ export default function NewVenuePage() {
       title="Nueva sede"
       description="Cargá el lugar donde se hace el recital. Solo el nombre es obligatorio."
     >
-      <VenueForm createVenue={createVenue} />
+      <VenueForm />
     </PageShell>
   )
 }

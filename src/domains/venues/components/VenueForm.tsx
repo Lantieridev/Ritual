@@ -2,18 +2,23 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useMutation, gql } from 'urql'
 import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
-import type { VenueCreateInput } from '@/src/core/types'
 
-interface VenueFormProps {
-  createVenue: (data: VenueCreateInput) => Promise<{ error?: string; existingId?: string }>
-}
+const CreateVenueMutation = gql`
+  mutation CreateVenue($input: VenueCreateInput!) {
+    createVenue(input: $input) { id existingId error }
+  }
+`
 
-export function VenueForm({ createVenue }: VenueFormProps) {
+export function VenueForm() {
+  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [existingId, setExistingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [, createVenue] = useMutation(CreateVenueMutation)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -21,17 +26,22 @@ export function VenueForm({ createVenue }: VenueFormProps) {
     setExistingId(null)
     setIsSubmitting(true)
     const form = e.currentTarget
-    const result = await createVenue({
-      name: (form.elements.namedItem('name') as HTMLInputElement).value,
-      city: (form.elements.namedItem('city') as HTMLInputElement).value || undefined,
-      address: (form.elements.namedItem('address') as HTMLInputElement).value || undefined,
-      country: (form.elements.namedItem('country') as HTMLInputElement).value || undefined,
+    const { data } = await createVenue({
+      input: {
+        name: (form.elements.namedItem('name') as HTMLInputElement).value,
+        city: (form.elements.namedItem('city') as HTMLInputElement).value || undefined,
+        address: (form.elements.namedItem('address') as HTMLInputElement).value || undefined,
+        country: (form.elements.namedItem('country') as HTMLInputElement).value || undefined,
+      },
     })
+    const result = data?.createVenue
     if (result?.error) {
       setError(result.error)
       setExistingId(result.existingId ?? null)
       setIsSubmitting(false)
+      return
     }
+    router.push(routes.venues.list)
   }
 
   return (
