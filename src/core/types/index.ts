@@ -79,7 +79,9 @@ export interface Event {
  * Evento con relaciones expandidas (venue + lineups con artists).
  */
 export interface EventWithRelations extends Event {
-  venues: Pick<Venue, 'name' | 'city' | 'country'> | null
+  // lat/lng incluidos para el clima exacto del show (issue #8) — sin esto
+  // la página del evento no puede pedirle a Open-Meteo el punto correcto.
+  venues: Pick<Venue, 'name' | 'city' | 'country' | 'lat' | 'lng'> | null
   lineups: LineupRow[] | null
 }
 
