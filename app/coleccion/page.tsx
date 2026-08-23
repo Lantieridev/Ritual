@@ -3,7 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getArtists } from '@/src/domains/artists/data'
 import { getVenues } from '@/src/domains/venues/data'
-import { getFestivals } from '@/src/domains/festivals/data'
+import { listFestivals } from '@/src/domains/festivals/service'
 import { getEventsWithAttendance } from '@/src/domains/events/data'
 import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
 import { aggregateEventStats } from '@/src/domains/stats/aggregate'
@@ -215,7 +215,7 @@ const FESTIVAL_STATUS_LABEL: Record<string, string> = {
 }
 
 async function FestivalsTab() {
-    const festivals = await getFestivals()
+    const festivals = await listFestivals()
     const upcoming = festivals.filter((f) => !isPastEvent(f.start_date))
     const past = festivals.filter((f) => isPastEvent(f.start_date))
 
@@ -240,7 +240,7 @@ async function FestivalsTab() {
     )
 }
 
-function FestivalList({ title, festivals }: { title: string; festivals: Awaited<ReturnType<typeof getFestivals>> }) {
+function FestivalList({ title, festivals }: { title: string; festivals: Awaited<ReturnType<typeof listFestivals>> }) {
     return (
         <section>
             <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">{title}</h2>

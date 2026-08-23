@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { getEventsWithAttendance } from '@/src/domains/events/data'
 import { buildHomeFeed, buildHomeHeroState } from '@/src/domains/events/home-view'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
-import { getFestivals } from '@/src/domains/festivals/data'
+import { listFestivals } from '@/src/domains/festivals/service'
 import { getWishlistArtistIds } from '@/src/domains/artists/wishlist-actions'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { routes } from '@/src/core/lib/routes'
@@ -74,7 +74,7 @@ async function getNearbyShows(): Promise<NearbyCard[]> {
 }
 
 export default async function HomePage() {
-  const [allEvents, festivals] = await Promise.all([getEventsWithAttendance(), getFestivals()])
+  const [allEvents, festivals] = await Promise.all([getEventsWithAttendance(), listFestivals()])
   const now = new Date()
 
   const { nextShow, byYear, years } = buildHomeFeed(allEvents, 'went', now)

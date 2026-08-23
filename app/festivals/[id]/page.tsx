@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { getFestivalById } from '@/src/domains/festivals/data'
+import { findFestivalById } from '@/src/domains/festivals/service'
 import { routes } from '@/src/core/lib/routes'
 import { safeHref } from '@/src/core/lib/validation'
 import { formatDate } from '@/src/core/lib/utils'
@@ -14,7 +14,7 @@ interface FestivalDetailPageProps {
 
 export async function generateMetadata({ params }: FestivalDetailPageProps): Promise<Metadata> {
     const { id } = await params
-    const festival = await getFestivalById(id)
+    const festival = await findFestivalById(id)
     if (!festival) return { title: 'Festival no encontrado | RITUAL' }
     return {
         title: `${festival.name} | RITUAL`,
@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: FestivalDetailPageProps): Pro
 
 export default async function FestivalDetailPage({ params }: FestivalDetailPageProps) {
     const { id } = await params
-    const festival = await getFestivalById(id)
+    const festival = await findFestivalById(id)
     if (!festival) notFound()
 
     const start = new Date(festival.start_date)
