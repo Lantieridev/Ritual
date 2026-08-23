@@ -17,7 +17,7 @@ AS $$
 $$;
 
 -- 4. Narrow RPC: the ONLY sanctioned way to change another user's role.
--- Deliberately NOT a broad "admins can update any profile" RLS policy — an
+-- Deliberately NOT a broad "admins can update any profile" RLS policy - an
 -- admin hitting PostgREST directly must not be able to touch name/bio/etc.
 -- on someone else's row. This function is SECURITY DEFINER (bypasses RLS
 -- internally) but only ever writes the `role`/`updated_at` columns, and it
