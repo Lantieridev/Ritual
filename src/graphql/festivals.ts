@@ -1,6 +1,6 @@
 import { builder } from './builder'
-import { getFestivals, getFestivalById } from '@/src/domains/festivals/data'
-import type { Festival } from '@/src/domains/festivals/data'
+import { listFestivals, findFestivalById } from '@/src/domains/festivals/service'
+import type { Festival } from '@/src/domains/festivals/service'
 import {
     insertFestival,
     removeFestival,
@@ -90,7 +90,7 @@ FestivalRef.implement({
 builder.queryField('festivals', (t) =>
     t.field({
         type: [FestivalRef],
-        resolve: () => getFestivals(),
+        resolve: () => listFestivals(),
     })
 )
 
@@ -101,7 +101,7 @@ builder.queryField('festival', (t) =>
         args: {
             id: t.arg.id({ required: true }),
         },
-        resolve: (_root, args) => getFestivalById(String(args.id)),
+        resolve: (_root, args) => findFestivalById(String(args.id)),
     })
 )
 
