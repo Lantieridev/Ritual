@@ -55,6 +55,12 @@ StatsRef.implement({
         topVenues: t.field({ type: [TopVenueRef], resolve: (s) => s.topVenues }),
         averageRating: t.exposeFloat('averageRating', { nullable: true }),
         totalRated: t.exposeInt('totalRated'),
+        // Clima (issue #8): siempre 0 hoy — getPersonalStats todavía no
+        // resuelve clima por evento, ver el comentario en aggregate.ts.
+        // Expuestos desde ahora para que un futuro cliente (ej. una tarjeta
+        // de Wrapped) no necesite un cambio de schema para consumirlos.
+        rainyShows: t.exposeInt('rainyShows'),
+        totalWithWeather: t.exposeInt('totalWithWeather'),
         recentActivity: t.field({ type: [RecentActivityEntryRef], resolve: (s) => s.recentActivity }),
     }),
 })

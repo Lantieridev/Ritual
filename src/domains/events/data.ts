@@ -10,6 +10,16 @@ const EVENTS_SELECT = `
   )
 `
 
+// Solo la ficha de un evento necesita lat/lng (clima exacto del show, ver
+// issue #8) — el listado del home no pide estos campos de más.
+const EVENT_DETAIL_SELECT = `
+  *,
+  venues ( name, city, country, lat, lng ),
+  lineups (
+    artists ( id, name, genre )
+  )
+`
+
 const EVENTS_WITH_ATTENDANCE_SELECT = `
   *,
   venues ( name, city, country ),
@@ -93,7 +103,7 @@ export async function getEventById(
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('events')
-    .select(EVENTS_SELECT)
+    .select(EVENT_DETAIL_SELECT)
     .eq('id', id)
     .single()
 

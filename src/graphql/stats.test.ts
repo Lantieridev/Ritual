@@ -41,6 +41,8 @@ const stats: StatsData = {
   topVenues: [{ name: 'Niceto', city: 'CABA', count: 2 }],
   averageRating: 4.5,
   totalRated: 3,
+  rainyShows: 0,
+  totalWithWeather: 0,
   recentActivity: [
     {
       id: 'e1',

@@ -5,11 +5,24 @@
  * server-only, rompiendo tests o cualquier uso desde un Client Component.
  */
 
-/** Forma mínima que necesita aggregateEventStats — cualquier lista de eventos con esta forma sirve. */
+/**
+ * `weather` es opcional y a propósito no se llena en getPersonalStats
+ * todavía (issue #8): resolverlo pediría un fetch a Open-Meteo por cada
+ * show pasado del usuario en cada carga de stats/Wrapped, sin cachear nada
+ * — un costo que no vale la pena pagar antes de que exista una tarjeta de
+ * Wrapped real que lo use. Lo que sí hace este archivo es dejar el dato
+ * "enchufable": un caller que arme `weather` por evento (por ejemplo
+ * llamando a getEventWeather de src/domains/weather/weather-service para
+ * cada evento pasado, con su propia estrategia de caché/concurrencia) ya
+ * puede pasarlo acá y aggregateEventStats lo cuenta — sin esto, el clima
+ * quedaría atrapado en la ficha del evento y una futura tarjeta de Wrapped
+ * tendría que reinventar esta función.
+ */
 export interface AggregatableEvent {
     lineups?: Array<{ artists: { name: string } | null }> | null
     venues?: { name: string; city?: string | null; country?: string | null } | null
     rating?: number | null
+    weather?: { isRain: boolean } | null
 }
 
 export interface AggregatedEventStats {
@@ -22,6 +35,10 @@ export interface AggregatedEventStats {
     topVenues: Array<{ name: string; city: string | null; count: number }>
     averageRating: number | null
     totalRated: number
+    /** Shows con clima conocido y precipitación > 0 en el momento del show — ver issue #8. */
+    rainyShows: number
+    /** Cuántos de los eventos de entrada trajeron dato de clima (rainyShows es sobre este subconjunto, no sobre el total). */
+    totalWithWeather: number
 }
 
 /**
@@ -71,6 +88,9 @@ export function aggregateEventStats(events: AggregatableEvent[]): AggregatedEven
 
     const topVenues = Object.values(venueMap).sort((a, b) => b.count - a.count)
 
+    const eventsWithWeather = events.filter((ev) => ev.weather != null)
+    const rainyShows = eventsWithWeather.filter((ev) => ev.weather!.isRain).length
+
     return {
         uniqueArtists: artistSet.size,
         uniqueVenues: Object.keys(venueMap).length,
@@ -80,5 +100,7 @@ export function aggregateEventStats(events: AggregatableEvent[]): AggregatedEven
         topVenues,
         averageRating,
         totalRated: ratings.length,
+        rainyShows,
+        totalWithWeather: eventsWithWeather.length,
     }
 }

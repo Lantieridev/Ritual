@@ -20,6 +20,18 @@ export interface StatsData {
     topVenues: Array<{ name: string; city: string | null; count: number }>
     averageRating: number | null
     totalRated: number
+    /**
+     * Shows con clima conocido y lluvia en el momento (issue #8). Siempre 0
+     * hoy: getPersonalStats todavía no resuelve clima por evento (pediría un
+     * fetch a Open-Meteo por show pasado en cada carga de stats, sin caché —
+     * ver el comentario en aggregate.ts). El campo ya existe y
+     * aggregateEventStats ya lo cuenta para que una futura tarjeta de
+     * Wrapped ("fuiste a N shows bajo la lluvia") solo tenga que resolver
+     * `weather` por evento antes de llamar a esta función, no reimplementar
+     * el conteo.
+     */
+    rainyShows: number
+    totalWithWeather: number
     recentActivity: Array<{
         id: string
         name: string | null
@@ -141,6 +153,8 @@ export async function getPersonalStats(): Promise<StatsData> {
         topVenues,
         averageRating: agg.averageRating,
         totalRated: agg.totalRated,
+        rainyShows: agg.rainyShows,
+        totalWithWeather: agg.totalWithWeather,
         recentActivity,
     }
 }
@@ -160,6 +174,8 @@ function emptyStats(): StatsData {
         topVenues: [],
         averageRating: null,
         totalRated: 0,
+        rainyShows: 0,
+        totalWithWeather: 0,
         recentActivity: [],
     }
 }

@@ -55,7 +55,10 @@ describe('EventForm — create mode', () => {
     await waitFor(() => {
       expect(insertEvent).toHaveBeenCalledWith({
         name: 'Show en Niceto',
-        date: '2024-05-01',
+        // Fecha + hora combinadas en un timestamp con el offset fijo de
+        // Argentina (-03:00) — "20:00" es el default del input de hora, no
+        // se tocó en este test (issue #8).
+        date: '2024-05-01T20:00:00-03:00',
         venue_id: 'v1',
         artist_ids: ['a1'],
         ticket_url: '',
@@ -64,6 +67,46 @@ describe('EventForm — create mode', () => {
     await waitFor(() => {
       expect(push).toHaveBeenCalledWith('/events/e-new')
     })
+  })
+
+  it('combines the chosen date and time into the timestamp sent to insertEvent', async () => {
+    const insertEvent = vi.fn().mockResolvedValue({ id: 'e-new' })
+    render(
+      <EventForm
+        venues={venues}
+        artists={artists}
+        insertEvent={insertEvent}
+        findOrCreateVenue={noopFindOrCreateVenue}
+        findOrCreateArtist={noopFindOrCreateArtist}
+      />
+    )
+
+    await userEvent.type(screen.getByLabelText(/Nombre del recital/), 'Show')
+    await userEvent.type(screen.getByLabelText(/Fecha/), '2024-05-01')
+    await userEvent.clear(screen.getByLabelText(/Hora/))
+    await userEvent.type(screen.getByLabelText(/Hora/), '23:15')
+    await pickVenue('Niceto')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar y generar el talón' }))
+
+    await waitFor(() => {
+      expect(insertEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ date: '2024-05-01T23:15:00-03:00' })
+      )
+    })
+  })
+
+  it('defaults the time input to 20:00 for a new event', () => {
+    render(
+      <EventForm
+        venues={venues}
+        artists={artists}
+        insertEvent={vi.fn()}
+        findOrCreateVenue={noopFindOrCreateVenue}
+        findOrCreateArtist={noopFindOrCreateArtist}
+      />
+    )
+
+    expect(screen.getByLabelText(/Hora/)).toHaveValue('20:00')
   })
 
   it('removes an artist chip when its "x" is clicked', async () => {
@@ -274,7 +317,9 @@ describe('EventForm — edit mode', () => {
   const event = {
     id: 'e1',
     name: 'Show existente',
-    date: '2024-05-01',
+    // Timestamp completo (como lo devuelve Supabase siempre, sea el evento
+    // manual o importado) — 23:00 UTC = 20:00 ART.
+    date: '2024-05-01T23:00:00Z',
     venue_id: 'v1',
     lineups: [{ artists: { id: 'a1', name: 'Bandalos Chinos', genre: 'Indie' } }],
   } as EventWithRelations
@@ -330,9 +375,31 @@ describe('EventForm — edit mode', () => {
     await waitFor(() => {
       expect(updateEvent).toHaveBeenCalledWith(
         'e1',
-        expect.objectContaining({ name: 'Show existente', artist_ids: ['a1'] })
+        expect.objectContaining({
+          name: 'Show existente',
+          artist_ids: ['a1'],
+          // La hora precargada (20:00 ART, ver fixture) se reenvía tal cual
+          // si el usuario no la tocó.
+          date: '2024-05-01T20:00:00-03:00',
+        })
       )
     })
+  })
+
+  it('pre-fills the time input from the stored event timestamp, in Argentina local time', () => {
+    render(
+      <EventForm
+        venues={venues}
+        artists={artists}
+        event={event}
+        updateEvent={vi.fn()}
+        findOrCreateVenue={noopFindOrCreateVenue}
+        findOrCreateArtist={noopFindOrCreateArtist}
+      />
+    )
+
+    // event.date es '2024-05-01T23:00:00Z' = 20:00 ART.
+    expect(screen.getByLabelText(/Hora/)).toHaveValue('20:00')
   })
 
   // AllAccess/Passline no tienen API de búsqueda — issue #19 lo resuelve con
