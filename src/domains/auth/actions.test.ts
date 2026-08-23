@@ -163,6 +163,18 @@ describe('updateProfile', () => {
     expect(result).toEqual({ error: 'Ese nombre de usuario ya está en uso.' })
   })
 
+  it('sanitizes an unrecognized DB error instead of returning it raw', async () => {
+    const supabase = makeSupabase({
+      user: { id: 'user-1' },
+      profileResult: { data: null, error: { message: 'relation "profiles" does not exist' } },
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await updateProfile({}, new FormData())
+
+    expect(result).toEqual({ error: 'Ocurrió un error inesperado. Intentá de nuevo.' })
+  })
+
   it('returns success and revalidates the profile path on a clean update', async () => {
     const supabase = makeSupabase({
       user: { id: 'user-1' },
@@ -239,5 +251,17 @@ describe('modifyProfile', () => {
     const result = await modifyProfile({})
 
     expect(result).toEqual({})
+  })
+
+  it('sanitizes an unrecognized DB error instead of returning it raw', async () => {
+    const supabase = makeSupabase({
+      user: { id: 'user-1' },
+      profileResult: { data: null, error: { message: 'relation "profiles" does not exist' } },
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await modifyProfile({ username: 'martin' })
+
+    expect(result).toEqual({ error: 'Ocurrió un error inesperado. Intentá de nuevo.' })
   })
 })

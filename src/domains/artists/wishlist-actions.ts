@@ -50,7 +50,7 @@ export async function toggleWishlist(
 
     if (selectError && selectError.code !== 'PGRST116') {
         console.error('[Wishlist] Check error:', selectError)
-        return { inWishlist: false, error: 'Error al verificar wishlist.' }
+        return { inWishlist: false, error: sanitizeError(selectError) }
     }
 
     if (existing) {

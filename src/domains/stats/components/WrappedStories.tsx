@@ -26,6 +26,7 @@ interface WrappedStoriesProps {
 export function WrappedStories({ slides, handle }: WrappedStoriesProps) {
   const [index, setIndex] = useState(0)
   const [isExporting, setIsExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const total = slides.length
 
@@ -42,6 +43,7 @@ export function WrappedStories({ slides, handle }: WrappedStoriesProps) {
     if (!cardRef.current || isExporting) return
     try {
       setIsExporting(true)
+      setExportError(null)
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         filter: (node) => {
@@ -57,6 +59,7 @@ export function WrappedStories({ slides, handle }: WrappedStoriesProps) {
       link.click()
     } catch (err) {
       console.error('Error al exportar la placa como imagen:', err)
+      setExportError('No se pudo descargar la imagen. Probá de nuevo.')
     } finally {
       setIsExporting(false)
     }
@@ -133,6 +136,15 @@ export function WrappedStories({ slides, handle }: WrappedStoriesProps) {
           Siguiente →
         </button>
       </div>
+      {exportError && (
+        <p
+          role="alert"
+          data-no-export="true"
+          className="absolute bottom-14 left-3 right-3 z-20 text-center font-label text-[10px] tracking-[0.06em] text-red-400"
+        >
+          {exportError}
+        </p>
+      )}
     </div>
   )
 }
