@@ -1,7 +1,13 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import { saveFestivalAttendance } from '@/src/domains/festivals/actions'
+import { useMutation, gql } from 'urql'
+
+const SaveFestivalAttendanceMutation = gql`
+  mutation SaveFestivalAttendance($festivalId: ID!, $status: AttendanceStatus!) {
+    saveFestivalAttendance(festivalId: $festivalId, status: $status) { success error }
+  }
+`
 
 interface FestivalAttendanceButtonProps {
     festivalId: string
@@ -19,6 +25,7 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
     const [open, setOpen] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
+    const [, saveFestivalAttendance] = useMutation(SaveFestivalAttendanceMutation)
 
     function handleSelect(value: 'interested' | 'going' | 'went') {
         const previous = status
@@ -26,10 +33,11 @@ export function FestivalAttendanceButton({ festivalId, initialStatus }: Festival
         setOpen(false)
         setError(null)
         startTransition(async () => {
-            const result = await saveFestivalAttendance(festivalId, value)
-            if (result.error) {
+            const { data } = await saveFestivalAttendance({ festivalId, status: value })
+            const result = data?.saveFestivalAttendance
+            if (!result || result.error) {
                 setStatus(previous)
-                setError(result.error)
+                setError(result?.error ?? 'No se pudo guardar la asistencia.')
             }
         })
     }

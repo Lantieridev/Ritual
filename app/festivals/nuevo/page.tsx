@@ -2,14 +2,23 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { createFestival } from '@/src/domains/festivals/actions'
+import { useRouter } from 'next/navigation'
+import { useMutation, gql } from 'urql'
 import { FormField } from '@/src/core/components/ui'
 import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
 
+const CreateFestivalMutation = gql`
+  mutation CreateFestival($input: FestivalCreateInput!) {
+    createFestival(input: $input) { id error }
+  }
+`
+
 export default function NuevoFestivalPage() {
+    const router = useRouter()
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
+    const [, createFestival] = useMutation(CreateFestivalMutation)
 
     function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -17,23 +26,24 @@ export default function NuevoFestivalPage() {
         const formData = new FormData(e.currentTarget)
 
         startTransition(async () => {
-            try {
-                const result = await createFestival({
+            const { data } = await createFestival({
+                input: {
                     name: formData.get('name') as string,
                     edition: formData.get('edition') as string,
-                    start_date: formData.get('start_date') as string,
-                    end_date: formData.get('end_date') as string || undefined,
+                    startDate: formData.get('start_date') as string,
+                    endDate: (formData.get('end_date') as string) || undefined,
                     city: formData.get('city') as string,
                     country: formData.get('country') as string,
                     website: formData.get('website') as string,
                     notes: formData.get('notes') as string,
-                })
-                if (result?.error) {
-                    setError(result.error)
-                }
-            } catch {
-                // redirect() throws — that means success
+                },
+            })
+            const result = data?.createFestival
+            if (!result || result.error || !result.id) {
+                setError(result?.error ?? 'No se pudo crear el festival.')
+                return
             }
+            router.push(routes.festivals.detail(result.id))
         })
     }
 

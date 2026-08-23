@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockCreateClient = vi.fn()
-const mockRedirect = vi.fn()
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
@@ -15,18 +14,12 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-vi.mock('next/navigation', () => ({
-  redirect: (...args: unknown[]) => mockRedirect(...args),
-}))
-
 import {
-  createFestival,
-  deleteFestival,
   insertFestival,
   removeFestival,
   saveFestivalAttendance,
   linkEventToFestival,
-} from '@/src/domains/festivals/actions'
+} from '@/src/domains/festivals/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 const VALID_FESTIVAL_ID = '11111111-1111-1111-1111-111111111111'
@@ -46,7 +39,7 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   return builder
 }
 
-describe('createFestival', () => {
+describe('insertFestival', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
@@ -54,28 +47,28 @@ describe('createFestival', () => {
 
   it('rejects an unauthenticated caller', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue(null)
-    const result = await createFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' } as never)
+    const result = await insertFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' })
     expect(result.error).toBeTruthy()
     expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('rejects a missing name or start date', async () => {
-    const noName = await createFestival({ name: '', start_date: '2024-01-01' } as never)
+    const noName = await insertFestival({ name: '', start_date: '2024-01-01' })
     expect(noName.error).toBeTruthy()
 
-    const noDate = await createFestival({ name: 'Cosquin Rock', start_date: '' } as never)
+    const noDate = await insertFestival({ name: 'Cosquin Rock', start_date: '' })
     expect(noDate.error).toBeTruthy()
 
     expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
-  it('creates the festival and redirects to its detail page', async () => {
+  it('creates the festival and returns its id for the caller to navigate to', async () => {
     const builder = makeQueryBuilder({ data: { id: VALID_FESTIVAL_ID }, error: null })
     mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
 
-    await createFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' } as never)
+    const result = await insertFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' })
 
-    expect(mockRedirect).toHaveBeenCalledWith(`/festivals/${VALID_FESTIVAL_ID}`)
+    expect(result).toEqual({ id: VALID_FESTIVAL_ID })
   })
 
   it('returns a sanitized error when the insert fails', async () => {
@@ -85,14 +78,13 @@ describe('createFestival', () => {
     })
     mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
 
-    const result = await createFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' } as never)
+    const result = await insertFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' })
 
     expect(result.error).toBe('Ya existe un registro con esos datos.')
-    expect(mockRedirect).not.toHaveBeenCalled()
   })
 })
 
-describe('deleteFestival', () => {
+describe('removeFestival', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
@@ -100,53 +92,40 @@ describe('deleteFestival', () => {
 
   it('rejects an unauthenticated caller', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue(null)
-    const result = await deleteFestival(VALID_FESTIVAL_ID)
+    const result = await removeFestival(VALID_FESTIVAL_ID)
     expect(result.error).toBeTruthy()
     expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
   it('rejects an invalid id', async () => {
-    const result = await deleteFestival('not-a-uuid')
+    const result = await removeFestival('not-a-uuid')
     expect(result.error).toBeTruthy()
     expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
-  it('deletes and redirects to the list', async () => {
+  it('deletes the festival row', async () => {
     const builder = makeQueryBuilder({ data: null, error: null })
     mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
 
-    await deleteFestival(VALID_FESTIVAL_ID)
+    await removeFestival(VALID_FESTIVAL_ID)
 
     expect(builder.delete).toHaveBeenCalled()
-    expect(mockRedirect).toHaveBeenCalledWith('/festivals')
   })
 })
 
-describe('insertFestival / removeFestival', () => {
+describe('insertFestival / removeFestival payloads', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
   })
 
-  it('insertFestival returns the new id without redirecting', async () => {
-    const builder = makeQueryBuilder({ data: { id: VALID_FESTIVAL_ID }, error: null })
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
-
-    const result = await insertFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' } as never)
-
-    expect(result).toEqual({ id: VALID_FESTIVAL_ID })
-    expect(mockRedirect).not.toHaveBeenCalled()
-  })
-
-  it('removeFestival deletes without redirecting', async () => {
+  it('removeFestival resolves to an empty payload on success', async () => {
     const builder = makeQueryBuilder({ data: null, error: null })
     mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
 
     const result = await removeFestival(VALID_FESTIVAL_ID)
 
-    expect(builder.delete).toHaveBeenCalled()
     expect(result).toEqual({})
-    expect(mockRedirect).not.toHaveBeenCalled()
   })
 })
 

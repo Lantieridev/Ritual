@@ -5,16 +5,19 @@ import userEvent from '@testing-library/user-event'
 
 const mockSaveFestivalAttendance = vi.fn()
 
-vi.mock('@/src/domains/festivals/actions', () => ({
-  saveFestivalAttendance: (...args: unknown[]) => mockSaveFestivalAttendance(...args),
-}))
+vi.mock('urql', async () => {
+  const actual = await vi.importActual<typeof import('urql')>('urql')
+  return { ...actual, useMutation: () => [{ fetching: false }, mockSaveFestivalAttendance] }
+})
 
 import { FestivalAttendanceButton } from '@/src/domains/festivals/components/FestivalAttendanceButton'
 
 describe('FestivalAttendanceButton', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockSaveFestivalAttendance.mockResolvedValue({})
+    mockSaveFestivalAttendance.mockResolvedValue({
+      data: { saveFestivalAttendance: { success: true } },
+    })
   })
 
   it('shows a generic prompt when there is no saved status', () => {
@@ -44,7 +47,7 @@ describe('FestivalAttendanceButton', () => {
     await userEvent.click(screen.getByRole('button'))
     await userEvent.click(screen.getByRole('menuitemradio', { name: /Voy/ }))
 
-    expect(mockSaveFestivalAttendance).toHaveBeenCalledWith('f1', 'going')
+    expect(mockSaveFestivalAttendance).toHaveBeenCalledWith({ festivalId: 'f1', status: 'going' })
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
