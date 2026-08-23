@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getEventById } from '@/src/domains/events/data'
-import { listExpensesForEvent, estimateSpendForEvent } from '@/src/domains/expenses/service'
+
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
@@ -33,18 +33,32 @@ function formatARS(amount: number) {
  * stays inline on the event page itself ("nunca redirige a /expenses", and
  * this view isn't /expenses either — it's this specific show's own page).
  */
+import { getClient } from '@/src/graphql/client'
+import { gql } from 'urql'
+
+const EventExpensesPageQuery = gql`
+  query EventExpensesPage($eventId: ID!) {
+    expenses(eventId: $eventId) {
+      id amount category note date
+    }
+    estimateSpendForEvent(eventId: $eventId) {
+      averageTotal
+      eventsConsidered
+    }
+  }
+`
+
 export default async function EventExpensesPage({ params }: EventExpensesPageProps) {
   const { id } = await params
   const userId = await getCurrentUserId()
   const event = await getEventById(id)
   if (!event) notFound()
 
-  const [expenses, spendEstimate] = await Promise.all([
-    listExpensesForEvent(id, userId),
-    estimateSpendForEvent(event, userId),
-  ])
+  const { data } = await getClient().query<{ expenses: any[], estimateSpendForEvent: any }>(EventExpensesPageQuery, { eventId: id })
+  const expenses = data?.expenses ?? []
+  const spendEstimate = data?.estimateSpendForEvent ?? null
 
-  const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
+  const total = expenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0)
   const groups = groupExpensesByCategory(expenses)
   const choripanLine = formatChoripanComparison(total)
   const mainArtist = event.lineups?.[0]?.artists

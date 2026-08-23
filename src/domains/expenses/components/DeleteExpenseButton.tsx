@@ -9,11 +9,17 @@ interface DeleteExpenseButtonProps {
 }
 
 export function DeleteExpenseButton({ expense, deleteExpense }: DeleteExpenseButtonProps) {
+  const handleConfirm = async () => {
+    return await deleteExpense(expense.id)
+  }
+
   return (
     <ConfirmDeleteButton
       label="Eliminar gasto"
       confirmMessage={`¿Eliminar este gasto de $${Number(expense.amount).toLocaleString('es-AR')} (${expense.category})?`}
-      onConfirm={() => deleteExpense(expense.id)}
+      onConfirm={handleConfirm}
     />
   )
 }
+
+

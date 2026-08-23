@@ -1,8 +1,11 @@
 import { builder } from './builder'
 import { listExpenses, findExpenseById, summarizeExpenses } from '@/src/domains/expenses/service'
 import type { ExpenseSummary } from '@/src/domains/expenses/service'
-import { insertExpense, modifyExpense, removeExpense } from '@/src/domains/expenses/actions'
+import { insertExpense, modifyExpense, removeExpense } from '@/src/domains/expenses/service'
 import { MutationResultRef, toMutationResult } from './shared'
+import { getEventById } from '@/src/domains/events/data'
+import { estimateSpendForEvent, listExpensesForEvent } from '@/src/domains/expenses/service'
+import type { VenueArtistSpendEstimate } from '@/src/domains/expenses/service'
 
 export const ExpenseRef = builder.objectRef<{
     id: string
@@ -45,7 +48,15 @@ ExpenseSummaryRef.implement({
 builder.queryField('expenses', (t) =>
     t.field({
         type: [ExpenseRef],
-        resolve: (_root, _args, ctx) => listExpenses(ctx.userId),
+        args: {
+            eventId: t.arg.id({ required: false }),
+        },
+        resolve: async (_root, args, ctx) => {
+            if (args.eventId) {
+                return listExpensesForEvent(String(args.eventId), ctx.userId)
+            }
+            return listExpenses(ctx.userId)
+        }
     })
 )
 
@@ -139,5 +150,27 @@ builder.mutationField('deleteExpense', (t) =>
             id: t.arg.id({ required: true }),
         },
         resolve: async (_root, args) => toMutationResult(await removeExpense(String(args.id))),
+    })
+)
+
+
+const VenueArtistSpendEstimateRef = builder.objectRef<VenueArtistSpendEstimate>('VenueArtistSpendEstimate')
+VenueArtistSpendEstimateRef.implement({
+    fields: (t) => ({
+        averageTotal: t.exposeFloat('averageTotal'),
+        eventsConsidered: t.exposeInt('eventsConsidered'),
+    }),
+})
+
+builder.queryField('estimateSpendForEvent', (t) =>
+    t.field({
+        type: VenueArtistSpendEstimateRef,
+        nullable: true,
+        args: { eventId: t.arg.id({ required: true }) },
+        resolve: async (_root, args, ctx) => {
+            const event = await getEventById(String(args.eventId))
+            if (!event) return null
+            return estimateSpendForEvent(event, ctx.userId)
+        }
     })
 )

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getCurrentUserId } from '@/src/core/auth/session'
-import { listExpenses, summarizeExpenses } from '@/src/domains/expenses/service'
+
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { getExpenseCategory } from '@/src/domains/expenses/categories'
@@ -17,15 +17,24 @@ function formatARS(amount: number) {
   return `$${amount.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 }
 
+import { getClient } from '@/src/graphql/client'
+import { gql } from 'urql'
+
+const ExpensesPageQuery = gql`
+  query ExpensesPage {
+    expenses { id amount category note date eventId }
+    expensesSummary { total count byCategory byYear }
+  }
+`
+
 export default async function ExpensesPage() {
   const userId = await getCurrentUserId()
-  const [expenses, summary] = await Promise.all([
-    listExpenses(userId),
-    summarizeExpenses(userId),
-  ])
+  const { data } = await getClient().query<{ expenses: any[], expensesSummary: any }>(ExpensesPageQuery, {})
+  const expenses = data?.expenses ?? []
+  const summary = data?.expensesSummary ?? { total: 0, count: 0, byCategory: {}, byYear: {} }
 
-  const topCategories = Object.entries(summary.byCategory).sort(([, a], [, b]) => b - a)
-  const mostExpensive = expenses.length > 0 ? expenses.reduce((max, e) => (Number(e.amount) > Number(max.amount) ? e : max)) : null
+  const topCategories = Object.entries(summary.byCategory).sort(([, a], [, b]) => Number(b) - Number(a))
+  const mostExpensive = expenses.length > 0 ? expenses.reduce((max: any, e: any) => (Number(e.amount) > Number(max.amount) ? e : max)) : null
 
   return (
     <PageShell
@@ -68,7 +77,7 @@ export default async function ExpensesPage() {
             <section>
               <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Por categoría</h2>
               <div className="space-y-2">
-                {topCategories.map(([cat, amount]) => {
+                {topCategories.map(([cat, amount]: [string, any]) => {
                   const pct = summary.total > 0 ? (amount / summary.total) * 100 : 0
                   const { icon } = getExpenseCategory(cat)
                   return (
@@ -110,7 +119,7 @@ export default async function ExpensesPage() {
           <section>
             <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Todos los gastos</h2>
             <ul className="divide-y divide-ritual-border-subtle">
-              {expenses.map((ex) => {
+              {expenses.map((ex: any) => {
                 const { icon } = getExpenseCategory(ex.category)
                 return (
                   <li key={ex.id}>

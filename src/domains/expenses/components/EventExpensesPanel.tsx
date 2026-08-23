@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { insertExpense, modifyExpense, removeExpense } from '@/src/domains/expenses/actions'
+import { useMutation, gql } from 'urql'
 import { getExpenseCategory } from '@/src/domains/expenses/categories'
 import { groupExpensesByCategory } from '@/src/domains/expenses/grouping'
 import { formatChoripanComparison } from '@/src/domains/expenses/comparisons'
@@ -37,6 +37,23 @@ function formatARS(amount: number) {
  * this panel owns its own local state instead of relying on a page reload,
  * same pattern as PhotoGallery.
  */
+
+const CreateExpenseMutation = gql`
+  mutation CreateExpense($input: ExpenseCreateInput!) {
+    createExpense(input: $input) { id error }
+  }
+`
+const UpdateExpenseMutation = gql`
+  mutation UpdateExpense($id: ID!, $input: ExpenseUpdateInput!) {
+    updateExpense(id: $id, input: $input) { error }
+  }
+`
+const DeleteExpenseMutation = gql`
+  mutation DeleteExpense($id: ID!) {
+    deleteExpense(id: $id) { error }
+  }
+`
+
 export function EventExpensesPanel({
   eventId,
   initialExpenses,
@@ -48,6 +65,22 @@ export function EventExpensesPanel({
   const [showQuickAdd, setShowQuickAdd] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+
+  const [, createExpenseM] = useMutation(CreateExpenseMutation)
+  const [, updateExpenseM] = useMutation(UpdateExpenseMutation)
+  const [, deleteExpenseM] = useMutation(DeleteExpenseMutation)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function handleInsert(expenseData: any) {
+    const { data } = await createExpenseM({ input: expenseData })
+    return { id: data?.createExpense?.id, error: data?.createExpense?.error }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function handleModify(id: string, expenseData: any) {
+    const { data } = await updateExpenseM({ id, input: expenseData })
+    return { error: data?.updateExpense?.error }
+  }
 
   const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
   const groups = groupExpensesByCategory(expenses)
@@ -65,12 +98,13 @@ export function EventExpensesPanel({
   }
 
   async function handleDelete(id: string) {
-    const result = await removeExpense(id)
-    if (!result.error) {
+    const { data } = await deleteExpenseM({ id })
+    if (!data?.deleteExpense?.error) {
       setExpenses((prev) => prev.filter((e) => e.id !== id))
       if (editingId === id) setEditingId(null)
+      return {}
     }
-    return result
+    return { error: data.deleteExpense.error }
   }
 
   return (
@@ -112,7 +146,7 @@ export function EventExpensesPanel({
         <ExpenseQuickAdd
           eventId={eventId}
           defaultDate={defaultDate}
-          insertExpense={insertExpense}
+          insertExpense={handleInsert}
           onAdded={handleAdded}
           onCancel={() => setShowQuickAdd(false)}
         />
@@ -148,7 +182,7 @@ export function EventExpensesPanel({
                         {editingId === expense.id ? (
                           <ExpenseInlineEdit
                             expense={expense}
-                            modifyExpense={modifyExpense}
+                            modifyExpense={handleModify}
                             onSaved={handleUpdated}
                             onCancel={() => setEditingId(null)}
                           />

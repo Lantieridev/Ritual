@@ -37,6 +37,8 @@ export const metadata: Metadata = {
 import { isAuthSessionMissingError } from "@supabase/supabase-js";
 import { createClient } from "@/src/core/lib/supabase/server";
 
+import { GraphQLProvider } from "@/src/graphql/provider";
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -51,9 +53,11 @@ export default async function RootLayout({
   return (
     <html lang="es" className="dark">
       <body className={`${fontVariables} antialiased font-sans`}>
-        <Navbar user={user} />
-        {children}
-        <Footer />
+        <GraphQLProvider>
+          <Navbar user={user} />
+          {children}
+          <Footer />
+        </GraphQLProvider>
       </body>
     </html>
   );
