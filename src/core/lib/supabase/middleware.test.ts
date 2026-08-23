@@ -46,6 +46,15 @@ describe('updateSession', () => {
     expect(response.status).toBe(200)
   })
 
+  it('redirects an anonymous visitor away from /modo-recital', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: new AuthSessionMissingError() })
+
+    const response = await updateSession(makeRequest('/modo-recital'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toContain('/login')
+  })
+
   it('does not log an error for the expected anonymous-visitor case (no session)', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockGetUser.mockResolvedValue({ data: { user: null }, error: new AuthSessionMissingError() })
