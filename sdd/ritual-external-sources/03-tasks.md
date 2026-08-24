@@ -14,22 +14,22 @@
 - [x] Write tests for Dedup logic
 
 ## Wave 2 (Fase 2 - "Cheap Scrapes" de alto valor)
-- [ ] Implement adapter: AllAccess
-- [ ] Implement adapter: Livepass
-- [ ] Implement adapter: Movistar Arena
-- [ ] Implement adapter: Entradaweb
-- [ ] Refine dedup logic with real world data
+- [x] Implement adapter: AllAccess
+- [x] Implement adapter: Livepass
+- [x] Implement adapter: Entradaweb
+- [x] Refine dedup logic with real world data
+- [ ] Implement adapter: Movistar Arena *(Explicitly deferred: confirmed to be a Blazor Server + SignalR WebSocket app, not scrapeable via plain HTTP fetch. Needs Playwright/headless infrastructure decision.)*
 
 ## Wave 3 (Fase 3 - "Cheap Scrapes" de nicho)
-- [ ] Implement adapter: Enigma
-- [ ] Implement adapter: Entraste
-- [ ] Implement adapter: Tuentrada
-- [ ] Implement adapter: Puntoticket
-- [ ] Implement adapter: Konex
-- [ ] Implement adapter: Pulsotickets
-- [ ] Implement adapter: Norteticket
+- [x] Implement adapter: Enigma
+- [x] Implement adapter: Entraste
+- [x] Implement adapter: Tuentrada
+- [x] Implement adapter: Puntoticket
+- [x] Implement adapter: Konex
+- [x] Implement adapter: Pulsotickets
+- [x] Implement adapter: Norteticket
 
 ## Wave 4 (Fase 4 - Las bloqueadas - Evaluación de riesgo)
-- [ ] Evaluate Passline headless strategy
-- [ ] Evaluate Mientrada headless strategy
-- [ ] Evaluate Edén Entradas SSL bypass strategy
+- [~] Evaluate Passline headless strategy *(Excluded entirely - established in earlier waves)*
+- [~] Evaluate Mientrada headless strategy *(Excluded entirely - established in earlier waves)*
+- [~] Evaluate Edén Entradas SSL bypass strategy *(Excluded entirely - established in earlier waves)*
