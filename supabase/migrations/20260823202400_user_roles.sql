@@ -29,7 +29,12 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF public.get_user_role(auth.uid()) != 'admin' THEN
+  -- IS DISTINCT FROM, not !=: get_user_role() returns NULL when the caller has
+  -- no profiles row (e.g. deleted mid-session). `NULL != 'admin'` is NULL, and
+  -- `IF NULL THEN` is falsy in plpgsql, so a plain != would silently skip this
+  -- check and let the request through. IS DISTINCT FROM treats NULL as "not
+  -- admin" and fails closed.
+  IF public.get_user_role(auth.uid()) IS DISTINCT FROM 'admin' THEN
     RAISE EXCEPTION 'insufficient_privilege' USING HINT = 'Only admins can assign roles';
   END IF;
 
@@ -41,4 +46,12 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.assign_user_role(uuid, public.user_role) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.assign_user_role(uuid, public.user_role) TO authenticated;
+
+-- Without this, the pre-existing "Users update own profile" RLS policy
+-- (auth.uid() = id, no column restriction) lets ANY authenticated user set
+-- their OWN role to 'admin' directly via PostgREST/supabase.from('profiles'),
+-- completely bypassing assign_user_role and its admin check. Column-level
+-- REVOKE closes this independently of RLS: assign_user_role is unaffected
+-- because SECURITY DEFINER functions run as their owner, not as `authenticated`.
+REVOKE UPDATE (role) ON public.profiles FROM authenticated;
 

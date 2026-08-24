@@ -66,20 +66,44 @@ describe('auth GraphQL schema', () => {
   it('resolves another user\'s profile by id', async () => {
     vi.mocked(getProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'usuario' })
 
-    const body = await query('{ profile(id: "u2") { username role } }')
+    const body = await query('{ profile(id: "u2") { username } }')
 
     expect(body.errors).toBeUndefined()
-    expect(body.data).toEqual({ profile: { username: 'otra', role: 'usuario' } })
+    expect(body.data).toEqual({ profile: { username: 'otra' } })
     expect(getProfile).toHaveBeenCalledWith('u2')
   })
 
-  it('resolves role on me query', async () => {
+  it('resolves role on me query (viewer is the profile owner)', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('u1')
+    mockRpc.mockResolvedValue({ data: 'moderador', error: null })
     vi.mocked(getProfile).mockResolvedValue({ id: 'u1', username: 'martin', bio: null, role: 'moderador' })
 
     const body = await query('{ me { role } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ me: { role: 'moderador' } })
+  })
+
+  it('hides another user\'s role from a non-admin viewer, to prevent privileged-account enumeration', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('u1')
+    mockRpc.mockResolvedValue({ data: 'usuario', error: null })
+    vi.mocked(getProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'admin' })
+
+    const body = await query('{ profile(id: "u2") { username role } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ profile: { username: 'otra', role: null } })
+  })
+
+  it('reveals another user\'s role to an admin viewer', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('u1')
+    mockRpc.mockResolvedValue({ data: 'admin', error: null })
+    vi.mocked(getProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'moderador' })
+
+    const body = await query('{ profile(id: "u2") { username role } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ profile: { username: 'otra', role: 'moderador' } })
   })
 })
 

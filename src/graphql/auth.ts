@@ -16,7 +16,16 @@ ProfileRef.implement({
         bio: t.exposeString('bio', { nullable: true }),
         location: t.exposeString('location', { nullable: true }),
         updatedAt: t.exposeString('updated_at', { nullable: true }),
-        role: t.exposeString('role'),
+        // Only the profile's own owner or an admin can see a role — anyone
+        // else would let an anonymous caller enumerate which accounts are
+        // moderador/admin by querying profile(id) across ids, a targeting
+        // aid for social-engineering against privileged accounts.
+        role: t.field({
+            type: 'String',
+            nullable: true,
+            resolve: (profile, _args, context) =>
+                context.userId === profile.id || context.role === 'admin' ? profile.role : null,
+        }),
     }),
 })
 
