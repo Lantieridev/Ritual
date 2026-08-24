@@ -8,6 +8,7 @@ import { SearchEventsForm } from '@/src/domains/events/components/SearchEventsFo
 import { SetlistResults } from '@/src/domains/events/components/SetlistResults'
 import { FutureEventsResults } from '@/src/domains/events/components/FutureEventsResults'
 import { isTicketmasterConfigured, searchTicketmasterEvents } from '@/src/core/lib/ticketmaster'
+import { searchCachedExternalEvents } from '@/src/core/lib/external-sources/cache'
 import { isSetlistFmConfigured, getSetlistsByArtist } from '@/src/core/lib/setlistfm'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { formatDate } from '@/src/core/lib/utils'
@@ -60,7 +61,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
 
   const tmConfigured = isTicketmasterConfigured()
   const slConfigured = isSetlistFmConfigured()
-  const anyConfigured = tmConfigured || slConfigured
+  const anyConfigured = true // We always have the local cache now
 
   let tmEvents: Awaited<ReturnType<typeof searchTicketmasterEvents>>['events'] = []
   let tmError: string | undefined
@@ -68,10 +69,20 @@ export default async function BuscarPage({ searchParams }: PageProps) {
   let slError: string | undefined
 
   if (tab === 'cartelera') {
-    if (hasQuery && source === 'future' && tmConfigured) {
-      const result = await searchTicketmasterEvents({ keyword: params.artist, city: params.location })
-      tmEvents = result.events
-      tmError = result.error
+    if (hasQuery && source === 'future') {
+      const [tmResult, cacheResult] = await Promise.all([
+        tmConfigured 
+          ? searchTicketmasterEvents({ keyword: params.artist, city: params.location })
+          : Promise.resolve({ events: [], total: 0, error: undefined }),
+        searchCachedExternalEvents({ keyword: params.artist, city: params.location })
+      ])
+      
+      // Combine events
+      tmEvents = [...tmResult.events, ...cacheResult.events]
+      // Sort by date ascending to interleave TM and Cached events properly
+      tmEvents.sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+
+      tmError = tmResult.error // We prefer to show TM errors if any, cache errors are just logged internally for now
     }
     if (hasQuery && source === 'past' && slConfigured && params.artist?.trim()) {
       const result = await getSetlistsByArtist(params.artist.trim())
@@ -162,13 +173,13 @@ export default async function BuscarPage({ searchParams }: PageProps) {
 
           {hasQuery && !tmError && !slError && (
             <>
-              {source === 'future' && tmConfigured && <FutureEventsResults events={tmEvents} searchQuery={params.artist || params.location} />}
+              {source === 'future' && <FutureEventsResults events={tmEvents} searchQuery={params.artist || params.location} />}
               {source === 'past' && slConfigured && params.artist?.trim() && <SetlistResults setlists={slSetlists} />}
             </>
           )}
 
-          {!hasQuery && source === 'future' && tmConfigured && (
-            <EmptyState title="Buscá tu música" description="Artista o ciudad para shows futuros vía Ticketmaster." className="border-dashed mt-8" />
+          {!hasQuery && source === 'future' && (
+            <EmptyState title="Buscá tu música" description="Artista o ciudad para shows futuros." className="border-dashed mt-8" />
           )}
           {!hasQuery && source === 'past' && slConfigured && (
             <EmptyState title="Historial de shows" description="Nombre exacto del artista, vía Setlist.fm." className="border-dashed mt-8" />
