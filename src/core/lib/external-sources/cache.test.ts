@@ -37,7 +37,7 @@ describe('searchCachedExternalEvents', () => {
       })
     }
     
-    vi.mocked(createClient).mockResolvedValue(mockSupabase as unknown as ReturnType<typeof createClient>)
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as unknown as Awaited<ReturnType<typeof createClient>>)
 
     const result = await searchCachedExternalEvents({})
     
