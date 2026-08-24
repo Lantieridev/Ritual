@@ -18,7 +18,13 @@ vi.mock('@/src/domains/events/data', () => ({
 }))
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
-  createClient: vi.fn().mockResolvedValue({}),
+  // rpc must resolve, not be missing — createGraphQLContext() now calls
+  // supabase.rpc('get_user_role', ...) for any authenticated request, and an
+  // empty mock object here throws (`rpc is not a function`) inside every
+  // resolver, which yoga swallows into an opaque "Unexpected error".
+  createClient: vi.fn().mockResolvedValue({
+    rpc: vi.fn().mockResolvedValue({ data: 'usuario', error: null }),
+  }),
 }))
 
 const mockGetCurrentUserId = vi.fn()

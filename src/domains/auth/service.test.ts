@@ -10,7 +10,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { modifyProfile } from '@/src/domains/auth/service'
+import { modifyProfile, assignUserRole } from '@/src/domains/auth/service'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -28,14 +28,17 @@ function makeSupabase(opts: {
   user: { id: string } | null
   profileResult?: { data: unknown; error: unknown }
   uploadError?: { message: string } | null
+  rpcResult?: { error: unknown }
 }) {
   const profileBuilder = makeQueryBuilder(opts.profileResult ?? { data: null, error: null })
   const fromMock = vi.fn(() => profileBuilder)
   const uploadMock = vi.fn(() => Promise.resolve({ error: opts.uploadError ?? null }))
   const getPublicUrlMock = vi.fn(() => ({ data: { publicUrl: 'https://cdn.test/avatar.png' } }))
+  const rpcMock = vi.fn(() => Promise.resolve(opts.rpcResult ?? { error: null }))
   return {
     auth: { getUser: vi.fn(() => Promise.resolve({ data: { user: opts.user } })) },
     from: fromMock,
+    rpc: rpcMock,
     storage: { from: vi.fn(() => ({ upload: uploadMock, getPublicUrl: getPublicUrlMock })) },
     profileBuilder,
     uploadMock,
@@ -133,5 +136,51 @@ describe('modifyProfile', () => {
     expect(supabase.profileBuilder.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ avatar_url: 'https://cdn.test/avatar.png' })
     )
+  })
+
+  it('ignores injected role field', async () => {
+    const supabase = makeSupabase({
+      user: { id: 'user-1' },
+      profileResult: { data: null, error: null },
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    // @ts-expect-error Testing invalid input injection
+    await modifyProfile({ username: 'martin', role: 'admin' })
+
+    const upsertMock = supabase.profileBuilder.upsert as ReturnType<typeof vi.fn>
+    const upserted = upsertMock.mock.calls[0][0]
+    expect(upserted).not.toHaveProperty('role')
+  })
+})
+
+describe('assignUserRole', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls assign_user_role RPC and returns empty object on success', async () => {
+    const supabase = makeSupabase({ user: null })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await assignUserRole('user-1', 'admin')
+
+    expect(supabase.rpc).toHaveBeenCalledWith('assign_user_role', {
+      target_user_id: 'user-1',
+      new_role: 'admin',
+    })
+    expect(result).toEqual({})
+  })
+
+  it('surfaces error via sanitizeError on failure', async () => {
+    const supabase = makeSupabase({
+      user: null,
+      rpcResult: { error: { message: 'insufficient_privilege' } },
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await assignUserRole('user-1', 'admin')
+
+    expect(result).toEqual({ error: 'Ocurrió un error inesperado. Intentá de nuevo.' })
   })
 })

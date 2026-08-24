@@ -6,10 +6,18 @@ vi.mock('@/src/domains/auth/data', () => ({
 
 vi.mock('@/src/domains/auth/service', () => ({
   modifyProfile: vi.fn(),
+  assignUserRole: vi.fn(),
 }))
 
+const mocks = vi.hoisted(() => ({
+  rpc: vi.fn().mockResolvedValue({ data: 'usuario', error: null }),
+}))
+export const mockRpc = mocks.rpc
+
 vi.mock('@/src/core/lib/supabase/server', () => ({
-  createClient: vi.fn().mockResolvedValue({}),
+  createClient: vi.fn().mockResolvedValue({
+    rpc: mocks.rpc
+  }),
 }))
 
 vi.mock('@/src/core/auth/session', () => ({
@@ -17,7 +25,8 @@ vi.mock('@/src/core/auth/session', () => ({
 }))
 
 import { getProfile } from '@/src/domains/auth/data'
-import { modifyProfile } from '@/src/domains/auth/service'
+import { modifyProfile, assignUserRole } from '@/src/domains/auth/service'
+import { getCurrentUserId } from '@/src/core/auth/session'
 import { POST } from '@/app/api/graphql/route'
 
 async function query(source: string) {
@@ -55,13 +64,46 @@ describe('auth GraphQL schema', () => {
   })
 
   it('resolves another user\'s profile by id', async () => {
-    vi.mocked(getProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null })
+    vi.mocked(getProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'usuario' })
 
     const body = await query('{ profile(id: "u2") { username } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ profile: { username: 'otra' } })
     expect(getProfile).toHaveBeenCalledWith('u2')
+  })
+
+  it('resolves role on me query (viewer is the profile owner)', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('u1')
+    mockRpc.mockResolvedValue({ data: 'moderador', error: null })
+    vi.mocked(getProfile).mockResolvedValue({ id: 'u1', username: 'martin', bio: null, role: 'moderador' })
+
+    const body = await query('{ me { role } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ me: { role: 'moderador' } })
+  })
+
+  it('hides another user\'s role from a non-admin viewer, to prevent privileged-account enumeration', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('u1')
+    mockRpc.mockResolvedValue({ data: 'usuario', error: null })
+    vi.mocked(getProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'admin' })
+
+    const body = await query('{ profile(id: "u2") { username role } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ profile: { username: 'otra', role: null } })
+  })
+
+  it('reveals another user\'s role to an admin viewer', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('u1')
+    mockRpc.mockResolvedValue({ data: 'admin', error: null })
+    vi.mocked(getProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'moderador' })
+
+    const body = await query('{ profile(id: "u2") { username role } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ profile: { username: 'otra', role: 'moderador' } })
   })
 })
 
@@ -112,5 +154,30 @@ describe('auth GraphQL mutations', () => {
     expect(body.data).toEqual({
       updateProfile: { success: false, error: 'Ese nombre de usuario ya está en uso.' },
     })
+  })
+
+  it('rejects assignRole if caller is not admin', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+    mockRpc.mockResolvedValue({ data: 'moderador', error: null })
+
+    const body = await query('mutation { assignRole(userId: "target", role: "admin") { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({
+      assignRole: { success: false, error: 'No tenés permisos para realizar esta acción.' },
+    })
+    expect(assignUserRole).not.toHaveBeenCalled()
+  })
+
+  it('allows assignRole if caller is admin', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+    mockRpc.mockResolvedValue({ data: 'admin', error: null })
+    vi.mocked(assignUserRole).mockResolvedValue({})
+
+    const body = await query('mutation { assignRole(userId: "target", role: "moderador") { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ assignRole: { success: true, error: null } })
+    expect(assignUserRole).toHaveBeenCalledWith('target', 'moderador')
   })
 })

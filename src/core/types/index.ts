@@ -261,11 +261,14 @@ export interface FutureEvent {
   status?: string
 }
 
+export type UserRole = 'usuario' | 'moderador' | 'admin'
+
 /**
  * Perfil público del usuario.
  */
 export interface Profile {
   id: string
+  role?: UserRole | null
   username?: string | null
   full_name?: string | null
   avatar_url?: string | null
