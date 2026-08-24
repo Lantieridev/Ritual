@@ -5,7 +5,7 @@ export default function Loading() {
     <div className="max-w-7xl mx-auto px-6 md:px-8 pt-24 pb-16 space-y-8 animate-in fade-in duration-500">
       <div className="space-y-4">
         <Skeleton className="h-12 w-48 bg-white/10" />
-        <Skeleton className="h-4 w-96 bg-white/5" />
+        <Skeleton className="h-4 w-full max-w-sm bg-white/5" />
       </div>
 
       {/* Grid layout similar to events/festivals */}

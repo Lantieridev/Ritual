@@ -30,7 +30,7 @@ const ExpensesPageQuery = gql`
 
 export default async function ExpensesPage() {
   const userId = await getCurrentUserId()
-  const { data } = await getClient().query<{ expenses: GraphQLExpense[], expensesSummary: GraphQLExpenseSummary }>(ExpensesPageQuery, {})
+  const { data } = await getClient().query<{ expenses: GraphQLExpense[], expensesSummary: GraphQLExpenseSummary }>(ExpensesPageQuery, {}).toPromise()
   const expenses = data?.expenses ?? []
   const summary = data?.expensesSummary ?? { total: 0, count: 0, byCategory: {}, byYear: {} }
 

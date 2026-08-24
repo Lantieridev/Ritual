@@ -54,7 +54,7 @@ export default async function EventExpensesPage({ params }: EventExpensesPagePro
   const event = await getEventById(id)
   if (!event) notFound()
 
-  const { data } = await getClient().query<{ expenses: import('@/src/core/types').GraphQLExpense[], estimateSpendForEvent: { averageTotal: number, eventsConsidered: number } | null }>(EventExpensesPageQuery, { eventId: id })
+  const { data } = await getClient().query<{ expenses: import('@/src/core/types').GraphQLExpense[], estimateSpendForEvent: { averageTotal: number, eventsConsidered: number } | null }>(EventExpensesPageQuery, { eventId: id }).toPromise()
   const expenses = data?.expenses ?? []
   const spendEstimate = data?.estimateSpendForEvent ?? null
 

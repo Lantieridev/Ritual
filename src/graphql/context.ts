@@ -2,11 +2,16 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { UserRole } from '@/src/core/types'
+import DataLoader from 'dataloader'
+import { getAttendanceForEventsBatch, type EventAttendance } from '@/src/domains/events/attendance-data'
+import { getEventPhotosBatch, type EventPhoto } from '@/src/domains/events/photo-actions'
 
 export interface GraphQLContext {
     supabase: SupabaseClient
     userId: string | null
     role: UserRole | null
+    attendanceLoader: DataLoader<string, EventAttendance | null>
+    photosLoader: DataLoader<string, EventPhoto[]>
 }
 
 export async function createGraphQLContext(): Promise<GraphQLContext> {
@@ -30,5 +35,14 @@ export async function createGraphQLContext(): Promise<GraphQLContext> {
         }
     }
 
-    return { supabase, userId, role }
+    const attendanceLoader = new DataLoader<string, EventAttendance | null>(async (keys) => {
+        if (!userId) return keys.map(() => null)
+        return getAttendanceForEventsBatch(keys, userId)
+    })
+
+    const photosLoader = new DataLoader<string, EventPhoto[]>(async (keys) => {
+        return getEventPhotosBatch(keys)
+    })
+
+    return { supabase, userId, role, attendanceLoader, photosLoader }
 }

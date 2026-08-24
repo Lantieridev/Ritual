@@ -85,7 +85,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   if (!event) notFound()
 
-  const { data } = await getClient().query(EventDetailPageQuery, { eventId: id })
+  const { data } = await getClient().query(EventDetailPageQuery, { eventId: id }).toPromise()
   const expenses = data?.expenses ?? []
   const spendEstimate = data?.estimateSpendForEvent ?? null
 

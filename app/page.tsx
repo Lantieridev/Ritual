@@ -119,7 +119,7 @@ export default async function HomePage() {
       wishlistArtistIds: string[]
       artists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
       festivals: HomeFestival[]
-    }>(HomePageQuery, {}),
+    }>(HomePageQuery, {}).toPromise(),
   ])
   const festivals = (data?.festivals ?? []).map(toHeroFestival)
   const now = new Date()

@@ -111,12 +111,12 @@ EventRef.implement({
         myAttendance: t.field({
             type: EventAttendanceRef,
             nullable: true,
-            resolve: (e) => getAttendanceForEvent(e.id),
+            resolve: (e, args, context) => context.attendanceLoader.load(e.id),
         }),
         photos: t.field({
             type: [EventPhotoRef],
-            resolve: (e) =>
-                getEventPhotos(e.id).then((photos) =>
+            resolve: (e, args, context) =>
+                context.photosLoader.load(e.id).then((photos) =>
                     photos.map((p) => ({ id: p.id, caption: p.caption, createdAt: p.created_at, url: p.url }))
                 ),
         }),
