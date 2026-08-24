@@ -6,6 +6,9 @@ import { allaccessAdapter } from './allaccess'
 import { livepassAdapter } from './livepass'
 import { enigmaAdapter } from './enigma'
 import { entrasteAdapter } from './entraste'
+import { tuentradaAdapter } from './tuentrada'
+import { puntoticketAdapter } from './puntoticket'
+import { konexAdapter } from './konex'
 
 export const externalAdapters: ExternalSourceAdapter[] = [
   alpogoAdapter,
@@ -15,4 +18,7 @@ export const externalAdapters: ExternalSourceAdapter[] = [
   livepassAdapter,
   enigmaAdapter,
   entrasteAdapter,
+  tuentradaAdapter,
+  puntoticketAdapter,
+  konexAdapter,
 ]

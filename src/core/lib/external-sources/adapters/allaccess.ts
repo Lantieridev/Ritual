@@ -32,7 +32,7 @@ export const allaccessAdapter: ExternalSourceAdapter = {
 }
 
 export function parseAllAccessHTML(html: string, query: ExternalSearchRequest): FutureEvent[] {
-  const match = html.match(/var App = window\.App = new \(require\('app\/app'\)\)\(([\s\S]*?)\);\n/)
+  const match = html.match(/window\.App\s*=\s*new\s*\(require\('app\/app'\)\)\(([\s\S]*?)\);\r?\n/)
   if (!match) return []
 
   let data
