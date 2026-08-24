@@ -1,0 +1,26 @@
+{
+  "events": [
+    {
+      "order": 1,
+      "status": "1",
+      "visibleGroup": "false",
+      "groupId": "",
+      "groupOrder": "",
+      "publicPresentationPlace": "presencial",
+      "locationId": "DPPA-2e040eef",
+      "type": "imagen",
+      "itemType": "event",
+      "image": "https://imgs.entradaweb.com.ar/events/MDIA-17d84218.jpg",
+      "mobileImage": "https://imgs.entradaweb.com.ar/events/MDIA-17d84218.jpg",
+      "place": "Teatro Sarmiento | Sala Principal",
+      "location": "Capital | San Juan, Argentina",
+      "dates": "Jueves 10 de Septiembre, 2026",
+      "hours": "21:30hs.",
+      "contentType": "Teatro",
+      "contentTypeExtra": "Teatro",
+      "title": "MARTIN BOSSI, GUSTAVO BERMUDEZ y LAURITA FERNANDEZ <br/>presentan <br/>LA CENA DE LOS TONTOS | SAN JUAN",
+      "link": "https://www.entradaweb.com.ar/evento/40c261d5/step/1",
+      "eventHash": "40c261d5"
+    }
+  ]
+}

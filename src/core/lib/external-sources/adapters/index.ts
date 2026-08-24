@@ -9,6 +9,9 @@ import { entrasteAdapter } from './entraste'
 import { tuentradaAdapter } from './tuentrada'
 import { puntoticketAdapter } from './puntoticket'
 import { konexAdapter } from './konex'
+import { pulsoticketsAdapter } from './pulsotickets'
+import { norteticketAdapter } from './norteticket'
+import { entradawebAdapter } from './entradaweb'
 
 export const externalAdapters: ExternalSourceAdapter[] = [
   alpogoAdapter,
@@ -21,4 +24,7 @@ export const externalAdapters: ExternalSourceAdapter[] = [
   tuentradaAdapter,
   puntoticketAdapter,
   konexAdapter,
+  pulsoticketsAdapter,
+  norteticketAdapter,
+  entradawebAdapter,
 ]
