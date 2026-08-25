@@ -158,7 +158,7 @@ describe('RecentSeenList', () => {
     expect(screen.getByText('Lo último que viste')).toBeInTheDocument()
     expect(screen.getByText('4/5')).toBeInTheDocument()
     expect(screen.getByText('5/5')).toBeInTheDocument()
-    expect(screen.queryByText('null/5')).not.toBeInTheDocument()
+    expect(screen.getAllByText(/\/5$/)).toHaveLength(2)
   })
 
   it('con menos de 3 shows sólo renderiza esos, sin placeholders', () => {

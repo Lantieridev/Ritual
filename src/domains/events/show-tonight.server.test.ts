@@ -90,6 +90,22 @@ describe('loadBandaAction', () => {
     expect(getCurrentUserId).not.toHaveBeenCalled()
   })
 
+  it('le pasa a isDevBandaAllowed el entorno, el token del env y el valor real del cookie de dev', async () => {
+    vi.stubEnv('RITUAL_E2E_BANDA_TOKEN', 'token-e2e')
+    mockCookiesGet.mockImplementation((name: string) =>
+      name === 'ritual-dev-banda' ? { name, value: 'valor-del-cookie' } : undefined
+    )
+
+    await loadBandaAction(null)
+
+    expect(isDevBandaAllowed).toHaveBeenCalledWith({
+      nodeEnv: process.env.NODE_ENV,
+      token: 'token-e2e',
+      cookie: 'valor-del-cookie',
+    })
+    vi.unstubAllEnvs()
+  })
+
   it('el cookie de dev sólo habilita a través de isDevBandaAllowed, sin consultar el show real', async () => {
     vi.mocked(isDevBandaAllowed).mockReturnValue(true)
 
