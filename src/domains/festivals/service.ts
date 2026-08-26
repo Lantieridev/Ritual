@@ -59,6 +59,13 @@ export async function findFestivalById(id: string): Promise<Festival | null> {
 /**
  * Inserta el festival y devuelve su id. Nunca redirige — la navegación
  * después de crear la decide el cliente, que es quien dispara la mutation.
+ *
+ * A diferencia de eventos/artistas/sedes, los festivales quedan fuera de la
+ * cola de moderación: el spec de la fase 2 (`01-spec.md` §4) los excluye del
+ * scope comunitario por su complejidad (multi-día, multi-escenario) y los
+ * reserva a alta top-down. El permiso se chequea acá, antes de tocar nada,
+ * porque `createFestival` no tenía ninguna guarda — cualquier autenticado
+ * podía crear uno directo en el catálogo compartido sin pasar por revisión.
  */
 export async function insertFestival(
     data: FestivalCreateInput
@@ -71,6 +78,16 @@ export async function insertFestival(
     if (!data.start_date) return { error: 'La fecha de inicio es obligatoria.' }
 
     const supabase = await createClient()
+
+    const { data: canCreate, error: roleError } = await supabase.rpc('is_moderator')
+    if (roleError) {
+        console.error('No se pudo verificar el rol para crear el festival:', roleError)
+        return { error: sanitizeError(roleError) }
+    }
+    if (!canCreate) {
+        return { error: 'Solo un moderador puede crear un festival.' }
+    }
+
     const { data: newFestival, error } = await supabase
         .from('festivals')
         .insert({
@@ -152,6 +169,11 @@ export async function saveFestivalAttendance(
     return {}
 }
 
+/**
+ * Vincula un evento a un día del festival. Sigue la misma regla de
+ * `insertFestival`: sólo quien puede crear el festival tiene sentido que le
+ * arme el line-up de días/eventos.
+ */
 export async function linkEventToFestival(
     festivalId: string,
     eventId: string,
@@ -166,6 +188,16 @@ export async function linkEventToFestival(
     if (evErr) return { error: evErr }
 
     const supabase = await createClient()
+
+    const { data: canLink, error: roleError } = await supabase.rpc('is_moderator')
+    if (roleError) {
+        console.error('No se pudo verificar el rol para vincular el evento al festival:', roleError)
+        return { error: sanitizeError(roleError) }
+    }
+    if (!canLink) {
+        return { error: 'Solo un moderador puede vincular un evento a un festival.' }
+    }
+
     const { error } = await supabase
         .from('festival_events')
         .insert({

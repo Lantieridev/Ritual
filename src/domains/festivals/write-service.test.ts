@@ -25,6 +25,14 @@ import { getCurrentUserId } from '@/src/core/auth/session'
 const VALID_FESTIVAL_ID = '11111111-1111-1111-1111-111111111111'
 const VALID_EVENT_ID = '22222222-2222-2222-2222-222222222222'
 
+/**
+ * `insertFestival` y `linkEventToFestival` consultan el RPC `is_moderator`
+ * antes de escribir — los festivales quedan fuera de la cola de moderación,
+ * así que crearlos y armarles el line-up es top-down. Por defecto los tests
+ * corren como moderador; los que prueban el rechazo lo sobrescriben.
+ */
+const moderatorRpc = vi.fn(() => Promise.resolve({ data: true, error: null }))
+
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
   const chain = () => builder
@@ -64,7 +72,7 @@ describe('insertFestival', () => {
 
   it('creates the festival and returns its id for the caller to navigate to', async () => {
     const builder = makeQueryBuilder({ data: { id: VALID_FESTIVAL_ID }, error: null })
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: moderatorRpc }))
 
     const result = await insertFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' })
 
@@ -76,11 +84,33 @@ describe('insertFestival', () => {
       data: null,
       error: { message: 'duplicate key value violates unique constraint' },
     })
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: moderatorRpc }))
 
     const result = await insertFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' })
 
     expect(result.error).toBe('Ya existe un registro con esos datos.')
+  })
+
+  it('rejects a caller who is not a moderator, without inserting', async () => {
+    const builder = makeQueryBuilder({ data: { id: VALID_FESTIVAL_ID }, error: null })
+    const rejectingRpc = vi.fn(() => Promise.resolve({ data: false, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: rejectingRpc }))
+
+    const result = await insertFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' })
+
+    expect(result.error).toBeTruthy()
+    expect(builder.insert).not.toHaveBeenCalled()
+  })
+
+  it('returns a sanitized error when the role check itself fails', async () => {
+    const builder = makeQueryBuilder({ data: { id: VALID_FESTIVAL_ID }, error: null })
+    const failingRpc = vi.fn(() => Promise.resolve({ data: null, error: { message: 'boom' } }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: failingRpc }))
+
+    const result = await insertFestival({ name: 'Cosquin Rock', start_date: '2024-01-01' })
+
+    expect(result.error).toBeTruthy()
+    expect(builder.insert).not.toHaveBeenCalled()
   })
 })
 
@@ -211,7 +241,7 @@ describe('linkEventToFestival', () => {
 
   it('inserts the festival_events link and revalidates', async () => {
     const builder = makeQueryBuilder({ data: null, error: null })
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: moderatorRpc }))
 
     const result = await linkEventToFestival(VALID_FESTIVAL_ID, VALID_EVENT_ID, 'Día 1')
 
@@ -225,10 +255,21 @@ describe('linkEventToFestival', () => {
 
   it('returns a sanitized error when the insert fails', async () => {
     const builder = makeQueryBuilder({ data: null, error: { message: 'boom' } })
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: moderatorRpc }))
 
     const result = await linkEventToFestival(VALID_FESTIVAL_ID, VALID_EVENT_ID)
 
     expect(result.error).toBeTruthy()
+  })
+
+  it('rejects a caller who is not a moderator, without inserting', async () => {
+    const builder = makeQueryBuilder({ data: null, error: null })
+    const rejectingRpc = vi.fn(() => Promise.resolve({ data: false, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: rejectingRpc }))
+
+    const result = await linkEventToFestival(VALID_FESTIVAL_ID, VALID_EVENT_ID)
+
+    expect(result.error).toBeTruthy()
+    expect(builder.insert).not.toHaveBeenCalled()
   })
 })
