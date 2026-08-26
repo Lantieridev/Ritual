@@ -49,8 +49,14 @@ export function buildWrappedSummary(
         monthCount[m] = (monthCount[m] ?? 0) + 1
     }
     const busiestMonthEntry = Object.entries(monthCount).sort((a, b) => b[1] - a[1])[0]
+    // Se ancla al día 15 y en UTC: acá sólo interesa el nombre del mes, y un
+    // día 1 a medianoche cae en el mes anterior al formatearlo en una zona
+    // detrás de UTC — "marzo" salía "febrero". El medio del mes no puede
+    // cruzar ningún borde.
     const busiestMonth = busiestMonthEntry
-        ? formatDate(new Date(selectedYear, parseInt(busiestMonthEntry[0])), { month: 'long' })
+        ? formatDate(new Date(Date.UTC(selectedYear, parseInt(busiestMonthEntry[0]), 15)), {
+            month: 'long',
+        })
         : null
 
     const availableYears = Object.keys(lifetimeStats.showsByYear)

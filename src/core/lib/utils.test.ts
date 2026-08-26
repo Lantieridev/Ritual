@@ -20,11 +20,15 @@ describe('cn', () => {
 })
 
 describe('formatDate', () => {
-  // new Date('YYYY-MM-DD') parses as UTC midnight, which reads back as the
-  // previous day in a timezone behind UTC (like the test runner's local
-  // zone here) — construct with explicit local components to avoid that,
-  // same lesson as core/lib/dates.ts.
-  const localDate = new Date(2026, 2, 15) // 15 de marzo de 2026, hora local
+  // formatDate muestra los timestamps en la zona de la app (Argentina, UTC-3),
+  // no en la del runtime, así que el instante se fija de forma explícita en vez
+  // de construirlo con componentes locales: con `new Date(2026, 2, 15)` el
+  // resultado dependía de la zona de la máquina y el test pasaba local pero
+  // fallaba en CI, que corre en UTC.
+  //
+  // 15:00 UTC son las 12:00 del 15 de marzo en Argentina — mediodía, lejos de
+  // cualquier borde de día.
+  const localDate = new Date('2026-03-15T15:00:00Z')
 
   it('formats a Date with the default long options', () => {
     expect(formatDate(localDate)).toBe('15 de marzo de 2026')
@@ -53,8 +57,15 @@ describe('formatDate con fechas sin hora', () => {
             .toBe('1 de enero de 2026')
     })
 
-    it('sigue respetando la hora cuando el string sí la trae', () => {
-        // 2026-05-26T02:00:00Z son las 23:00 del 25 en Argentina.
+    // Un timestamp sí es un instante y se muestra en la zona de la app, no en
+    // la del runtime: 02:00 UTC son las 23:00 del día anterior en Argentina.
+    // Este test corría distinto en CI (UTC) que en la máquina local (ART) hasta
+    // que formatDate pasó a fijar la timezone explícitamente.
+    it('muestra un timestamp en la zona de la app, no en la del servidor', () => {
         expect(formatDate('2026-05-26T02:00:00Z', { day: 'numeric', month: 'short' })).toBe('25 may')
+    })
+
+    it('no corre el día de un timestamp del mediodía', () => {
+        expect(formatDate('2026-05-26T15:00:00Z', { day: 'numeric', month: 'short' })).toBe('26 may')
     })
 })

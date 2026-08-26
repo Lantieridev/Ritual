@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { APP_TIMEZONE } from '@/src/core/lib/dates'
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
@@ -18,24 +19,24 @@ export function formatDate(
     date: string | Date,
     options: Intl.DateTimeFormatOptions = DEFAULT_DATE_OPTIONS
 ): string {
-    let dateObj: Date
-
-    if (typeof date === 'string') {
-        // Un "YYYY-MM-DD" pelado se parsea como medianoche UTC, y al
-        // formatearlo en horario de Argentina (UTC-3) retrocede al día
-        // anterior: `expenses.date` es una columna `date`, así que un gasto
-        // del 26 se mostraba como "25 may". Se construye la fecha en horario
-        // local para que el día calendario sobreviva al formateo.
-        //
-        // Es el mismo trap que ya evitan eventYear/eventMonth/isPastEvent en
-        // core/lib/dates.ts; acá faltaba.
-        const dateOnly = date.match(DATE_ONLY)
-        dateObj = dateOnly
-            ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
-            : new Date(date)
-    } else {
-        dateObj = date
+    // Un "YYYY-MM-DD" pelado no representa un instante sino un día calendario:
+    // así llegan las columnas `date` de Postgres, como `expenses.date`. Se lo
+    // ancla en UTC y se lo formatea en UTC para que salga el día tal cual está
+    // guardado. Sin esto se parseaba como medianoche UTC y se formateaba en la
+    // zona del runtime, así que un gasto del 26 aparecía como "25 may".
+    const dateOnly = typeof date === 'string' ? date.match(DATE_ONLY) : null
+    if (dateOnly) {
+        const utc = new Date(
+            Date.UTC(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+        )
+        return utc.toLocaleDateString('es-AR', { ...options, timeZone: 'UTC' })
     }
 
-    return dateObj.toLocaleDateString('es-AR', options)
+    // Un timestamp sí es un instante, y se muestra en la zona de la app. Fijarla
+    // es necesario: `toLocaleDateString` usa la zona del runtime si no se le
+    // indica una, así que en Vercel (UTC) un show de las 21:00 en Argentina se
+    // renderizaba con la fecha del día siguiente. Mismo criterio que
+    // eventYear/eventMonth/isPastEvent en core/lib/dates.ts.
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    return dateObj.toLocaleDateString('es-AR', { timeZone: APP_TIMEZONE, ...options })
 }
