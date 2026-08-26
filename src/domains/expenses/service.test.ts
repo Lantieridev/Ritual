@@ -10,8 +10,8 @@ vi.mock('./data', () => ({
   getVenueArtistSpendEstimate: vi.fn(),
 }))
 
-vi.mock('@/src/domains/events/data', () => ({
-  getEvents: vi.fn(),
+vi.mock('@/src/domains/events/service', () => ({
+  listEvents: vi.fn(),
 }))
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
@@ -23,7 +23,7 @@ vi.mock('@/src/core/auth/session', () => ({
 }))
 
 import { getExpenses, getExpenseById, getExpensesForEvent, getExpensesSummary, getVenueArtistSpendEstimate } from './data'
-import { getEvents } from '@/src/domains/events/data'
+import { listEvents } from '@/src/domains/events/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import {
   listExpenses,
@@ -105,12 +105,12 @@ describe('expenses service (use-case layer)', () => {
     expect(result).toBe(summary)
   })
 
-  it('listEventOptionsForExpensePicker delegates to the events domain getEvents, with no arguments', async () => {
-    vi.mocked(getEvents).mockResolvedValue([])
+  it('listEventOptionsForExpensePicker delegates to the events domain listEvents, with no arguments', async () => {
+    vi.mocked(listEvents).mockResolvedValue([])
 
     const result = await listEventOptionsForExpensePicker()
 
-    expect(getEvents).toHaveBeenCalledWith()
+    expect(listEvents).toHaveBeenCalledWith()
     expect(result).toEqual([])
   })
 

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { getEventById } from '@/src/domains/events/data'
+import { findEventById } from '@/src/domains/events/service'
 
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
@@ -17,7 +17,7 @@ interface EventExpensesPageProps {
 
 export async function generateMetadata({ params }: EventExpensesPageProps): Promise<Metadata> {
   const { id } = await params
-  const event = await getEventById(id)
+  const event = await findEventById(id)
   if (!event) return { title: 'Recital no encontrado | RITUAL' }
   const title = event.name || event.lineups?.[0]?.artists?.name || 'Recital'
   return { title: `Gastos — ${title} | RITUAL` }
@@ -51,7 +51,7 @@ const EventExpensesPageQuery = gql`
 export default async function EventExpensesPage({ params }: EventExpensesPageProps) {
   const { id } = await params
   const userId = await getCurrentUserId()
-  const event = await getEventById(id)
+  const event = await findEventById(id)
   if (!event) notFound()
 
   const { data } = await getClient().query<{ expenses: import('@/src/core/types').GraphQLExpense[], estimateSpendForEvent: { averageTotal: number, eventsConsidered: number } | null }>(EventExpensesPageQuery, { eventId: id }).toPromise()

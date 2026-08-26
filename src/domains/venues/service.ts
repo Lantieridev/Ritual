@@ -3,10 +3,10 @@ import { sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { findOrCreateByName } from '@/src/core/lib/find-or-create'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, Venue, VenueCreateInput } from '@/src/core/types'
-import { getVenues, getVenueById } from './data'
-import type { VenueWithEvents } from './data'
+import { getVenues, getVenueById, getVenueEventsBatch } from './data'
+import type { VenueWithEvents, VenueEvent } from './data'
 
-export type { VenueWithEvents }
+export type { VenueWithEvents, VenueEvent }
 
 /**
  * Use-case / application-service layer for the venues domain.
@@ -37,6 +37,11 @@ export async function listVenues(): Promise<Venue[]> {
 /** Finds one venue by id, with its show history attached. */
 export async function findVenueById(id: string): Promise<VenueWithEvents | null> {
   return getVenueById(id)
+}
+
+/** Versión por lote de `findVenueById(...).events`, para el DataLoader de `Venue.events`. */
+export async function listVenueEventsBatch(venueIds: readonly string[]): Promise<VenueEvent[][]> {
+  return getVenueEventsBatch(venueIds)
 }
 
 /**

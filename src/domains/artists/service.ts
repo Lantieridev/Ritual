@@ -5,10 +5,10 @@ import { sanitizeText, sanitizeError, validateUUID } from '@/src/core/lib/valida
 import { findOrCreateByName } from '@/src/core/lib/find-or-create'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, Artist, ArtistCreateInput } from '@/src/core/types'
-import { getArtists, getArtistById } from './data'
-import type { ArtistWithEvents } from './data'
+import { getArtists, getArtistById, getArtistEventsBatch } from './data'
+import type { ArtistWithEvents, ArtistEvent } from './data'
 
-export type { ArtistWithEvents }
+export type { ArtistWithEvents, ArtistEvent }
 
 /**
  * Use-case / application-service layer for the artists domain.
@@ -37,6 +37,11 @@ export async function listArtists(): Promise<Artist[]> {
 /** Finds one artist by id, with the show history flattened from its lineups. */
 export async function findArtistById(id: string): Promise<ArtistWithEvents | null> {
   return getArtistById(id)
+}
+
+/** Versión por lote de `findArtistById(...).events`, para el DataLoader de `Artist.events`. */
+export async function listArtistEventsBatch(artistIds: readonly string[]): Promise<ArtistEvent[][]> {
+  return getArtistEventsBatch(artistIds)
 }
 
 /**

@@ -3,7 +3,7 @@ import { listExpenses, findExpenseById, summarizeExpenses } from '@/src/domains/
 import type { ExpenseSummary } from '@/src/domains/expenses/service'
 import { insertExpense, modifyExpense, removeExpense } from '@/src/domains/expenses/service'
 import { MutationResultRef, toMutationResult } from './shared'
-import { getEventById } from '@/src/domains/events/data'
+import { findEventById } from '@/src/domains/events/service'
 import { estimateSpendForEvent, listExpensesForEvent } from '@/src/domains/expenses/service'
 import type { VenueArtistSpendEstimate } from '@/src/domains/expenses/service'
 
@@ -168,7 +168,7 @@ builder.queryField('estimateSpendForEvent', (t) =>
         nullable: true,
         args: { eventId: t.arg.id({ required: true }) },
         resolve: async (_root, args, ctx) => {
-            const event = await getEventById(String(args.eventId))
+            const event = await findEventById(String(args.eventId))
             if (!event) return null
             return estimateSpendForEvent(event, ctx.userId)
         }

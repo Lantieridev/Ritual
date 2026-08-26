@@ -1,9 +1,16 @@
 import { builder } from './builder'
 import { resolveOffsetConnection } from '@pothos/plugin-relay'
-import { getEvents, getEventsWithAttendance, getEventById } from '@/src/domains/events/data'
-import type { EventWithAttendance } from '@/src/domains/events/data'
 import { deleteEventPhoto } from '@/src/domains/events/photo-actions'
-import { insertEvent, modifyEvent, removeEvent, addExternalEvent } from '@/src/domains/events/service'
+import {
+    insertEvent,
+    modifyEvent,
+    removeEvent,
+    addExternalEvent,
+    listEvents,
+    listEventsWithAttendance,
+    findEventById,
+} from '@/src/domains/events/service'
+import type { EventWithAttendance } from '@/src/domains/events/service'
 import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import type { EventWithRelations, LineupRow } from '@/src/core/types'
 import type { FutureEvent } from '@/src/core/types'
@@ -83,7 +90,7 @@ EventPhotoRef.implement({
 })
 
 // EventWithAttendance en vez de EventWithRelations: es el tipo más ancho de
-// los tres (getEvents/getEventById devuelven el primero, sin la propiedad
+// los tres (listEvents/findEventById devuelven el primero, sin la propiedad
 // attendance) — Pothos solo expone los campos declarados abajo, así que un
 // Event sin attendance real simplemente no la tiene poblada.
 export const EventRef = builder.objectRef<EventWithAttendance>('Event')
@@ -97,7 +104,7 @@ EventRef.implement({
         createdAt: t.exposeString('created_at', { nullable: true }),
         venue: t.field({ type: EventVenueSummaryRef, nullable: true, resolve: (e) => e.venues }),
         lineups: t.field({ type: [LineupRowRef], resolve: (e) => e.lineups ?? [] }),
-        // Ya viene resuelta en bloque por getEventsWithAttendance (un solo
+        // Ya viene resuelta en bloque por listEventsWithAttendance (un solo
         // join, no una query por evento) — nunca dispara una consulta nueva
         // acá, por eso es segura de usar sobre una lista completa sin N+1.
         attendance: t.field({ type: [AttendanceRowRef], resolve: (e) => e.attendance ?? [] }),
@@ -129,7 +136,7 @@ builder.queryField('events', (t) =>
         description: 'Catálogo compartido de eventos, sin attendance.',
         resolve: (_root, args) =>
             resolveOffsetConnection({ args }, ({ limit, offset }) =>
-                getEvents({ limit, offset })
+                listEvents({ limit, offset })
             ),
     })
 )
@@ -140,7 +147,7 @@ builder.queryField('eventsWithAttendance', (t) =>
         description: 'Eventos con la attendance del usuario actual ya incluida (batch, sin N+1).',
         resolve: (_root, args) =>
             resolveOffsetConnection({ args }, ({ limit, offset }) =>
-                getEventsWithAttendance({ limit, offset })
+                listEventsWithAttendance({ limit, offset })
             ),
     })
 )
@@ -152,7 +159,7 @@ builder.queryField('event', (t) =>
         args: {
             id: t.arg.id({ required: true }),
         },
-        resolve: (_root, args) => getEventById(String(args.id)),
+        resolve: (_root, args) => findEventById(String(args.id)),
     })
 )
 

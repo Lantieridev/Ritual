@@ -1,9 +1,9 @@
 import { MetadataRoute } from 'next'
-import { getEventIdsForSitemap } from '@/src/domains/events/data'
+import { listEventIdsForSitemap } from '@/src/domains/events/service'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ritual.vercel.app'
-  const events = await getEventIdsForSitemap()
+  const events = await listEventIdsForSitemap()
 
   const eventsUrls = events.map((event) => ({
     url: `${baseUrl}/events/${event.id}`,

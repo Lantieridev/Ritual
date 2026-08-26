@@ -3,7 +3,11 @@ import { validateUUID, validateDate, sanitizeText, sanitizeError } from '@/src/c
 import { findOrCreateByName } from '@/src/core/lib/find-or-create'
 import { parseExternalDateTime } from '@/src/core/lib/dates'
 import { getCurrentUserId } from '@/src/core/auth/session'
-import type { ActionResult, EventCreateInput, EventUpdateInput, FutureEvent } from '@/src/core/types'
+import type { ActionResult, EventCreateInput, EventUpdateInput, FutureEvent, EventWithRelations } from '@/src/core/types'
+import { getEvents, getEventsWithAttendance, getEventById, getEventIdsForSitemap, getMyEvents } from './data'
+import type { EventWithAttendance } from './data'
+
+export type { EventWithRelations, EventWithAttendance }
 
 /**
  * Capa de casos de uso del dominio de eventos.
@@ -17,6 +21,33 @@ import type { ActionResult, EventCreateInput, EventUpdateInput, FutureEvent } fr
  * portaron: la navegación después de guardar la decide ahora el client
  * component que dispara la mutation, con router.push().
  */
+
+/** Catálogo de eventos, con venue y lineup embebidos. */
+export async function listEvents(options?: { limit?: number; offset?: number }): Promise<EventWithRelations[]> {
+  return getEvents(options)
+}
+
+/** Catálogo de eventos con la attendance del usuario actual ya resuelta (batch, sin N+1). */
+export async function listEventsWithAttendance(
+  options?: { limit?: number; offset?: number }
+): Promise<EventWithAttendance[]> {
+  return getEventsWithAttendance(options)
+}
+
+/** Un evento puntual por id, con venue y lineup embebidos. */
+export async function findEventById(id: string): Promise<EventWithRelations | null> {
+  return getEventById(id)
+}
+
+/** Sólo `id` y `date` de cada evento, para el sitemap. */
+export async function listEventIdsForSitemap(): Promise<Array<{ id: string; date: string }>> {
+  return getEventIdsForSitemap()
+}
+
+/** Eventos del usuario actual (attendance propia), para Home y Wrapped. */
+export async function listMyEvents(): Promise<EventWithAttendance[]> {
+  return getMyEvents()
+}
 
 const MAX_NAME_LENGTH = 200
 const MAX_VENUE_NAME_LENGTH = 200

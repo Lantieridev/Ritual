@@ -5,7 +5,7 @@ import { gql } from 'urql'
 import { getClient } from '@/src/graphql/client'
 import type { GraphQLArtist, GraphQLFestival, GraphQLVenue } from '@/src/core/types'
 import type { Artist } from '@/src/core/types'
-import { getEventsWithAttendance } from '@/src/domains/events/data'
+import { listEventsWithAttendance } from '@/src/domains/events/service'
 import { aggregateEventStats } from '@/src/domains/stats/aggregate'
 import { buildArtistShelves, buildCollectionTerritory, type CollectionArtist } from '@/src/domains/artists/collection-view'
 import { routes } from '@/src/core/lib/routes'
@@ -85,7 +85,7 @@ async function ArtistsShelvesView() {
             ArtistsTabQuery,
             {}
         ).toPromise(),
-        getEventsWithAttendance().then((events) => events.filter((e) => e.attendance?.[0]?.status === 'went')),
+        listEventsWithAttendance().then((events) => events.filter((e) => e.attendance?.[0]?.status === 'went')),
     ])
     const artists = (data?.artists ?? []).map(toDomainArtist)
     const wishlistIds = data?.wishlistArtistIds ?? []

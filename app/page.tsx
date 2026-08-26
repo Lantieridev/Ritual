@@ -1,7 +1,7 @@
 import * as React from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getMyEvents } from '@/src/domains/events/data'
+import { listMyEvents } from '@/src/domains/events/service'
 import { buildHomeFeed, buildHomeHeroState } from '@/src/domains/events/home-view'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
 import { gql } from 'urql'
@@ -159,7 +159,7 @@ async function NearbyShowsWrapper({ wishlistArtists }: { wishlistArtists: Array<
 
 export default async function HomePage() {
   const [allEvents, { data }] = await Promise.all([
-    getMyEvents(),
+    listMyEvents(),
     getClient().query<{
       wishlistArtists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
       festivals: HomeFestival[]

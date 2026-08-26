@@ -1,7 +1,7 @@
 import { isPastEvent } from '@/src/core/lib/dates'
 import { getBestSpotifyImage, type SpotifyArtist } from '@/src/core/lib/spotify'
 import { getBestLastFmImage, getLastFmTags, type LastFmArtist } from '@/src/core/lib/lastfm'
-import type { ArtistWithEvents } from '@/src/domains/artists/data'
+import type { ArtistWithEvents } from '@/src/domains/artists/service'
 
 const MAX_BIO_LENGTH = 500
 const MAX_TAGS = 5

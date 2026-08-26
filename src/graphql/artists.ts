@@ -8,7 +8,7 @@ import {
     getWishlistArtists,
     toggleWishlist,
 } from '@/src/domains/artists/service'
-import type { ArtistEvent, ArtistWithEvents } from '@/src/domains/artists/data'
+import type { ArtistEvent, ArtistWithEvents } from '@/src/domains/artists/service'
 import type { Artist } from '@/src/core/types'
 
 const ArtistEventVenueRef = builder.objectRef<NonNullable<ArtistEvent['venues']>>('ArtistEventVenue')

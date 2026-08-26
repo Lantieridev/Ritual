@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og'
-import { getEventById } from '@/src/domains/events/data'
+import { findEventById } from '@/src/domains/events/service'
 import { formatDate } from '@/src/core/lib/utils'
 
 export const alt = 'Recital en RITUAL'
@@ -11,7 +11,7 @@ export const contentType = 'image/png'
 
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const event = await getEventById(id)
+  const event = await findEventById(id)
 
   const mainArtist = event?.lineups?.[0]?.artists?.name
   const title = event?.name || mainArtist || 'Recital'

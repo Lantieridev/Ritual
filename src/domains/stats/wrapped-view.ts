@@ -2,7 +2,7 @@ import { eventYear, eventMonth } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
 import { aggregateEventStats } from '@/src/domains/stats/aggregate'
 import type { StatsData } from '@/src/domains/stats/data'
-import type { EventWithAttendance } from '@/src/domains/events/data'
+import type { EventWithAttendance } from '@/src/domains/events/service'
 
 export interface WrappedSummary {
     /** Shows "fui" del año, ordenados ascendente por fecha — listos para la timeline. */

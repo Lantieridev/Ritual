@@ -5,8 +5,8 @@ import type { UserRole } from '@/src/core/types'
 import DataLoader from 'dataloader'
 import { getAttendanceForEventsBatch, type EventAttendance } from '@/src/domains/events/attendance-data'
 import { getEventPhotosBatch, type EventPhoto } from '@/src/domains/events/photo-actions'
-import { getArtistEventsBatch, type ArtistEvent } from '@/src/domains/artists/data'
-import { getVenueEventsBatch, type VenueEvent } from '@/src/domains/venues/data'
+import { listArtistEventsBatch, type ArtistEvent } from '@/src/domains/artists/service'
+import { listVenueEventsBatch, type VenueEvent } from '@/src/domains/venues/service'
 
 export interface GraphQLContext {
     supabase: SupabaseClient
@@ -52,11 +52,11 @@ export async function createGraphQLContext(): Promise<GraphQLContext> {
     // del commit fbf4b23. Sin batchear, pedir `events` sobre las queries de
     // listado (que no paginan) dispara un select anidado por fila.
     const artistEventsLoader = new DataLoader<string, ArtistEvent[]>(async (keys) => {
-        return getArtistEventsBatch(keys)
+        return listArtistEventsBatch(keys)
     })
 
     const venueEventsLoader = new DataLoader<string, VenueEvent[]>(async (keys) => {
-        return getVenueEventsBatch(keys)
+        return listVenueEventsBatch(keys)
     })
 
     return {

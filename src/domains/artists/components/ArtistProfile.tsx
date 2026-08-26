@@ -1,4 +1,4 @@
-import { ArtistWithEvents } from '@/src/domains/artists/data'
+import type { ArtistWithEvents } from '@/src/domains/artists/service'
 import type { BestNight } from '@/src/domains/artists/enrichment'
 import { FutureEvent } from '@/src/core/types'
 import Link from 'next/link'

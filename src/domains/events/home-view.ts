@@ -1,6 +1,6 @@
 import { isPastEvent, eventYear, daysUntil } from '@/src/core/lib/dates'
 import { nearestUpcoming } from '@/src/core/lib/dates'
-import type { EventWithAttendance } from '@/src/domains/events/data'
+import type { EventWithAttendance } from '@/src/domains/events/service'
 
 export type HomeFilter = 'all' | 'upcoming' | 'past' | 'interested' | 'going' | 'went'
 

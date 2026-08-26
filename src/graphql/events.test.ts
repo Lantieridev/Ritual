@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { EventWithAttendance } from '@/src/domains/events/data'
-
-vi.mock('@/src/domains/events/data', () => ({
-  getEvents: vi.fn(),
-  getEventsWithAttendance: vi.fn(),
-  getEventById: vi.fn(),
-}))
+import type { EventWithAttendance } from '@/src/domains/events/service'
 
 vi.mock('@/src/domains/events/attendance-data', () => ({
   getAttendanceForEvent: vi.fn(),
@@ -23,6 +17,9 @@ vi.mock('@/src/domains/events/service', () => ({
   modifyEvent: vi.fn(),
   removeEvent: vi.fn(),
   addExternalEvent: vi.fn(),
+  listEvents: vi.fn(),
+  listEventsWithAttendance: vi.fn(),
+  findEventById: vi.fn(),
 }))
 
 vi.mock('@/src/domains/events/attendance-actions', () => ({
@@ -41,10 +38,17 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue('u1'),
 }))
 
-import { getEvents, getEventsWithAttendance, getEventById } from '@/src/domains/events/data'
 import { getAttendanceForEvent, getAttendanceForEventsBatch } from '@/src/domains/events/attendance-data'
 import { getEventPhotosBatch, deleteEventPhoto } from '@/src/domains/events/photo-actions'
-import { insertEvent, modifyEvent, removeEvent, addExternalEvent } from '@/src/domains/events/service'
+import {
+  insertEvent,
+  modifyEvent,
+  removeEvent,
+  addExternalEvent,
+  listEvents,
+  listEventsWithAttendance,
+  findEventById,
+} from '@/src/domains/events/service'
 import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import { POST } from '@/app/api/graphql/route'
 
@@ -77,7 +81,7 @@ describe('events GraphQL schema', () => {
   })
 
   it('resolves the plain events query with venue and lineup, no attendance call at all', async () => {
-    vi.mocked(getEvents).mockResolvedValue([event])
+    vi.mocked(listEvents).mockResolvedValue([event])
 
     const body = await query('{ events { edges { node { id name venue { name city } lineups { artist { name } isHeadliner } } } } }')
 
@@ -103,7 +107,7 @@ describe('events GraphQL schema', () => {
   // dibuja el botón "Comprar entradas" con él — sin este campo un cliente
   // que no sea la web no tiene con qué dibujarlo.
   it('exposes the ticket link on an event', async () => {
-    vi.mocked(getEventById).mockResolvedValue(event)
+    vi.mocked(findEventById).mockResolvedValue(event)
 
     const body = await query('{ event(id: "e1") { ticketUrl } }')
 
@@ -112,7 +116,7 @@ describe('events GraphQL schema', () => {
   })
 
   it('resolves eventsWithAttendance from the batched join, without calling getAttendanceForEvent per event (no N+1)', async () => {
-    vi.mocked(getEventsWithAttendance).mockResolvedValue([
+    vi.mocked(listEventsWithAttendance).mockResolvedValue([
       {
         ...event,
         attendance: [{ id: 'att1', status: 'went', user_id: 'u1', rating: 5, review: null }],
@@ -135,7 +139,7 @@ describe('events GraphQL schema', () => {
   })
 
   it('resolves myAttendance and photos on a single event via the DataLoader batched queries', async () => {
-    vi.mocked(getEventById).mockResolvedValue(event)
+    vi.mocked(findEventById).mockResolvedValue(event)
     vi.mocked(getAttendanceForEventsBatch).mockResolvedValue([{
       id: 'att1',
       status: 'went',
@@ -168,7 +172,7 @@ describe('events GraphQL schema', () => {
   })
 
   it('resolves event(id) as null when it does not exist', async () => {
-    vi.mocked(getEventById).mockResolvedValue(null)
+    vi.mocked(findEventById).mockResolvedValue(null)
 
     const body = await query('{ event(id: "missing") { id } }')
 
@@ -177,7 +181,7 @@ describe('events GraphQL schema', () => {
   })
 
   it('resolves myAttendance as null when the user has no attendance for that event', async () => {
-    vi.mocked(getEventById).mockResolvedValue(event)
+    vi.mocked(findEventById).mockResolvedValue(event)
     vi.mocked(getAttendanceForEventsBatch).mockResolvedValue([null])
 
     const body = await query('{ event(id: "e1") { myAttendance { status } } }')
@@ -187,7 +191,7 @@ describe('events GraphQL schema', () => {
   })
 
   it('resolves an event with no venue/lineup as nullable/empty, not an error', async () => {
-    vi.mocked(getEvents).mockResolvedValue([
+    vi.mocked(listEvents).mockResolvedValue([
       { id: 'e2', name: null, date: '2026-04-01', venue_id: null, venues: null, lineups: null },
     ])
 

@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@/src/domains/artists/data', () => ({
-  getArtists: vi.fn(),
-  getArtistById: vi.fn(),
-  getArtistEventsBatch: vi.fn(),
-}))
-
 vi.mock('@/src/domains/artists/service', () => ({
   listArtists: vi.fn(),
   findArtistById: vi.fn(),
@@ -13,6 +7,7 @@ vi.mock('@/src/domains/artists/service', () => ({
   findOrCreateArtist: vi.fn(),
   getWishlistArtistIds: vi.fn(),
   toggleWishlist: vi.fn(),
+  listArtistEventsBatch: vi.fn(),
 }))
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
@@ -23,7 +18,6 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue(null),
 }))
 
-import { getArtistEventsBatch } from '@/src/domains/artists/data'
 import {
   listArtists,
   findArtistById,
@@ -31,6 +25,7 @@ import {
   findOrCreateArtist,
   getWishlistArtistIds,
   toggleWishlist,
+  listArtistEventsBatch,
 } from '@/src/domains/artists/service'
 import { POST } from '@/app/api/graphql/route'
 
@@ -165,14 +160,14 @@ describe('artists GraphQL parity additions', () => {
         attendance: [{ status: 'went', rating: 5, review: 'brutal' }],
       },
     ])
-    expect(getArtistEventsBatch).not.toHaveBeenCalled()
+    expect(listArtistEventsBatch).not.toHaveBeenCalled()
   })
 
   it('loads the show history on demand when the row came from the list query', async () => {
     vi.mocked(listArtists).mockResolvedValue([
       { id: 'a1', name: 'Bandalos Chinos', genre: null, image_url: null, spotify_id: null },
     ])
-    vi.mocked(getArtistEventsBatch).mockResolvedValue([[
+    vi.mocked(listArtistEventsBatch).mockResolvedValue([[
       { id: 'e1', name: 'Show', date: '2026-01-01', venues: null, event_photos: [], attendance: [] },
     ]])
 
@@ -180,7 +175,7 @@ describe('artists GraphQL parity additions', () => {
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ artists: [{ id: 'a1', events: [{ id: 'e1' }] }] })
-    expect(getArtistEventsBatch).toHaveBeenCalledWith(['a1'])
+    expect(listArtistEventsBatch).toHaveBeenCalledWith(['a1'])
   })
 
   // La wishlist no tenia ninguna representacion en el schema: sin esto el

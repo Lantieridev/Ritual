@@ -10,7 +10,7 @@ import {
   getVenueArtistSpendEstimate,
 } from './data'
 import type { ExpenseSummary, VenueArtistSpendEstimate } from './data'
-import { getEvents } from '@/src/domains/events/data'
+import { listEvents } from '@/src/domains/events/service'
 import type { Expense, EventWithRelations } from '@/src/core/types'
 
 export type { ExpenseSummary, VenueArtistSpendEstimate }
@@ -55,15 +55,13 @@ export async function summarizeExpenses(userId: string | null): Promise<ExpenseS
 }
 
 /**
- * Event options for the expense form's "recital asociado" picker. This
- * reads through the events domain's own data module — a cross-domain read,
- * not a write or a schema change — so it's exposed here rather than forcing
- * app/expenses/nuevo and app/expenses/[id]/editar to import events/data.ts
- * directly. The events domain itself is out of scope for this migration
- * (see the PR description's scope notes).
+ * Event options for the expense form's "recital asociado" picker. Cross-domain
+ * read through events/service.ts — not a write or a schema change — so it's
+ * exposed here rather than forcing app/expenses/nuevo and
+ * app/expenses/[id]/editar to reach into another domain's service directly.
  */
 export async function listEventOptionsForExpensePicker(): Promise<EventWithRelations[]> {
-  return getEvents()
+  return listEvents()
 }
 
 /**

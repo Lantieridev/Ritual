@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getPersonalStats } from '@/src/domains/stats/data'
 import { buildWrappedSummary } from '@/src/domains/stats/wrapped-view'
-import { getMyEvents } from '@/src/domains/events/data'
+import { listMyEvents } from '@/src/domains/events/service'
 import { summarizeExpenses } from '@/src/domains/expenses/service'
 import { getProfile } from '@/src/domains/auth/data'
 import { getCurrentUserId } from '@/src/core/auth/session'
@@ -32,7 +32,7 @@ export default async function WrappedPage({ searchParams }: PageProps) {
     const userId = await getCurrentUserId()
     const [stats, allEvents, expensesSummary, profile] = await Promise.all([
         getPersonalStats(),
-        getMyEvents(),
+        listMyEvents(),
         summarizeExpenses(userId),
         getProfile(userId ?? undefined),
     ])
@@ -181,7 +181,7 @@ function buildSlides(data: {
     selectedYear: number
     showCount: number
     topArtist: readonly [string, number] | null
-    bestNight: Awaited<ReturnType<typeof getMyEvents>>[number] | null
+    bestNight: Awaited<ReturnType<typeof listMyEvents>>[number] | null
     uniqueVenues: number
     spentThisYear: number
 }): WrappedSlide[] {

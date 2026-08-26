@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
-import { getEventById } from '@/src/domains/events/data'
+import { findEventById } from '@/src/domains/events/service'
 import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
 import { getEventPhotos } from '@/src/domains/events/photo-actions'
 
@@ -54,7 +54,7 @@ interface EventDetailPageProps {
 
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { id } = await params
-  const event = await getEventById(id)
+  const event = await findEventById(id)
   if (!event) return { title: 'Recital no encontrado | RITUAL' }
   const mainArtist = event.lineups?.[0]?.artists?.name
   const title = event.name || mainArtist || 'Recital'
@@ -85,7 +85,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const { id } = await params
   const userId = await getCurrentUserId()
   const [event, attendance, photos] = await Promise.all([
-    getEventById(id),
+    findEventById(id),
     getAttendanceForEvent(id),
     getEventPhotos(id),
   ])

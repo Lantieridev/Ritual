@@ -1,6 +1,6 @@
 import { builder } from './builder'
 import { listVenues, findVenueById, insertVenue, findOrCreateVenue } from '@/src/domains/venues/service'
-import type { VenueEvent, VenueWithEvents } from '@/src/domains/venues/data'
+import type { VenueEvent, VenueWithEvents } from '@/src/domains/venues/service'
 import type { Venue } from '@/src/core/types'
 
 const VenueEventLineupArtistRef = builder.objectRef<VenueEvent['lineups'][number]['artists']>(

@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ArtistProfile } from '@/src/domains/artists/components/ArtistProfile'
-import type { ArtistWithEvents } from '@/src/domains/artists/data'
+import type { ArtistWithEvents } from '@/src/domains/artists/service'
 import type { FutureEvent } from '@/src/core/types'
 
 const wentEvent: ArtistWithEvents['events'][number] = {

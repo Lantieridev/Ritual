@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { gql } from 'urql'
 import { getClient } from '@/src/graphql/client'
-import { getEventById } from '@/src/domains/events/data'
+import { findEventById } from '@/src/domains/events/service'
 import { routes } from '@/src/core/lib/routes'
 import type { Artist, GraphQLArtist, GraphQLVenue, Venue } from '@/src/core/types'
 
@@ -38,7 +38,7 @@ interface EditEventPageProps {
 
 export async function generateMetadata({ params }: EditEventPageProps): Promise<Metadata> {
   const { id } = await params
-  const event = await getEventById(id)
+  const event = await findEventById(id)
   if (!event) return { title: 'Recital no encontrado | RITUAL' }
   return { title: `Editar ${event.name || 'recital'} | RITUAL` }
 }
@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: EditEventPageProps): Promise<
  */
 export default async function EditEventPage({ params }: EditEventPageProps) {
   const { id } = await params
-  const [event, { venues, artists }] = await Promise.all([getEventById(id), fetchPickers()])
+  const [event, { venues, artists }] = await Promise.all([findEventById(id), fetchPickers()])
 
   if (!event) {
     notFound()
