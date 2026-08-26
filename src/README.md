@@ -11,6 +11,6 @@ Las páginas en **`app/`** solo importan de `core` y `domains`; no hay lógica d
 
 Para agregar un nuevo dominio: crear `domains/nuevo-dominio/` con data, service y components, sumar su archivo en `graphql/` si expone API, y las rutas en `app/`.
 
-**Deuda conocida:** la capa `actions.ts` que describía este documento se eliminó en el issue #23 y su contenido vive hoy en `service.ts`. El dominio `moderation` todavía no tiene `data.ts` separado (habla contra Supabase directo desde `service.ts`).
+**Historia:** la capa `actions.ts` que describía este documento se eliminó en el issue #23 y su contenido vive hoy en `service.ts`.
 
-La regla de que todo pase por `service.ts` — declarada en los comentarios de cada dominio desde el issue #25 — se cerró del todo el 2026-08-26: `src/graphql/`, las páginas de `app/` y los demás dominios ya no importan `data.ts` directo en ningún lado (commit `ced3ddb`).
+La regla de que todo pase por `service.ts` — declarada en los comentarios de cada dominio desde el issue #25 — se cerró del todo el 2026-08-26: `src/graphql/`, las páginas de `app/` y los demás dominios ya no importan `data.ts` directo en ningún lado (commit `ced3ddb`), y `moderation` (el único dominio que hablaba contra Supabase directo desde `service.ts`, sin `data.ts` propio) quedó separado en la misma línea (commit `4bae471`). Sin deuda conocida en esta capa por ahora.
