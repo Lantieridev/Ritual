@@ -15,6 +15,7 @@ import {
     getShowDateRange,
 } from '@/src/domains/showmode/data'
 import { DEFAULT_SHOW_MODE_PREFERENCES } from '@/src/domains/showmode/preferences'
+import { todayDateOnly } from '@/src/core/lib/dates'
 
 const completeShow = {
     attendanceStatus: 'went' as const,
@@ -34,7 +35,12 @@ beforeEach(() => {
         checks: [{ templateItemId: 't-1', checked: false }],
     })
     // Un show de hace dos días: dentro de la ventana posterior por default.
-    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
+    // Se ancla con todayDateOnly (timezone de Argentina) y no con
+    // `toISOString().slice(0,10)`, que da el día UTC: entre las 21:00 y la
+    // medianoche argentina el día UTC ya es el siguiente, así que "hace dos
+    // días" en UTC era "ayer" para la lógica de la app y el test fallaba solo
+    // en esa franja horaria.
+    const twoDaysAgo = todayDateOnly(new Date(Date.now() - 2 * 86400000))
     vi.mocked(getShowDateRange).mockResolvedValue({ startDate: twoDaysAgo })
 })
 
@@ -54,7 +60,9 @@ describe('getEventShowModeState', () => {
 
     it('resuelve la ventana contra el rango que devuelve data, no contra la fecha cruda del evento', async () => {
         // El evento dice 2020, pero pertenece a un festival que es hoy.
-        const today = new Date().toISOString().slice(0, 10)
+        // Mismo motivo que en el beforeEach: el "hoy" tiene que ser el día
+        // calendario de Argentina, no el UTC.
+        const today = todayDateOnly()
         vi.mocked(getShowDateRange).mockResolvedValue({ startDate: today, endDate: today })
 
         const state = await getEventShowModeState(
