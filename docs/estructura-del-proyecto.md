@@ -28,7 +28,7 @@ src/
   domains/                    # Un folder por dominio (datos + acciones + vistas + componentes)
     events/
       data.ts                 # getEvents, getEventById, getEventsWithAttendance
-      actions.ts               # createEvent, updateEvent, deleteEvent
+      service.ts               # createEvent, updateEvent, deleteEvent y casos de uso
       attendance-data.ts / attendance-actions.ts
       photo-actions.ts
       home-view.ts             # Lógica pura para el hero del Home (testeada sin renderizar)
@@ -77,7 +77,7 @@ proxy.ts                       # Auth guard + refresh de cookies (antes middlewa
 ### Imports
 
 - Páginas en `app/`: importan de `@/src/core/*`, `@/src/domains/*` y (progresivamente) `@/src/graphql/*`.
-- Dentro de un dominio: `data.ts` y `actions.ts` importan de `@/src/core/lib/supabase/server` y `@/src/core/types`.
+- Dentro de un dominio: `data.ts` y `service.ts` importan de `@/src/core/lib/supabase/server` y `@/src/core/types`.
 - Componentes de dominio: importan de `@/src/core/components/ui` y `@/src/core/lib/routes`.
 
 ---

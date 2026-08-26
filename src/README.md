@@ -1,11 +1,14 @@
 # Estructura de `src/`
 
 - **`core/`** – Lo que usa toda la app: tipos, Supabase, rutas, componentes UI y layout. No contiene lógica de un dominio concreto.
-- **`domains/`** – Un folder por dominio (events, venues, artists, expenses). Cada uno tiene:
+- **`domains/`** – Un folder por dominio. Hoy: `artists`, `auth`, `events`, `expenses`, `festivals`, `moderation`, `search`, `showmode`, `stats`, `venues`, `weather`. Cada uno tiene:
   - **`data.ts`** – Lectura de datos (getX, getXById).
-  - **`actions.ts`** – Server Actions (create, update, delete).
+  - **`service.ts`** – Casos de uso y escrituras. Es el seam que consumen las páginas y los resolvers.
   - **`components/`** – Componentes específicos del dominio (formularios, listas, etc.).
+- **`graphql/`** – El schema de Pothos: un archivo por dominio, más el builder, el contexto (con los DataLoaders) y el cliente in-process.
 
 Las páginas en **`app/`** solo importan de `core` y `domains`; no hay lógica de negocio en `app/`.
 
-Para agregar un nuevo dominio (ej. “perfil” o “amigos”): crear `domains/nuevo-dominio/` con data, actions y components, y las rutas en `app/`.
+Para agregar un nuevo dominio: crear `domains/nuevo-dominio/` con data, service y components, sumar su archivo en `graphql/` si expone API, y las rutas en `app/`.
+
+**Deuda conocida:** la capa `actions.ts` que describía este documento se eliminó en el issue #23 y su contenido vive hoy en `service.ts`. La regla de que todo pase por `service.ts` está declarada en los comentarios de varios dominios pero no se cumple en todos lados: `src/graphql/` y varias páginas importan `data.ts` directo. El dominio `moderation` todavía no tiene `data.ts` separado.
