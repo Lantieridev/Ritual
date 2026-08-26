@@ -15,11 +15,7 @@ import {
   isTicketmasterConfigured,
   searchTicketmasterEvents,
 } from '@/src/core/lib/ticketmaster'
-import {
-  isSpotifyConfigured,
-  searchSpotifyArtist,
-  getBestSpotifyImage,
-} from '@/src/core/lib/spotify'
+import { getArtistImage } from '@/src/core/lib/artist-image'
 import type { FutureEvent } from '@/src/core/types'
 
 export const metadata: Metadata = {
@@ -104,9 +100,8 @@ async function getNearbyShows(
 
   const withImages = await Promise.all(
     candidates.map(async (c) => {
-      if (!isSpotifyConfigured()) return { ...c, image: null }
-      const { artist } = await searchSpotifyArtist(c.artistName)
-      return { ...c, image: artist ? getBestSpotifyImage(artist.images) : null }
+      const { image } = await getArtistImage(c.artistName)
+      return { ...c, image }
     })
   )
 
@@ -177,11 +172,23 @@ export default async function HomePage() {
   const heroState = buildHomeHeroState(nextShow, festivals, now)
 
   const heroEvent = heroState.kind === 'show-today' ? heroState.event : heroState.kind === 'normal' ? heroState.nextShow : undefined
-  const heroHeadliner = heroEvent?.lineups?.[0]?.artists.name ?? heroEvent?.name ?? null
-  const heroImagePromise =
-    heroHeadliner && isSpotifyConfigured()
-      ? searchSpotifyArtist(heroHeadliner).then(({ artist }) => (artist ? getBestSpotifyImage(artist.images) : null))
-      : Promise.resolve(null)
+
+  // Cuando no hay próximo show el hero muestra su estado vacío, pero antes
+  // quedaba además sin fondo: `nextShow` sólo considera los marcados como
+  // 'going', así que alguien con historial pero sin nada agendado veía la
+  // pantalla pelada. Se cae al último show del archivo — ya está en memoria,
+  // así que no cuesta una query extra.
+  const ultimoDelArchivo = allEvents[0]
+  const headlinerDe = (ev: typeof heroEvent) => ev?.lineups?.[0]?.artists.name ?? ev?.name ?? null
+  const heroHeadliner = headlinerDe(heroEvent) ?? headlinerDe(ultimoDelArchivo)
+
+  // No se condiciona a que Spotify esté configurado: getArtistImage prueba
+  // Spotify y cae en Deezer, que no pide credenciales. Antes, sin las dos
+  // variables de Spotify el hero se quedaba sin fondo — que es el caso por
+  // defecto de cualquier instalación recién clonada.
+  const heroImagePromise = heroHeadliner
+    ? getArtistImage(heroHeadliner).then(({ image }) => image)
+    : Promise.resolve(null)
 
   const upcomingFestivals = festivals
     .filter((f) => !isPastEvent(f.end_date ?? f.start_date, now))

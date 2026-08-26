@@ -51,12 +51,27 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
 
   if (!event) {
     return (
-      <section className="relative min-h-screen flex flex-col justify-center items-start px-6 md:px-10 pt-16 bg-ritual-panel">
-        <p className="font-label text-[10px] tracking-[0.32em] text-ritual-gray-text uppercase">Tu archivo</p>
-        <h1 className="font-display text-[9vh] leading-[0.82] uppercase text-ritual-bone mt-2">
+      <section className="relative min-h-screen flex flex-col justify-center items-start px-6 md:px-10 pt-16 bg-ritual-panel overflow-hidden">
+        {/*
+          El estado vacío también recibe fondo. La página lo resuelve del
+          último show del archivo cuando no hay ninguno agendado, así que
+          alguien con historial pero sin nada próximo ya no ve una pantalla
+          pelada. Si no hay imagen —usuario nuevo, o las fuentes externas
+          caídas— el degradado sobre `bg-ritual-panel` se ve igual que antes.
+        */}
+        {resolvedBg && (
+          <div
+            className="absolute inset-0 ritual-photo"
+            style={{ backgroundImage: `url(${resolvedBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg via-ritual-bg/60 to-ritual-bg/20" />
+
+        <p className="relative font-label text-[10px] tracking-[0.32em] text-ritual-gray-text uppercase">Tu archivo</p>
+        <h1 className="relative font-display text-[9vh] leading-[0.82] uppercase text-ritual-bone mt-2">
           Todavía no hay<br />ningún talón
         </h1>
-        <div className="flex gap-3 mt-8">
+        <div className="relative flex gap-3 mt-8">
           <Link href={routes.events.search} className="font-figure text-lg tracking-wider bg-ritual-red text-ritual-bone px-6 py-3">
             BUSCAR SHOWS
           </Link>
