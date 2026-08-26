@@ -53,6 +53,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Cron not configured' }, { status: 503 })
   }
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  const startedAt = new Date()
 
   const results = await Promise.allSettled(
     externalAdapters.map(adapter => adapter.search({})) // Empty query fetches next upcoming events
@@ -60,6 +61,7 @@ export async function GET(request: Request) {
 
   let insertedCount = 0
   let failedCount = 0
+  const failedAdapterIds: string[] = []
 
   for (let i = 0; i < externalAdapters.length; i++) {
     const adapter = externalAdapters[i]
@@ -67,12 +69,12 @@ export async function GET(request: Request) {
 
     if (result.status === 'fulfilled' && !result.value.error) {
       const { events } = result.value
-      
+
       for (const event of events) {
         // Dedup key: slugify(artist) + '-' + date(YYYY-MM-DD)
         const dateStr = event.datetime ? event.datetime.split('T')[0] : 'nodate'
         const dedupKey = `${slugify(event.title)}-${dateStr}`
-        
+
         // Expires in 7 days
         const expiresAt = new Date()
         expiresAt.setDate(expiresAt.getDate() + 7)
@@ -92,12 +94,31 @@ export async function GET(request: Request) {
       }
     } else {
       failedCount++
+      failedAdapterIds.push(adapter.id)
       console.error(`Adapter ${adapter.id} failed:`, result.status === 'rejected' ? result.reason : result.value.error)
     }
   }
 
+  // Todos los adaptadores fallando es la señal de una caída real (ej. el
+  // formato de un sitio scrapeado cambió), no ruido de una sola fuente
+  // inestable. Se persiste la corrida para poder detectarlo sin depender de
+  // revisar logs de Vercel a mano — no hay Sentry/Datadog integrados acá.
+  const ok = failedCount < externalAdapters.length
+  const { error: cronRunError } = await supabase.from('cron_runs').insert({
+    job: 'sync-external-sources',
+    started_at: startedAt.toISOString(),
+    adapters_total: externalAdapters.length,
+    adapters_failed: failedCount,
+    failed_adapter_ids: failedAdapterIds,
+    events_inserted: insertedCount,
+    ok,
+  })
+  if (cronRunError) {
+    console.error('No se pudo persistir la corrida del cron:', cronRunError)
+  }
+
   return NextResponse.json({
-    success: true,
+    success: ok,
     inserted: insertedCount,
     failedAdapters: failedCount
   })
