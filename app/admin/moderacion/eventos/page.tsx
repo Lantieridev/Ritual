@@ -1,5 +1,6 @@
 import { getClient } from '@/src/graphql/client'
 import { cache } from 'react'
+import { ModerationActions } from '@/src/domains/moderation/components'
 
 interface UnverifiedEvent {
   id: string
@@ -80,13 +81,8 @@ export default async function ModerationEventsPage() {
                         {formatDate(ev.date, { day: 'numeric', month: 'long', year: 'numeric' })}
                       </p>
                     </td>
-                    <td className="px-6 py-4 text-right space-x-4">
-                      <button className="font-label text-[10px] tracking-[0.16em] text-ritual-bone hover:text-green-500 uppercase transition-colors">
-                        ✓ Aprobar
-                      </button>
-                      <button className="font-label text-[10px] tracking-[0.16em] text-ritual-bone hover:text-ritual-red-hover uppercase transition-colors">
-                        Fusionar...
-                      </button>
+                    <td className="px-6 py-4 text-right">
+                      <ModerationActions entityType="events" id={ev.id} name={title} />
                     </td>
                   </tr>
                 )

@@ -52,21 +52,10 @@ export async function getVenueById(id: string): Promise<VenueWithEvents | null> 
 }
 
 /**
- * Historial de shows de una sede, sin traer la sede en sí — para resolver
- * `Venue.events` en GraphQL cuando la fila llegó por `getVenues()`, que no
- * incluye la relación. Sin esto el campo devolvería siempre `[]` en la query
- * de listado, que es peor que no exponerlo.
- */
-export async function getVenueEvents(venueId: string): Promise<VenueEvent[]> {
-  const venue = await getVenueById(venueId)
-  return venue?.events ?? []
-}
-
-/**
- * Versión por lote de `getVenueEvents`, para el DataLoader de `Venue.events`.
- * Igual que en artists: la versión de a uno pasa por `getVenueById`, que trae
- * el detalle anidado completo, y pedir `events` sobre el listado disparaba una
- * de esas por sede.
+ * Historial de shows de sedes, para el DataLoader de `Venue.events`. Pedir
+ * `events` sobre `getVenues()` (que no incluye la relación) disparaba un
+ * `getVenueById` — detalle anidado completo — por sede en la query de
+ * listado, de ahí el batching.
  *
  * Consulta `events` directo por `venue_id` en vez de `venues` con el embed,
  * porque acá el punto de entrada es el lote de sedes y lo que se necesita son

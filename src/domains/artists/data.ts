@@ -69,21 +69,10 @@ export async function getArtistById(id: string): Promise<ArtistWithEvents | null
 }
 
 /**
- * Historial de shows de un artista, sin traer el artista en sí — para
- * resolver `Artist.events` en GraphQL cuando la fila llegó por
- * `getArtists()`, que no incluye la relación. Sin esto el campo devolvería
- * siempre `[]` en la query de listado, que es peor que no exponerlo.
- */
-export async function getArtistEvents(artistId: string): Promise<ArtistEvent[]> {
-  const artist = await getArtistById(artistId)
-  return artist?.events ?? []
-}
-
-/**
- * Versión por lote de `getArtistEvents`, para el DataLoader de
- * `Artist.events`. La versión de a uno llama a `getArtistById`, que es un
- * select anidado de cuatro niveles: pedir `events` sobre la query de listado
- * disparaba una de esas por artista del catálogo.
+ * Historial de shows de artistas, para el DataLoader de `Artist.events`.
+ * Resolver ese campo con `getArtistById` (un select anidado de cuatro
+ * niveles) por artista disparaba uno de esos por fila en la query de
+ * listado — de ahí el batching.
  *
  * Devuelve un array alineado con `artistIds`, que es el contrato que espera
  * DataLoader: misma longitud y mismo orden que las claves.

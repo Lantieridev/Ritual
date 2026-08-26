@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/src/domains/venues/data', () => ({
   getVenues: vi.fn(),
   getVenueById: vi.fn(),
-  getVenueEvents: vi.fn(),
   getVenueEventsBatch: vi.fn(),
 }))
 
@@ -22,7 +21,7 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue(null),
 }))
 
-import { getVenueEvents, getVenueEventsBatch } from '@/src/domains/venues/data'
+import { getVenueEventsBatch } from '@/src/domains/venues/data'
 import {
   listVenues,
   findVenueById,

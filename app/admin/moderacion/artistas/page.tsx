@@ -1,6 +1,6 @@
 import { getClient } from '@/src/graphql/client'
 import { cache } from 'react'
-import { ArtistModerationActions } from './ModerationActions'
+import { ModerationActions } from '@/src/domains/moderation/components'
 
 interface UnverifiedArtist {
   id: string
@@ -66,7 +66,7 @@ export default async function ModerationArtistsPage() {
                     <p className="font-body text-sm text-ritual-gray-text">{artist.genre || '—'}</p>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <ArtistModerationActions artistId={artist.id} artistName={artist.name} />
+                    <ModerationActions entityType="artists" id={artist.id} name={artist.name} />
                   </td>
                 </tr>
               ))}

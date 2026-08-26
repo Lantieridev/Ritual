@@ -8,7 +8,6 @@ import {
     getWishlistArtists,
     toggleWishlist,
 } from '@/src/domains/artists/service'
-import { getArtistEvents } from '@/src/domains/artists/data'
 import type { ArtistEvent, ArtistWithEvents } from '@/src/domains/artists/data'
 import type { Artist } from '@/src/core/types'
 
