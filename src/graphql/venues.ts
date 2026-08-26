@@ -56,7 +56,8 @@ VenueRef.implement({
         // real y no un array vacío silencioso.
         events: t.field({
             type: [VenueEventRef],
-            resolve: (venue) => ('events' in venue ? venue.events : getVenueEvents(venue.id)),
+            resolve: (venue, _args, context) =>
+                'events' in venue ? venue.events : context.venueEventsLoader.load(venue.id),
         }),
     }),
 })

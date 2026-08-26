@@ -66,7 +66,8 @@ ArtistRef.implement({
         // historial real y no un array vacío silencioso.
         events: t.field({
             type: [ArtistEventRef],
-            resolve: (artist) => ('events' in artist ? artist.events : getArtistEvents(artist.id)),
+            resolve: (artist, _args, context) =>
+                'events' in artist ? artist.events : context.artistEventsLoader.load(artist.id),
         }),
     }),
 })

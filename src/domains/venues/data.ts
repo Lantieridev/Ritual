@@ -61,3 +61,46 @@ export async function getVenueEvents(venueId: string): Promise<VenueEvent[]> {
   const venue = await getVenueById(venueId)
   return venue?.events ?? []
 }
+
+/**
+ * Versión por lote de `getVenueEvents`, para el DataLoader de `Venue.events`.
+ * Igual que en artists: la versión de a uno pasa por `getVenueById`, que trae
+ * el detalle anidado completo, y pedir `events` sobre el listado disparaba una
+ * de esas por sede.
+ *
+ * Consulta `events` directo por `venue_id` en vez de `venues` con el embed,
+ * porque acá el punto de entrada es el lote de sedes y lo que se necesita son
+ * sus eventos agrupados.
+ */
+export async function getVenueEventsBatch(
+  venueIds: readonly string[]
+): Promise<VenueEvent[][]> {
+  if (venueIds.length === 0) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('events')
+    .select(`
+      id, name, date, venue_id,
+      lineups ( artists ( name ) ),
+      attendance!left ( status )
+    `)
+    .in('venue_id', venueIds as string[])
+    .order('date', { ascending: false })
+
+  if (error) {
+    console.error('Error cargando shows por sede:', error)
+    return venueIds.map(() => [])
+  }
+
+  const rows = (data ?? []) as unknown as Array<VenueEvent & { venue_id: string }>
+
+  const byVenue = new Map<string, VenueEvent[]>()
+  for (const row of rows) {
+    const list = byVenue.get(row.venue_id)
+    if (list) list.push(row)
+    else byVenue.set(row.venue_id, [row])
+  }
+
+  return venueIds.map((id) => byVenue.get(id) ?? [])
+}
