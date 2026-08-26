@@ -28,3 +28,15 @@ pinned column on attendance that doesn't exist)"*. Depende de la capa social
 (issue #5), pausada con `attendance` privada por defecto hasta que esa capa se
 diseñe. No se perdió código: nunca se construyó. Se deja anotada acá para que
 no se re-litigue el motivo cada vez que se retome.
+
+## Estado vacío de la Home para visitantes sin sesión
+
+Anotado 2026-08-26. Un visitante anónimo ve el hero sin foto de fondo, porque
+la imagen se deriva del próximo show o del último del archivo, y sin sesión no
+hay ninguno de los dos. Darle una imagen requeriría consultar el catálogo
+compartido, que es exactamente la lectura que se quitó para que la Home
+anónima no le pegue a la base en cada visita.
+
+Es un problema de diseño, no de datos: probablemente la respuesta sea una
+portada estática o algo generado, no una query. Va junto con la pasada de
+diseño de .
