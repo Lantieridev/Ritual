@@ -134,3 +134,24 @@ export async function getEventById(
   return data as EventWithRelations
 }
 
+
+/**
+ * Sólo `id` y `date` de cada evento, para el sitemap. `getEvents()` trae
+ * `*` más los embeds de venues y lineups→artists, y el sitemap descartaba
+ * todo eso salvo el id — pagando el join completo en cada visita de un
+ * crawler.
+ */
+export async function getEventIdsForSitemap(): Promise<Array<{ id: string; date: string }>> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, date')
+    .order('date', { ascending: false })
+    .limit(MAX_EVENTS)
+
+  if (error) {
+    console.error('Error cargando ids de eventos para el sitemap:', error)
+    return []
+  }
+  return (data ?? []) as Array<{ id: string; date: string }>
+}
