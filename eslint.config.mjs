@@ -33,7 +33,21 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "public/tickets/vendor/**",
+
+    // Generated: istanbul/vitest coverage reporter output.
+    "coverage/**",
+
+    // Generated: Supabase CLI scratch space. Holds the bundled edge runtime,
+    // which is minified onto a handful of lines and lints as ~200 problems.
+    "supabase/.temp/**",
+
+    // Vendored: third-party libs plus the copied omelette starter components,
+    // which are overwritten wholesale whenever the starter is re-copied.
+    "public/tickets/**",
+
+    // Single-use codemods run against app/page.tsx, kept out of the app build.
+    "refactor.js",
+    "refactor-waterfall.js",
   ]),
 ]);
 
