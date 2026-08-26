@@ -79,35 +79,45 @@ export async function getPersonalStats(): Promise<StatsData> {
     const userId = await getCurrentUserId()
     if (!userId) return emptyStats()
 
-    // Traer todos los eventos con venue, lineup y attendance (rating incluido)
+    // Se parte de `attendance` filtrada por usuario y se embeben los eventos,
+    // no al revés. La versión anterior traía la tabla `events` COMPLETA —el
+    // catálogo compartido entre todos los usuarios, con venue, lineup y
+    // attendance— y recién después descartaba en JS las filas sin attendance
+    // propia. Era la única lectura del catálogo sin la cota MAX_EVENTS que sí
+    // aplican getEvents y getEventsWithAttendance, y su costo crecía con el
+    // catálogo entero en vez de con el historial del usuario. Pega en dos
+    // páginas: /stats y /wrapped.
     const supabase = await createClient()
-    const { data: events, error } = await supabase
-        .from('events')
+    const { data: rows, error } = await supabase
+        .from('attendance')
         .select(`
-      id, name, date,
-      venues ( name, city, country ),
-      lineups ( artists ( name ) ),
-      attendance!left (
-        status, user_id, rating
+      status, user_id, rating,
+      events (
+        id, name, date,
+        venues ( name, city, country ),
+        lineups ( artists ( name ) )
       )
     `)
-        .order('date', { ascending: false })
+        .eq('user_id', userId)
 
-    if (error || !events) {
+    if (error || !rows) {
         console.error('Error cargando stats:', error)
         return emptyStats()
     }
 
-    const rawEvents = events as unknown as RawEvent[]
+    type AttendanceRow = RawAttendance & { events: Omit<RawEvent, 'attendance'> | null }
 
-    // Filtrar attendance del usuario actual (RLS ya filtra, tomamos el primero si existe)
-    const eventsWithMyAttendance: EventWithMyAttendance[] = rawEvents.map((ev) => ({
-        ...ev,
-        myAttendance: ev.attendance?.[0] ?? null,
-    }))
-
-    // Solo cuentan para las stats personales los eventos donde tengo attendance registrada
-    const userEvents = eventsWithMyAttendance.filter((e) => e.myAttendance !== null)
+    // El orden por fecha descendente se hacía en la query anterior; acá se
+    // ordena en memoria porque el embed no admite ordenar por columna de la
+    // tabla embebida, y el conjunto es el historial de un solo usuario.
+    const userEvents: EventWithMyAttendance[] = (rows as unknown as AttendanceRow[])
+        .filter((row): row is AttendanceRow & { events: Omit<RawEvent, 'attendance'> } => row.events !== null)
+        .map((row) => ({
+            ...row.events,
+            attendance: [{ status: row.status, user_id: row.user_id, rating: row.rating }],
+            myAttendance: { status: row.status, user_id: row.user_id, rating: row.rating },
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     const totalShows = userEvents.length
     const showsAttended = userEvents.filter((e) => e.myAttendance?.status === 'went').length
