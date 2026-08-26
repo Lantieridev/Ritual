@@ -40,3 +40,29 @@ anónima no le pegue a la base en cada visita.
 Es un problema de diseño, no de datos: probablemente la respuesta sea una
 portada estática o algo generado, no una query. Va junto con la pasada de
 diseño inventariada en `docs/design-backlog.md`.
+
+## Observabilidad del cron — ideas evaluadas y pospuestas
+
+Anotado 2026-08-26, tras agregar `cron_runs` (historial persistido de cada
+corrida de `sync-external-sources`, con `ok`, `adapters_failed` y
+`failed_adapter_ids`). Tres ideas salieron de un debate con gpt-oss-120b y se
+descartan por ahora, no por malas sino porque son integraciones nuevas con
+costo de mantenimiento que nadie pidió todavía:
+
+- **Notificación a Discord/Slack** cuando el cron falla del todo. Requiere un
+  webhook y su secreto en variables de entorno; recién vale la pena si mirar
+  `cron_runs` a mano deja de alcanzar.
+- **Endpoint de salud (`/api/cron/status`)** para un monitor externo gratuito
+  tipo UptimeRobot. Redundante hoy con leer `cron_runs` directo desde el
+  dashboard de Supabase; sumaría una superficie de auth más floja que la del
+  cron mismo.
+- **TTL dinámico** en `external_events_cache` (extender más allá de 7 días si
+  la corrida previa falló). Complejidad real por un margen que el TTL actual
+  ya cubre para un cron que corre una vez por día en plan Hobby.
+
+También se investigó si valía la pena sumar una fuente de respaldo para
+Setlist.fm, Ticketmaster o Last.fm (señalado por un análisis previo de
+Gemini). Se descartó: no hay alternativa gratuita conocida con calidad
+comparable a Setlist.fm o Last.fm, y el scraping cron ya es respaldo práctico
+(no total) de Ticketmaster. Ver el mensaje del commit `95a7c10` para el
+detalle del debate.
