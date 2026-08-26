@@ -10,7 +10,7 @@ import { FutureEventsResults } from '@/src/domains/events/components/FutureEvent
 import { isTicketmasterConfigured, searchTicketmasterEvents } from '@/src/core/lib/ticketmaster'
 import { searchCachedExternalEvents } from '@/src/core/lib/external-sources/cache'
 import { isSetlistFmConfigured, getSetlistsByArtist } from '@/src/core/lib/setlistfm'
-import { createClient } from '@/src/core/lib/supabase/server'
+import { searchCatalog } from '@/src/domains/search/service'
 import { formatDate } from '@/src/core/lib/utils'
 import { EmptyState } from '@/src/core/components/ui/EmptyState'
 
@@ -23,21 +23,6 @@ type SearchParams = { artist?: string; location?: string; source?: 'future' | 'p
 
 interface PageProps {
   searchParams: Promise<SearchParams>
-}
-
-async function globalSearch(query: string) {
-  const q = `%${query}%`
-  const supabase = await createClient()
-  const [eventsRes, artistsRes, venuesRes] = await Promise.all([
-    supabase.from('events').select('id, name, date').ilike('name', q).order('date', { ascending: false }).limit(8),
-    supabase.from('artists').select('id, name, genre').ilike('name', q).limit(8),
-    supabase.from('venues').select('id, name, city, country').ilike('name', q).limit(8),
-  ])
-  return {
-    events: eventsRes.data ?? [],
-    artists: artistsRes.data ?? [],
-    venues: venuesRes.data ?? [],
-  }
 }
 
 function tabHref(tab: 'cartelera' | 'archivo', params: SearchParams) {
@@ -92,7 +77,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
   }
 
   const query = params.q?.trim() ?? ''
-  const archiveResults = tab === 'archivo' && query.length >= 2 ? await globalSearch(query) : null
+  const archiveResults = tab === 'archivo' && query.length >= 2 ? await searchCatalog(query) : null
   const archiveTotal = archiveResults
     ? archiveResults.events.length + archiveResults.artists.length + archiveResults.venues.length
     : 0

@@ -1,5 +1,6 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import type { Artist, Venue, EventWithRelations } from '@/src/core/types'
+import { escapeLikeWildcards } from '@/src/core/lib/validation'
 
 export type ModeratedEntity = 'artists' | 'venues' | 'events'
 
@@ -55,17 +56,6 @@ export async function getUnverifiedEvents(): Promise<EventWithRelations[]> {
 
     if (error) throw error
     return data as unknown as EventWithRelations[]
-}
-
-/**
- * Neutraliza los comodines de LIKE que venga en el término del usuario. Sin
- * esto, buscar "100%" matchea todo el catálogo y "_" matchea cualquier letra:
- * el moderador vería resultados que no pidió justo antes de ejecutar una
- * fusión destructiva. La barra invertida va primero para no re-escapar las
- * que agregan las dos líneas siguientes.
- */
-function escapeLikeWildcards(term: string): string {
-    return term.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
 }
 
 const MERGE_TARGET_COLUMNS: Record<ModeratedEntity, string> = {
