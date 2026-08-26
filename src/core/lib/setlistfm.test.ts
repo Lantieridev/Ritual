@@ -131,3 +131,55 @@ describe('getSetlistsByArtist', () => {
     expect(result.error).toBe('Setlist.fm tardó demasiado en responder. Probá de nuevo.')
   })
 })
+
+// Setlist.fm devuelve setlists parciales con normalidad: un show cargado sin
+// canciones viene con `sets.set` vacio o con sets sin `song`, y los venues
+// incompletos pueden no traer `city`. Antes cada una de esas formas tiraba un
+// TypeError que rompia el render del servidor en vez de degradar.
+describe('normalizeSetlist con respuestas parciales', () => {
+    const base = {
+        id: 's-1',
+        eventDate: '01-01-2026',
+        url: 'https://setlist.fm/x',
+        artist: { name: 'Divididos' },
+        venue: { name: 'Niceto', city: { name: 'CABA', country: { name: 'Argentina' } } },
+        sets: { set: [{ song: [{ name: 'Que ves' }] }] },
+    }
+
+    it('normaliza un setlist completo', () => {
+        const r = normalizeSetlist(base as never)
+        expect(r.setlist).toEqual(['Que ves'])
+        expect(r.totalSongs).toBe(1)
+        expect(r.venue.city).toBe('CABA')
+    })
+
+    it('no rompe cuando falta sets por completo', () => {
+        const { sets, ...sinSets } = base
+        const r = normalizeSetlist(sinSets as never)
+        expect(r.setlist).toEqual([])
+        expect(r.totalSongs).toBe(0)
+    })
+
+    it('no rompe cuando un set viene sin canciones', () => {
+        const r = normalizeSetlist({ ...base, sets: { set: [{}] } } as never)
+        expect(r.setlist).toEqual([])
+    })
+
+    it('no rompe cuando el venue no trae ciudad', () => {
+        const r = normalizeSetlist({ ...base, venue: { name: 'Niceto' } } as never)
+        expect(r.venue.city).toBe('')
+        expect(r.venue.country).toBe('')
+        expect(r.venue.name).toBe('Niceto')
+    })
+
+    it('no rompe cuando falta el artista', () => {
+        const { artist, ...sinArtista } = base
+        const r = normalizeSetlist(sinArtista as never)
+        expect(r.lineup).toEqual(['Artista desconocido'])
+    })
+
+    it('descarta canciones sin nombre en vez de dejar huecos', () => {
+        const r = normalizeSetlist({ ...base, sets: { set: [{ song: [{ name: 'A' }, {}, { name: 'B' }] }] } } as never)
+        expect(r.setlist).toEqual(['A', 'B'])
+    })
+})

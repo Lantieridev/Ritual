@@ -124,17 +124,28 @@ export function parseSetlistDate(dateStr: string): string {
  * para poder importarlo con addEventFromBandsintown.
  */
 export function normalizeSetlist(setlist: Setlist) {
-    const allSongs = setlist.sets.set.flatMap((s) => s.song.map((song) => song.name))
+    // Los tipos describen la respuesta completa, pero Setlist.fm devuelve
+    // setlists parciales con normalidad: un show cargado sin canciones viene
+    // con `sets.set` vacío o con sets sin `song`, y los venues incompletos
+    // pueden no traer `city`. Sin estas guardas el acceso encadenado tira
+    // TypeError y rompe el render entero en vez de degradar — verificado con
+    // las tres formas parciales que devuelve la API.
+    const allSongs = (setlist.sets?.set ?? []).flatMap((s) =>
+        (s?.song ?? []).map((song) => song?.name).filter((name): name is string => Boolean(name))
+    )
+    const artista = setlist.artist?.name ?? 'Artista desconocido'
+    const sede = setlist.venue?.name ?? 'Sede desconocida'
+
     return {
         id: setlist.id,
-        title: `${setlist.artist.name} @ ${setlist.venue.name}`,
+        title: `${artista} @ ${sede}`,
         datetime: parseSetlistDate(setlist.eventDate) + 'T00:00:00Z',
         venue: {
-            name: setlist.venue.name,
-            city: setlist.venue.city.name,
-            country: setlist.venue.city.country.name,
+            name: sede,
+            city: setlist.venue?.city?.name ?? '',
+            country: setlist.venue?.city?.country?.name ?? '',
         },
-        lineup: [setlist.artist.name],
+        lineup: [artista],
         url: setlist.url,
         // Datos extra de Setlist.fm
         setlist: allSongs,
