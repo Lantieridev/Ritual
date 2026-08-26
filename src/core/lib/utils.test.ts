@@ -38,3 +38,23 @@ describe('formatDate', () => {
     expect(formatDate(localDate, { month: 'short' })).toBe('mar')
   })
 })
+
+// Regresión del corrimiento de día en las columnas `date` de Postgres:
+// `expenses.date` guarda "2026-05-26" y la UI mostraba "25 may", porque el
+// string pelado se parsea como medianoche UTC y al formatear en horario de
+// Argentina (UTC-3) retrocede al día anterior.
+describe('formatDate con fechas sin hora', () => {
+    it('conserva el día calendario de un "YYYY-MM-DD"', () => {
+        expect(formatDate('2026-05-26', { day: 'numeric', month: 'short' })).toBe('26 may')
+    })
+
+    it('no retrocede en el primer día del mes', () => {
+        expect(formatDate('2026-01-01', { day: 'numeric', month: 'long', year: 'numeric' }))
+            .toBe('1 de enero de 2026')
+    })
+
+    it('sigue respetando la hora cuando el string sí la trae', () => {
+        // 2026-05-26T02:00:00Z son las 23:00 del 25 en Argentina.
+        expect(formatDate('2026-05-26T02:00:00Z', { day: 'numeric', month: 'short' })).toBe('25 may')
+    })
+})
