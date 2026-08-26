@@ -39,4 +39,4 @@ anónima no le pegue a la base en cada visita.
 
 Es un problema de diseño, no de datos: probablemente la respuesta sea una
 portada estática o algo generado, no una query. Va junto con la pasada de
-diseño de .
+diseño inventariada en `docs/design-backlog.md`.
