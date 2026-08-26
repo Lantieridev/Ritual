@@ -155,3 +155,57 @@ export async function getEventIdsForSitemap(): Promise<Array<{ id: string; date:
   }
   return (data ?? []) as Array<{ id: string; date: string }>
 }
+
+/**
+ * Sólo los eventos donde el usuario registró asistencia (de cualquier estado:
+ * went, going o interested), con la suya adjunta.
+ *
+ * /wrapped llamaba a getEventsWithAttendance() —hasta MAX_EVENTS del catálogo
+ * compartido, con venue, lineup y attendance— para después quedarse nada más
+ * que con los 'went' del usuario del año elegido. Sumado a getPersonalStats()
+ * en el mismo Promise.all, eran dos barridas casi idénticas del catálogo por
+ * cada carga de la página.
+ *
+ * Igual que en stats, se parte de `attendance` filtrada por usuario y se
+ * embebe el evento, así la base devuelve sólo el historial propio.
+ */
+export async function getMyEvents(): Promise<EventWithAttendance[]> {
+  const userId = await getCurrentUserId()
+  if (!userId) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('attendance')
+    .select(`
+      id, status, user_id, rating, review,
+      events (
+        *,
+        venues ( name, city, country ),
+        lineups ( artists ( id, name, genre ) )
+      )
+    `)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error cargando los shows del usuario:', error)
+    return []
+  }
+
+  type Row = {
+    id: string
+    status: string
+    user_id: string
+    rating: number | null
+    review: string | null
+    events: Omit<EventWithAttendance, 'attendance'> | null
+  }
+
+  return (data as unknown as Row[])
+    .filter((row): row is Row & { events: Omit<EventWithAttendance, 'attendance'> } => row.events !== null)
+    .map((row) => ({
+      ...row.events,
+      attendance: [
+        { id: row.id, status: row.status, user_id: row.user_id, rating: row.rating, review: row.review },
+      ],
+    })) as EventWithAttendance[]
+}

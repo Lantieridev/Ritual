@@ -5,6 +5,7 @@ import {
     insertArtist,
     findOrCreateArtist,
     getWishlistArtistIds,
+    getWishlistArtists,
     toggleWishlist,
 } from '@/src/domains/artists/service'
 import { getArtistEvents } from '@/src/domains/artists/data'
@@ -95,6 +96,23 @@ builder.queryField('wishlistArtistIds', (t) =>
         type: ['ID'],
         description: 'IDs de los artistas que el usuario actual sigue. Vacío si no hay sesión.',
         resolve: () => getWishlistArtistIds(),
+    })
+)
+
+const WishlistArtistRef = builder.objectRef<{ id: string; name: string }>('WishlistArtist')
+WishlistArtistRef.implement({
+    fields: (t) => ({
+        id: t.exposeID('id'),
+        name: t.exposeString('name'),
+    }),
+})
+
+builder.queryField('wishlistArtists', (t) =>
+    t.field({
+        type: [WishlistArtistRef],
+        description:
+            'Artistas que el usuario actual sigue, con su nombre. Evita traer el catálogo entero sólo para resolverlos.',
+        resolve: () => getWishlistArtists(),
     })
 )
 

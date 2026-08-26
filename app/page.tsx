@@ -1,7 +1,7 @@
 import * as React from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getEventsWithAttendance } from '@/src/domains/events/data'
+import { getMyEvents } from '@/src/domains/events/data'
 import { buildHomeFeed, buildHomeHeroState } from '@/src/domains/events/home-view'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
 import { gql } from 'urql'
@@ -35,8 +35,7 @@ interface NearbyCard {
 
 const HomePageQuery = gql`
   query HomePage {
-    wishlistArtistIds
-    artists { id name }
+    wishlistArtists { id name }
     festivals {
       id
       name
@@ -81,14 +80,15 @@ function toHeroFestival(festival: HomeFestival) {
  * mucho esto conviene moverlo a un fetch client-side diferido.
  */
 async function getNearbyShows(
-  wishlistArtistIds: string[],
-  catalog: Array<Pick<GraphQLArtist, 'id' | 'name'>>
+  wishlistArtists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
 ): Promise<NearbyCard[]> {
   if (!isTicketmasterConfigured()) return []
-  if (wishlistArtistIds.length === 0) return []
+  if (wishlistArtists.length === 0) return []
 
-  const wishlisted = new Set(wishlistArtistIds.slice(0, 6))
-  const artists = catalog.filter((a) => wishlisted.has(a.id))
+  // La query ya devuelve los artistas de la wishlist con su nombre. Antes se
+  // pedían los ids por un lado y el catálogo COMPLETO de artistas por otro,
+  // sólo para cruzarlos en memoria y quedarse con seis.
+  const artists = wishlistArtists.slice(0, 6)
 
   const results = await Promise.allSettled(
     artists.map(async (artist) => {
@@ -113,8 +113,8 @@ async function getNearbyShows(
   return withImages
 }
 
-async function NearbyShowsWrapper({ wishlistArtistIds, catalog }: { wishlistArtistIds: string[], catalog: Array<Pick<GraphQLArtist, 'id' | 'name'>> }) {
-  const nearbyShows = await getNearbyShows(wishlistArtistIds, catalog)
+async function NearbyShowsWrapper({ wishlistArtists }: { wishlistArtists: Array<Pick<GraphQLArtist, 'id' | 'name'>> }) {
+  const nearbyShows = await getNearbyShows(wishlistArtists)
   if (nearbyShows.length === 0) return null
 
   return (
@@ -164,10 +164,9 @@ async function NearbyShowsWrapper({ wishlistArtistIds, catalog }: { wishlistArti
 
 export default async function HomePage() {
   const [allEvents, { data }] = await Promise.all([
-    getEventsWithAttendance(),
+    getMyEvents(),
     getClient().query<{
-      wishlistArtistIds: string[]
-      artists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
+      wishlistArtists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
       festivals: HomeFestival[]
     }>(HomePageQuery, {}).toPromise(),
   ])
@@ -198,7 +197,7 @@ export default async function HomePage() {
       </React.Suspense>
 
       <React.Suspense fallback={<div className="min-h-screen bg-ritual-bg animate-pulse flex items-center justify-center"><p className="text-ritual-gray-text font-label uppercase">Buscando shows cerca tuyo...</p></div>}>
-        <NearbyShowsWrapper wishlistArtistIds={data?.wishlistArtistIds ?? []} catalog={data?.artists ?? []} />
+        <NearbyShowsWrapper wishlistArtists={data?.wishlistArtists ?? []} />
       </React.Suspense>
 
       {upcomingFestivals.length > 0 && (

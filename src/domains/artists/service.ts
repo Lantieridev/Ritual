@@ -120,6 +120,34 @@ export async function getWishlistArtistIds(): Promise<string[]> {
   return (data ?? []).map((r) => r.artist_id)
 }
 
+/**
+ * Los artistas de la wishlist, con su nombre, no sólo los ids.
+ *
+ * El home pedía `wishlistArtistIds` más el catálogo COMPLETO de artistas sólo
+ * para resolver el nombre de los primeros seis de la wishlist. Traer una tabla
+ * entera para cruzarla en memoria contra seis ids es trabajo que la base puede
+ * hacer con un join.
+ */
+export async function getWishlistArtists(): Promise<Array<{ id: string; name: string }>> {
+  const userId = await getCurrentUserId()
+  if (!userId) return []
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('wishlist')
+    .select('artists ( id, name )')
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('[Wishlist] Error cargando artistas:', error)
+    return []
+  }
+
+  const rows = (data ?? []) as unknown as Array<{ artists: { id: string; name: string } | null }>
+  return rows
+    .map((row) => row.artists)
+    .filter((artist): artist is { id: string; name: string } => artist !== null)
+}
+
 export async function toggleWishlist(
   artistId: string
 ): Promise<ActionResult<{ inWishlist: boolean }>> {
