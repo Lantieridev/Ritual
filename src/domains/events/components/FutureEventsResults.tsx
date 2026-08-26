@@ -6,6 +6,7 @@ import { useMutation, gql } from 'urql'
 import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
+import { parseExternalDateTime } from '@/src/core/lib/dates'
 import { FutureEvent } from '@/src/core/types'
 
 const AddExternalEventMutation = gql`
@@ -79,13 +80,19 @@ export function FutureEventsResults({ events, searchQuery, compact }: FutureEven
                 const isLoading = loadingId === ev.id
                 const isAdded = addedIds.has(ev.id)
                 const error = errors[ev.id]
-                const date = new Date(ev.datetime)
-                const dateLabel = formatDate(date, {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    year: compact ? undefined : 'numeric', // hide year in compact?
-                })
+                // Cada fuente externa emite la fecha en su propio formato y
+                // algunas no son parseables. Con `new Date()` a secas, esas
+                // caían en el label como el texto "Invalid Date"; mostrar el
+                // crudo del sitio ("13 SEP") le dice algo al usuario.
+                const date = parseExternalDateTime(ev.datetime)
+                const dateLabel = date
+                    ? formatDate(date, {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                        year: compact ? undefined : 'numeric',
+                    })
+                    : ev.datetime
                 const venueLabel = [ev.venue.name, ev.venue.city].filter(Boolean).join(', ')
 
                 return (
