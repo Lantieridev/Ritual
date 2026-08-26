@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "_comment": "Refresca external_events_cache. Diario porque el plan Hobby de Vercel dispara los crons una vez por día; el TTL del cache es de 7 días, así que una corrida diaria lo mantiene fresco con margen. En Pro se puede subir a '0 */6 * * *'.",
+      "path": "/api/cron/sync-external-sources",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}
