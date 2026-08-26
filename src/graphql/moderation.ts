@@ -6,9 +6,9 @@ import { EventRef } from './events'
 import { MutationResultRef, toMutationResult } from './shared'
 import type { GraphQLContext } from './context'
 import {
-    getUnverifiedArtists,
-    getUnverifiedVenues,
-    getUnverifiedEvents,
+    listUnverifiedArtists,
+    listUnverifiedVenues,
+    listUnverifiedEvents,
     searchMergeTargets,
     approveArtist,
     approveVenue,
@@ -56,7 +56,7 @@ builder.queryField('unverifiedArtists', (t) =>
         type: [ArtistRef],
         resolve: async (_root, _args, context) => {
             requireModerator(context)
-            return getUnverifiedArtists()
+            return listUnverifiedArtists()
         },
     })
 )
@@ -66,7 +66,7 @@ builder.queryField('unverifiedVenues', (t) =>
         type: [VenueRef],
         resolve: async (_root, _args, context) => {
             requireModerator(context)
-            return getUnverifiedVenues()
+            return listUnverifiedVenues()
         },
     })
 )
@@ -76,7 +76,7 @@ builder.queryField('unverifiedEvents', (t) =>
         type: [EventRef],
         resolve: async (_root, _args, context) => {
             requireModerator(context)
-            return getUnverifiedEvents()
+            return listUnverifiedEvents()
         },
     })
 )

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/src/domains/moderation/service', () => ({
-  getUnverifiedArtists: vi.fn(),
-  getUnverifiedVenues: vi.fn(),
-  getUnverifiedEvents: vi.fn(),
+  listUnverifiedArtists: vi.fn(),
+  listUnverifiedVenues: vi.fn(),
+  listUnverifiedEvents: vi.fn(),
   searchMergeTargets: vi.fn(),
   approveArtist: vi.fn(),
   approveVenue: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock('@/src/core/auth/session', () => ({
 }))
 
 import {
-  getUnverifiedArtists,
+  listUnverifiedArtists,
   searchMergeTargets,
   approveArtist,
   mergeArtists,
@@ -68,7 +68,7 @@ describe('moderation GraphQL schema', () => {
       const body = await query('{ unverifiedArtists { id } }')
 
       expect(body.errors).toHaveLength(1)
-      expect(getUnverifiedArtists).not.toHaveBeenCalled()
+      expect(listUnverifiedArtists).not.toHaveBeenCalled()
     })
 
     it('rejects an anonymous caller', async () => {
@@ -77,17 +77,17 @@ describe('moderation GraphQL schema', () => {
       const body = await query('{ unverifiedArtists { id } }')
 
       expect(body.errors).toHaveLength(1)
-      expect(getUnverifiedArtists).not.toHaveBeenCalled()
+      expect(listUnverifiedArtists).not.toHaveBeenCalled()
     })
 
     it.each(['admin', 'moderador'] as const)('lets %s through', async (role) => {
       actAs(role)
-      vi.mocked(getUnverifiedArtists).mockResolvedValue([])
+      vi.mocked(listUnverifiedArtists).mockResolvedValue([])
 
       const body = await query('{ unverifiedArtists { id } }')
 
       expect(body.errors).toBeUndefined()
-      expect(getUnverifiedArtists).toHaveBeenCalled()
+      expect(listUnverifiedArtists).toHaveBeenCalled()
     })
 
     it('guards mergeTargets too, not just the queue', async () => {

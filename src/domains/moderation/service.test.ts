@@ -6,42 +6,29 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
+vi.mock('./data', () => ({
+  getUnverifiedArtists: vi.fn(),
+  getUnverifiedVenues: vi.fn(),
+  getUnverifiedEvents: vi.fn(),
+  searchMergeTargets: vi.fn(),
+}))
+
 import {
+  listUnverifiedArtists,
+  listUnverifiedVenues,
+  listUnverifiedEvents,
   searchMergeTargets,
   approveArtist,
   approveVenue,
   approveEvent,
   mergeArtists,
 } from '@/src/domains/moderation/service'
-
-/** Registra la cadena de llamadas para poder afirmar sobre el filtro construido. */
-function makeQueryBuilder(result: { data: unknown; error: unknown }) {
-  const calls: Record<string, unknown[][]> = {}
-  const builder: Record<string, unknown> = {}
-  const record = (name: string) =>
-    vi.fn((...args: unknown[]) => {
-      calls[name] = [...(calls[name] ?? []), args]
-      return builder
-    })
-
-  builder.select = record('select')
-  builder.eq = record('eq')
-  builder.neq = record('neq')
-  builder.ilike = record('ilike')
-  builder.order = record('order')
-  builder.limit = record('limit')
-  builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
-    Promise.resolve(result).then(onFulfilled, onRejected)
-
-  return { builder, calls }
-}
-
-function mockFrom(result: { data: unknown; error: unknown }) {
-  const { builder, calls } = makeQueryBuilder(result)
-  const from = vi.fn(() => builder)
-  mockCreateClient.mockResolvedValue({ from })
-  return { from, calls }
-}
+import {
+  getUnverifiedArtists,
+  getUnverifiedVenues,
+  getUnverifiedEvents,
+  searchMergeTargets as searchMergeTargetsData,
+} from '@/src/domains/moderation/data'
 
 function mockRpc(result: { error: unknown }) {
   const rpc = vi.fn().mockResolvedValue(result)
@@ -49,94 +36,39 @@ function mockRpc(result: { error: unknown }) {
   return rpc
 }
 
-describe('searchMergeTargets', () => {
+describe('listUnverified* — delegan a data.ts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('does not touch the database for an empty or whitespace-only term', async () => {
-    mockFrom({ data: [], error: null })
+  it('listUnverifiedArtists delegates to getUnverifiedArtists', async () => {
+    vi.mocked(getUnverifiedArtists).mockResolvedValue([{ id: 'a-1' } as never])
 
-    await expect(searchMergeTargets('artists', '   ')).resolves.toEqual([])
-    expect(mockCreateClient).not.toHaveBeenCalled()
+    await expect(listUnverifiedArtists()).resolves.toEqual([{ id: 'a-1' }])
+    expect(getUnverifiedArtists).toHaveBeenCalledWith()
   })
 
-  it('restricts candidates to already verified rows', async () => {
-    const { calls } = mockFrom({ data: [], error: null })
+  it('listUnverifiedVenues delegates to getUnverifiedVenues', async () => {
+    vi.mocked(getUnverifiedVenues).mockResolvedValue([{ id: 'v-1' } as never])
 
-    await searchMergeTargets('artists', 'radiohead')
-
-    expect(calls.eq).toContainEqual(['status', 'verified'])
+    await expect(listUnverifiedVenues()).resolves.toEqual([{ id: 'v-1' }])
+    expect(getUnverifiedVenues).toHaveBeenCalledWith()
   })
 
-  it('escapes LIKE wildcards so a term like "100%" cannot match the whole catalog', async () => {
-    const { calls } = mockFrom({ data: [], error: null })
+  it('listUnverifiedEvents delegates to getUnverifiedEvents', async () => {
+    vi.mocked(getUnverifiedEvents).mockResolvedValue([{ id: 'e-1' } as never])
 
-    await searchMergeTargets('artists', '100%_x')
-
-    expect(calls.ilike).toEqual([['name', '%100\\%\\_x%']])
+    await expect(listUnverifiedEvents()).resolves.toEqual([{ id: 'e-1' }])
+    expect(getUnverifiedEvents).toHaveBeenCalledWith()
   })
 
-  it('escapes backslashes before adding its own, so the escape char is not doubled away', async () => {
-    const { calls } = mockFrom({ data: [], error: null })
+  it('searchMergeTargets delegates to data.ts with the same arguments', async () => {
+    vi.mocked(searchMergeTargetsData).mockResolvedValue([{ id: 'a-1', name: 'Radiohead', detail: 'rock' }])
 
-    await searchMergeTargets('artists', 'AC\\DC')
-
-    expect(calls.ilike).toEqual([['name', '%AC\\\\DC%']])
-  })
-
-  it('excludes the source entity when an id is given', async () => {
-    const { calls } = mockFrom({ data: [], error: null })
-
-    await searchMergeTargets('artists', 'radiohead', 'a-1')
-
-    expect(calls.neq).toEqual([['id', 'a-1']])
-  })
-
-  it('omits the exclusion filter when no source id is given', async () => {
-    const { calls } = mockFrom({ data: [], error: null })
-
-    await searchMergeTargets('artists', 'radiohead')
-
-    expect(calls.neq).toBeUndefined()
-  })
-
-  it('maps an artist row to its genre as the disambiguating detail', async () => {
-    mockFrom({ data: [{ id: 'a-1', name: 'Radiohead', genre: 'rock' }], error: null })
-
-    await expect(searchMergeTargets('artists', 'radio')).resolves.toEqual([
+    await expect(searchMergeTargets('artists', 'radio', 'a-2')).resolves.toEqual([
       { id: 'a-1', name: 'Radiohead', detail: 'rock' },
     ])
-  })
-
-  it('joins city and address for a venue, skipping the missing half', async () => {
-    mockFrom({ data: [{ id: 'v-1', name: 'Niceto', city: 'CABA', address: null }], error: null })
-
-    await expect(searchMergeTargets('venues', 'niceto')).resolves.toEqual([
-      { id: 'v-1', name: 'Niceto', detail: 'CABA' },
-    ])
-  })
-
-  it('leaves the detail null when a venue has neither city nor address', async () => {
-    mockFrom({ data: [{ id: 'v-1', name: 'Niceto', city: null, address: null }], error: null })
-
-    await expect(searchMergeTargets('venues', 'niceto')).resolves.toEqual([
-      { id: 'v-1', name: 'Niceto', detail: null },
-    ])
-  })
-
-  it('uses the date as the detail for an event', async () => {
-    mockFrom({ data: [{ id: 'e-1', name: 'Show', date: '2026-09-01' }], error: null })
-
-    await expect(searchMergeTargets('events', 'show')).resolves.toEqual([
-      { id: 'e-1', name: 'Show', detail: '2026-09-01' },
-    ])
-  })
-
-  it('propagates a query error instead of returning a silently empty list', async () => {
-    mockFrom({ data: null, error: new Error('boom') })
-
-    await expect(searchMergeTargets('artists', 'radiohead')).rejects.toThrow('boom')
+    expect(searchMergeTargetsData).toHaveBeenCalledWith('artists', 'radio', 'a-2')
   })
 })
 
