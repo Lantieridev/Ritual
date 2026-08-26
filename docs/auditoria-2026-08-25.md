@@ -34,8 +34,28 @@ Arreglado y verificado contra un `supabase db reset` limpio, con `npm test`
 - GRANTs de tabla, que ninguna migración otorgaba
   (`20260826000000_table_grants.sql`).
 
-Sigue pendiente todo lo listado en P5 (carga sobre la base) y P6 (estructura),
-más los ítems de UI pausados a propósito.
+P5 (carga sobre la base) cerrado:
+
+- N+1 en `Artist.events` y `Venue.events`, con DataLoader. Medido: una query
+  GraphQL sobre 3 artistas ejecuta 1 sentencia.
+- Cuatro índices faltantes (rate limit, colas de moderación, `attendance` por
+  evento, `expires_at` del cache), verificados con EXPLAIN.
+- `getCurrentUserId` memoizado por request con `cache()` de React.
+- Sitemap con lectura dedicada de `id, date`: 1 sentencia sin joins.
+- `getPersonalStats` invertida: parte de `attendance` del usuario en vez de
+  barrer la tabla `events` entera.
+- Home y `/wrapped` dejan de leer el catálogo completo. Un render anónimo del
+  home pasa a ejecutar cero queries contra el catálogo.
+- Las ~46 policies con `auth.uid()` sin envolver quedan en 17, todas con
+  `(select auth.uid())`.
+
+Encontrado al hacer P5, no estaba en el informe original: `event_photos` tenía
+un `with check (true)` conviviendo con la policy de dueño. Como las permisivas
+se combinan con OR, cualquier autenticado podía insertar una foto atribuida a
+otro usuario. Corregido y verificado con dos cuentas reales (403 al intentar
+suplantar, 201 al subir la propia).
+
+Sigue pendiente P6 (estructura) y los ítems de UI pausados a propósito.
 
 ---
 
