@@ -50,13 +50,23 @@ export interface EventWithAttendance extends EventWithRelations {
 // cualquier visitante, logueado o no, paga el costo de traer todo.
 export const MAX_EVENTS = 1000
 
-export async function getEvents(): Promise<EventWithRelations[]> {
+export async function getEvents(options?: { limit?: number; offset?: number }): Promise<EventWithRelations[]> {
+  const limit = options?.limit ?? MAX_EVENTS
+  const offset = options?.offset ?? 0
+
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('events')
     .select(EVENTS_SELECT)
     .order('date', { ascending: false })
-    .limit(MAX_EVENTS)
+
+  if (options?.limit !== undefined || options?.offset !== undefined) {
+    query = query.range(offset, offset + limit - 1)
+  } else {
+    query = query.limit(limit)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Error cargando eventos:', error)
@@ -69,13 +79,23 @@ export async function getEvents(): Promise<EventWithRelations[]> {
  * Carga todos los eventos con su attendance del usuario actual.
  * Permite filtrar y mostrar badges de estado en el home.
  */
-export async function getEventsWithAttendance(): Promise<EventWithAttendance[]> {
+export async function getEventsWithAttendance(options?: { limit?: number; offset?: number }): Promise<EventWithAttendance[]> {
+  const limit = options?.limit ?? MAX_EVENTS
+  const offset = options?.offset ?? 0
+
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('events')
     .select(EVENTS_WITH_ATTENDANCE_SELECT)
     .order('date', { ascending: false })
-    .limit(MAX_EVENTS)
+
+  if (options?.limit !== undefined || options?.offset !== undefined) {
+    query = query.range(offset, offset + limit - 1)
+  } else {
+    query = query.limit(limit)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Error cargando eventos con attendance:', error)

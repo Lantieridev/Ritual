@@ -49,6 +49,7 @@ VenueRef.implement({
         country: t.exposeString('country', { nullable: true }),
         lat: t.exposeFloat('lat', { nullable: true }),
         lng: t.exposeFloat('lng', { nullable: true }),
+        status: t.exposeString('status', { nullable: true }),
         // `getVenues()` no trae la relación y `getVenueById()` sí, así que el
         // campo la carga bajo demanda solo cuando no vino ya resuelta — para
         // que pedir `events` desde la query de listado devuelva el historial

@@ -1,3 +1,4 @@
+import * as React from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getEventsWithAttendance } from '@/src/domains/events/data'
@@ -112,45 +113,11 @@ async function getNearbyShows(
   return withImages
 }
 
-export default async function HomePage() {
-  const [allEvents, { data }] = await Promise.all([
-    getEventsWithAttendance(),
-    getClient().query<{
-      wishlistArtistIds: string[]
-      artists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
-      festivals: HomeFestival[]
-    }>(HomePageQuery, {}).toPromise(),
-  ])
-  const festivals = (data?.festivals ?? []).map(toHeroFestival)
-  const now = new Date()
-
-  const { nextShow, byYear, years } = buildHomeFeed(allEvents, 'went', now)
-  const heroState = buildHomeHeroState(nextShow, festivals, now)
-
-  const heroEvent = heroState.kind === 'show-today' ? heroState.event : heroState.kind === 'normal' ? heroState.nextShow : undefined
-  const heroHeadliner = heroEvent?.lineups?.[0]?.artists.name ?? heroEvent?.name ?? null
-  const heroImage =
-    heroHeadliner && isSpotifyConfigured()
-      ? await searchSpotifyArtist(heroHeadliner).then(({ artist }) => (artist ? getBestSpotifyImage(artist.images) : null))
-      : null
-
-  const [nearbyShows, upcomingFestivals] = await Promise.all([
-    getNearbyShows(data?.wishlistArtistIds ?? [], data?.artists ?? []),
-    Promise.resolve(
-      festivals
-        .filter((f) => !isPastEvent(f.end_date ?? f.start_date, now))
-        .filter((f) => !(heroState.kind === 'festival' && f.id === heroState.festival.id))
-        .slice(0, 4)
-    ),
-  ])
-
-  const hasArchive = byYear && years.length > 0
+async function NearbyShowsWrapper({ wishlistArtistIds, catalog }: { wishlistArtistIds: string[], catalog: Array<Pick<GraphQLArtist, 'id' | 'name'>> }) {
+  const nearbyShows = await getNearbyShows(wishlistArtistIds, catalog)
+  if (nearbyShows.length === 0) return null
 
   return (
-    <>
-      <HomeHero state={heroState} backgroundImage={heroImage} />
-
-      {nearbyShows.length > 0 && (
         <section className="min-h-screen flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-bg">
           <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
             <div>
@@ -192,7 +159,47 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
-      )}
+  )
+}
+
+export default async function HomePage() {
+  const [allEvents, { data }] = await Promise.all([
+    getEventsWithAttendance(),
+    getClient().query<{
+      wishlistArtistIds: string[]
+      artists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
+      festivals: HomeFestival[]
+    }>(HomePageQuery, {}).toPromise(),
+  ])
+  const festivals = (data?.festivals ?? []).map(toHeroFestival)
+  const now = new Date()
+
+  const { nextShow, byYear, years } = buildHomeFeed(allEvents, 'went', now)
+  const heroState = buildHomeHeroState(nextShow, festivals, now)
+
+  const heroEvent = heroState.kind === 'show-today' ? heroState.event : heroState.kind === 'normal' ? heroState.nextShow : undefined
+  const heroHeadliner = heroEvent?.lineups?.[0]?.artists.name ?? heroEvent?.name ?? null
+  const heroImagePromise =
+    heroHeadliner && isSpotifyConfigured()
+      ? searchSpotifyArtist(heroHeadliner).then(({ artist }) => (artist ? getBestSpotifyImage(artist.images) : null))
+      : Promise.resolve(null)
+
+  const upcomingFestivals = festivals
+    .filter((f) => !isPastEvent(f.end_date ?? f.start_date, now))
+    .filter((f) => !(heroState.kind === 'festival' && f.id === heroState.festival.id))
+    .slice(0, 4)
+
+  const hasArchive = byYear && years.length > 0
+
+  return (
+    <>
+      <React.Suspense fallback={<HomeHero state={heroState} backgroundImage={null} />}>
+        <HomeHero state={heroState} backgroundImage={heroImagePromise} />
+      </React.Suspense>
+
+      <React.Suspense fallback={<div className="min-h-screen bg-ritual-bg animate-pulse flex items-center justify-center"><p className="text-ritual-gray-text font-label uppercase">Buscando shows cerca tuyo...</p></div>}>
+        <NearbyShowsWrapper wishlistArtistIds={data?.wishlistArtistIds ?? []} catalog={data?.artists ?? []} />
+      </React.Suspense>
 
       {upcomingFestivals.length > 0 && (
         <section className="min-h-screen flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-panel">

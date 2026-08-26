@@ -63,6 +63,12 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
     : 'Sede por confirmar'
   const description = `${title} — ${formatDate(event.date)} · ${venueLabel}`
 
+  let heroImage: string | undefined = undefined
+  if (mainArtist && isSpotifyConfigured()) {
+    const { artist: spotifyArtist } = await searchSpotifyArtist(mainArtist)
+    heroImage = spotifyArtist ? (getBestSpotifyImage(spotifyArtist.images) ?? undefined) : undefined
+  }
+
   return {
     title: `${title} | RITUAL`,
     description,
@@ -70,6 +76,7 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
       title: `${title} | RITUAL`,
       description,
       type: 'website',
+      ...(heroImage ? { images: [{ url: heroImage }] } : {}),
     },
   }
 }

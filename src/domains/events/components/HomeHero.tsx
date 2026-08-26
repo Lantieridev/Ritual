@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, use } from 'react'
 import Link from 'next/link'
 import { TicketEmbed } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
@@ -9,7 +9,7 @@ import type { HomeHeroState } from '@/src/domains/events/home-view'
 
 interface HomeHeroProps {
   state: HomeHeroState
-  backgroundImage: string | null
+  backgroundImage: Promise<string | null> | string | null
 }
 
 /**
@@ -19,6 +19,7 @@ interface HomeHeroProps {
  * tiene "una" entrada, tiene un evento por día.
  */
 export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
+  const resolvedBg = backgroundImage instanceof Promise ? use(backgroundImage) : backgroundImage
   const [open, setOpen] = useState(false)
 
   if (state.kind === 'festival') {
@@ -75,10 +76,10 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-ritual-panel">
-      {backgroundImage && (
+      {resolvedBg && (
         <div
           className="absolute inset-0 ritual-photo"
-          style={{ backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+          style={{ backgroundImage: `url(${resolvedBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg via-ritual-bg/40 to-transparent" />

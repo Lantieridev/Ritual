@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@pothos/core": "^4.13.1",
+    "@pothos/plugin-relay": "^4.7.1",
     "@sentry/nextjs": "^10.70.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",

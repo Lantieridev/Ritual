@@ -59,6 +59,7 @@ ArtistRef.implement({
         genre: t.exposeString('genre', { nullable: true }),
         imageUrl: t.exposeString('image_url', { nullable: true }),
         spotifyId: t.exposeString('spotify_id', { nullable: true }),
+        status: t.exposeString('status', { nullable: true }),
         // `getArtists()` no trae la relación y `getArtistById()` sí, así que
         // el campo la carga bajo demanda solo cuando no vino ya resuelta —
         // para que pedir `events` desde la query de listado devuelva el

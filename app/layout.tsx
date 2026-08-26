@@ -30,6 +30,7 @@ const fontVariables = [
 ].join(" ");
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "RITUAL — Tu agenda de recitales",
   description: "Plataforma de gestión de recitales: itinerarios, giras y memoria en vivo.",
 };

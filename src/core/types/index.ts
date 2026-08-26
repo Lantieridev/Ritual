@@ -17,6 +17,7 @@ export interface Artist {
   genre?: string | null
   image_url?: string | null
   spotify_id?: string | null
+  status?: string
 }
 
 /** Payload mínimo para crear un artista (formulario). */
@@ -34,6 +35,7 @@ export interface Venue {
   country?: string | null
   lat?: number | null
   lng?: number | null
+  status?: string
 }
 
 /** Payload mínimo para crear una sede (formulario). */
