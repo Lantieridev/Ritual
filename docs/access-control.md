@@ -33,7 +33,8 @@ Existe una columna `role` en `profiles` (`usuario` / `moderador` / `admin`, defa
 - **Cola de moderación** (`/admin/moderacion/*`): las queries `unverified*`, las mutations `approve*` y `merge*`, y la query `mergeTargets` exigen `admin` o `moderador` en el resolver. Del lado de la base, `approve_entity` y los tres `merge_*` son `SECURITY DEFINER` y revalidan el rol adentro, así que pegarle directo a PostgREST no lo saltea.
 - **Cambio de `status`** (verificado / sin verificar): un trigger `BEFORE UPDATE` en `artists`, `venues` y `events` rechaza la transición si quien la hace no es admin ni moderador. Va por trigger y no por policy porque en una policy de UPDATE no se pueden correlacionar la fila vieja y la nueva.
 - **Borrado del catálogo**: eliminar un evento o un festival está restringido a admin y moderador, en RLS y en el service. La **edición** sigue abierta a cualquier autenticado a propósito: el catálogo es colaborativo y el borrado es lo único sin vuelta atrás.
+- **Alta y borrado de festivales**: a diferencia de eventos/artistas/sedes, los festivales quedan fuera del scope comunitario (`01-spec.md` §4, fase 2) por su complejidad multi-día — no entran a la cola de moderación como `unverified`, se reservan a alta top-down. Crear (`insertFestival`), vincular un evento a un día (`linkEventToFestival`) y borrar (`removeFestival`) exigen `admin` o `moderador`, en RLS y en el service.
 
-**Pendiente:** la creación de festivales sigue abierta a cualquier autenticado, aunque el spec de la fase 2 (§4) los reserva a Admin. El log de auditoría tampoco existe todavía.
+**Pendiente:** el log de auditoría todavía no existe.
 
 El modelo es de **post-moderación**: lo que carga un usuario se publica al instante con `status = 'unverified'` y queda visible en la app pública. La cola sirve para revisarlo después, no para retenerlo. Falta una marca visual de "sin verificar" en las vistas públicas.

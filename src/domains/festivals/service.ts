@@ -112,7 +112,15 @@ export async function insertFestival(
     return { id: newFestival.id }
 }
 
-/** Borra el festival. Nunca redirige — misma razón que insertFestival. */
+/**
+ * Borra el festival. Nunca redirige — misma razón que insertFestival.
+ *
+ * El permiso se chequea antes del delete, no sólo vía RLS: sin `.select()`
+ * de vuelta, un delete bloqueado por RLS no da `error` (devuelve cero filas
+ * afectadas en silencio), así que sin este chequeo un no-moderador recibía
+ * `{}` de éxito aunque el festival siguiera ahí. Mismo patrón que
+ * `removeEvent`.
+ */
 export async function removeFestival(id: string): Promise<ActionResult> {
     const userId = await getCurrentUserId()
     if (!userId) return { error: 'Usuario no autenticado' }
@@ -121,6 +129,16 @@ export async function removeFestival(id: string): Promise<ActionResult> {
     if (idErr) return { error: idErr }
 
     const supabase = await createClient()
+
+    const { data: canDelete, error: roleError } = await supabase.rpc('is_moderator')
+    if (roleError) {
+        console.error('No se pudo verificar el rol para eliminar el festival:', roleError)
+        return { error: sanitizeError(roleError) }
+    }
+    if (!canDelete) {
+        return { error: 'Solo un moderador puede eliminar un festival.' }
+    }
+
     const { error } = await supabase.from('festivals').delete().eq('id', id)
     if (error) {
         console.error('Error eliminando festival:', error)

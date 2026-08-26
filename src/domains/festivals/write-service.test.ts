@@ -135,11 +135,22 @@ describe('removeFestival', () => {
 
   it('deletes the festival row', async () => {
     const builder = makeQueryBuilder({ data: null, error: null })
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: moderatorRpc }))
 
     await removeFestival(VALID_FESTIVAL_ID)
 
     expect(builder.delete).toHaveBeenCalled()
+  })
+
+  it('rejects a caller who is not a moderator, without deleting', async () => {
+    const builder = makeQueryBuilder({ data: null, error: null })
+    const rejectingRpc = vi.fn(() => Promise.resolve({ data: false, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: rejectingRpc }))
+
+    const result = await removeFestival(VALID_FESTIVAL_ID)
+
+    expect(result.error).toBeTruthy()
+    expect(builder.delete).not.toHaveBeenCalled()
   })
 })
 
@@ -151,7 +162,7 @@ describe('insertFestival / removeFestival payloads', () => {
 
   it('removeFestival resolves to an empty payload on success', async () => {
     const builder = makeQueryBuilder({ data: null, error: null })
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: moderatorRpc }))
 
     const result = await removeFestival(VALID_FESTIVAL_ID)
 
