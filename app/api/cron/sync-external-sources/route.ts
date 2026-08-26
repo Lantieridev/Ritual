@@ -10,6 +10,16 @@ function slugify(text: string) {
 export const maxDuration = 300 // 5 minutes max duration for vercel cron
 
 /**
+ * El schedule vive en `vercel.json` (`0 7 * * *`, diario). Se documenta acá
+ * porque el esquema de Vercel rechaza claves extra dentro de `crons` y JSON no
+ * admite comentarios.
+ *
+ * Diario y no más seguido por dos razones: el plan Hobby dispara los crons una
+ * vez por día, y el TTL del cache es de 7 días, así que una corrida diaria lo
+ * mantiene fresco con margen. En Pro se puede pasar a cada seis horas.
+ */
+
+/**
  * Comparación en tiempo constante para no filtrar el secreto carácter por
  * carácter vía el tiempo de respuesta. `timingSafeEqual` exige buffers del
  * mismo largo, así que la diferencia de longitud se chequea aparte.
