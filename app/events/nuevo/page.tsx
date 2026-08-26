@@ -28,7 +28,7 @@ async function fetchPickers() {
   const { data } = await getClient().query<{
     venues: GraphQLVenue[]
     artists: GraphQLArtist[]
-  }>(EventFormPickersQuery, {})
+  }>(EventFormPickersQuery, {}).toPromise()
   const venues: Venue[] = data?.venues ?? []
   const artists: Artist[] = (data?.artists ?? []).map((a) => ({
     id: a.id,

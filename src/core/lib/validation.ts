@@ -154,3 +154,18 @@ export function sanitizeAuthError(error: { message?: string } | null | undefined
     if (process.env.NODE_ENV === 'development') return error.message
     return 'Ocurrió un error inesperado. Intentá de nuevo.'
 }
+
+/**
+ * Neutraliza los comodines de LIKE en un término de búsqueda del usuario.
+ *
+ * Sin esto, un `%` ensancha el patrón a toda la tabla y un `_` matchea
+ * cualquier carácter: en la búsqueda global devuelve resultados que nadie
+ * pidió, y en el buscador de fusión de la cola de moderación eso pasa justo
+ * antes de elegir el destino de una operación destructiva.
+ *
+ * La barra invertida va primero para no re-escapar las que agregan las dos
+ * líneas siguientes.
+ */
+export function escapeLikeWildcards(term: string): string {
+    return term.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}

@@ -18,13 +18,40 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const chain = () => builder
   builder.select = vi.fn(chain)
   builder.order = vi.fn(chain)
+  builder.eq = vi.fn(chain)
   builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
     Promise.resolve(result).then(onFulfilled, onRejected)
   return builder
 }
 
+type FixtureEvent = {
+  id: string
+  name: string | null
+  date: string
+  venues: unknown
+  lineups: unknown
+  attendance: Array<{ status: string; user_id: string; rating: number | null }>
+}
+
+/**
+ * Los casos siguen describiendo eventos con su attendance embebida, que es
+ * como se leen mejor. La query real ahora es al revés — parte de `attendance`
+ * filtrada por usuario y embebe el evento — así que el helper traduce.
+ *
+ * Los eventos con `attendance: []` no se traducen a ninguna fila, porque la
+ * query nueva directamente no los trae: el filtro que antes ocurría en JS
+ * ahora lo hace la base.
+ */
 function mockEvents(events: unknown[]) {
-  const fromMock = vi.fn(() => makeQueryBuilder({ data: events, error: null }))
+  const rows = (events as FixtureEvent[]).flatMap((ev) =>
+    (ev.attendance ?? []).map((att) => ({
+      status: att.status,
+      user_id: att.user_id,
+      rating: att.rating,
+      events: { id: ev.id, name: ev.name, date: ev.date, venues: ev.venues, lineups: ev.lineups },
+    }))
+  )
+  const fromMock = vi.fn(() => makeQueryBuilder({ data: rows, error: null }))
   mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
   return fromMock
 }

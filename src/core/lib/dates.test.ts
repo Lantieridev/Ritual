@@ -9,6 +9,7 @@ import {
   daysUntil,
   combineDateAndTime,
   eventTimeOfDay,
+  parseExternalDateTime,
 } from './dates'
 
 // Regression tests for a timezone bug: a date-only string like "2026-07-21"
@@ -188,5 +189,54 @@ describe('eventTimeOfDay', () => {
   it('round-trips with combineDateAndTime', () => {
     const iso = combineDateAndTime('2026-07-21', '21:15')
     expect(eventTimeOfDay(iso)).toBe('21:15')
+  })
+})
+
+// Las fechas que llegan de los adaptadores de fuentes externas: cada sitio
+// las emite en su propio formato, y antes de parsearlas terminaban como el
+// texto "Invalid Date" en la cartelera y rechazadas por Postgres al importar.
+describe('parseExternalDateTime', () => {
+  const reference = new Date(2026, 7, 25) // 25 de agosto de 2026
+
+  it('acepta el ISO que mandan enigma y quehacemos', () => {
+    expect(parseExternalDateTime('2026-08-26T20:00:00')?.getTime())
+      .toBe(new Date('2026-08-26T20:00:00').getTime())
+  })
+
+  it('acepta el ISO con zona explícita', () => {
+    expect(parseExternalDateTime('2026-09-26T03:00:00.000Z')?.toISOString())
+      .toBe('2026-09-26T03:00:00.000Z')
+  })
+
+  it('lee la prosa de entradaweb con año', () => {
+    const d = parseExternalDateTime('Domingo 30 de Agosto, 2026', reference)
+    expect([d?.getFullYear(), d?.getMonth(), d?.getDate()]).toEqual([2026, 7, 30])
+  })
+
+  it('toma la hora cuando la prosa la incluye', () => {
+    const d = parseExternalDateTime('Viernes 11 de Septiembre, 2026 - 21:00hs.', reference)
+    expect([d?.getMonth(), d?.getDate(), d?.getHours(), d?.getMinutes()]).toEqual([8, 11, 21, 0])
+  })
+
+  it('lee el "13 SEP" de livepass, sin año', () => {
+    const d = parseExternalDateTime('13 SEP', reference)
+    expect([d?.getFullYear(), d?.getMonth(), d?.getDate()]).toEqual([2026, 8, 13])
+  })
+
+  it('asume el año siguiente cuando el día y mes ya pasaron', () => {
+    // En diciembre, un "13 SEP" es del año que viene, no de tres meses atrás.
+    const d = parseExternalDateTime('13 SEP', new Date(2026, 11, 1))
+    expect(d?.getFullYear()).toBe(2027)
+  })
+
+  it('tolera el mes con tilde y en mayúsculas', () => {
+    expect(parseExternalDateTime('5 de Diciembre, 2026', reference)?.getMonth()).toBe(11)
+  })
+
+  it('devuelve null cuando el texto no es una fecha, en vez de un Date inválido', () => {
+    expect(parseExternalDateTime('SOBREDOSIS DE SODA')).toBeNull()
+    expect(parseExternalDateTime('')).toBeNull()
+    expect(parseExternalDateTime(null)).toBeNull()
+    expect(parseExternalDateTime(undefined)).toBeNull()
   })
 })

@@ -41,7 +41,7 @@ async function fetchFestival(id: string): Promise<GraphQLFestival | null> {
     const { data } = await getClient().query<{ festival: GraphQLFestival | null }>(
         FestivalDetailQuery,
         { id }
-    )
+    ).toPromise()
     return data?.festival ?? null
 }
 

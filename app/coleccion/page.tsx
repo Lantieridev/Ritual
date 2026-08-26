@@ -84,7 +84,7 @@ async function ArtistsShelvesView() {
         getClient().query<{ artists: GraphQLArtist[]; wishlistArtistIds: string[] }>(
             ArtistsTabQuery,
             {}
-        ),
+        ).toPromise(),
         getEventsWithAttendance().then((events) => events.filter((e) => e.attendance?.[0]?.status === 'went')),
     ])
     const artists = (data?.artists ?? []).map(toDomainArtist)
@@ -199,7 +199,7 @@ const VenuesTabQuery = gql`
 `
 
 async function VenuesTab() {
-    const { data } = await getClient().query<{ venues: GraphQLVenue[] }>(VenuesTabQuery, {})
+    const { data } = await getClient().query<{ venues: GraphQLVenue[] }>(VenuesTabQuery, {}).toPromise()
     const venues = data?.venues ?? []
 
     if (venues.length === 0) {
@@ -266,7 +266,7 @@ async function FestivalsTab() {
     const { data } = await getClient().query<{ festivals: CollectionFestival[] }>(
         FestivalsTabQuery,
         {}
-    )
+    ).toPromise()
     const festivals = data?.festivals ?? []
     const upcoming = festivals.filter((f) => !isPastEvent(f.startDate))
     const past = festivals.filter((f) => isPastEvent(f.startDate))

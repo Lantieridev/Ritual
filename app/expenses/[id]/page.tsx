@@ -28,7 +28,7 @@ interface ExpenseDetailPageProps {
 
 export async function generateMetadata({ params }: ExpenseDetailPageProps): Promise<Metadata> {
   const { id } = await params
-  const { data } = await getClient().query<{ expense: GraphQLExpense }>(ExpenseDetailQuery, { id })
+  const { data } = await getClient().query<{ expense: GraphQLExpense }>(ExpenseDetailQuery, { id }).toPromise()
   const expense = data?.expense
   if (!expense) return { title: 'Gasto no encontrado | RITUAL' }
   return {
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: ExpenseDetailPageProps): Prom
 
 export default async function ExpenseDetailPage({ params }: ExpenseDetailPageProps) {
   const { id } = await params
-  const { data } = await getClient().query<{ expense: GraphQLExpense }>(ExpenseDetailQuery, { id })
+  const { data } = await getClient().query<{ expense: GraphQLExpense }>(ExpenseDetailQuery, { id }).toPromise()
   const expense = data?.expense
 
   if (!expense) notFound()

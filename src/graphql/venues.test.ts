@@ -4,6 +4,7 @@ vi.mock('@/src/domains/venues/data', () => ({
   getVenues: vi.fn(),
   getVenueById: vi.fn(),
   getVenueEvents: vi.fn(),
+  getVenueEventsBatch: vi.fn(),
 }))
 
 vi.mock('@/src/domains/venues/service', () => ({
@@ -21,7 +22,7 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue(null),
 }))
 
-import { getVenueEvents } from '@/src/domains/venues/data'
+import { getVenueEvents, getVenueEventsBatch } from '@/src/domains/venues/data'
 import {
   listVenues,
   findVenueById,
@@ -102,7 +103,7 @@ describe('venues GraphQL schema', () => {
         attendance: [{ status: 'went' }],
       },
     ])
-    expect(getVenueEvents).not.toHaveBeenCalled()
+    expect(getVenueEventsBatch).not.toHaveBeenCalled()
   })
 
   // La query de listado no trae la relacion, asi que el campo la carga bajo
@@ -111,15 +112,15 @@ describe('venues GraphQL schema', () => {
     vi.mocked(listVenues).mockResolvedValue([
       { id: 'v1', name: 'Niceto', city: null, country: null, address: null, lat: null, lng: null },
     ])
-    vi.mocked(getVenueEvents).mockResolvedValue([
+    vi.mocked(getVenueEventsBatch).mockResolvedValue([[
       { id: 'e1', name: 'Show', date: '2026-01-01', lineups: [], attendance: [] },
-    ])
+    ]])
 
     const body = await query('{ venues { id events { id } } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ venues: [{ id: 'v1', events: [{ id: 'e1' }] }] })
-    expect(getVenueEvents).toHaveBeenCalledWith('v1')
+    expect(getVenueEventsBatch).toHaveBeenCalledWith(['v1'])
   })
 })
 

@@ -1,8 +1,8 @@
 import { builder } from './builder'
+import { resolveOffsetConnection } from '@pothos/plugin-relay'
 import { getEvents, getEventsWithAttendance, getEventById } from '@/src/domains/events/data'
 import type { EventWithAttendance } from '@/src/domains/events/data'
-import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
-import { getEventPhotos, deleteEventPhoto } from '@/src/domains/events/photo-actions'
+import { deleteEventPhoto } from '@/src/domains/events/photo-actions'
 import { insertEvent, modifyEvent, removeEvent, addExternalEvent } from '@/src/domains/events/service'
 import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import type { EventWithRelations, LineupRow } from '@/src/core/types'
@@ -111,12 +111,12 @@ EventRef.implement({
         myAttendance: t.field({
             type: EventAttendanceRef,
             nullable: true,
-            resolve: (e) => getAttendanceForEvent(e.id),
+            resolve: (e, args, context) => context.attendanceLoader.load(e.id),
         }),
         photos: t.field({
             type: [EventPhotoRef],
-            resolve: (e) =>
-                getEventPhotos(e.id).then((photos) =>
+            resolve: (e, args, context) =>
+                context.photosLoader.load(e.id).then((photos) =>
                     photos.map((p) => ({ id: p.id, caption: p.caption, createdAt: p.created_at, url: p.url }))
                 ),
         }),
@@ -124,18 +124,24 @@ EventRef.implement({
 })
 
 builder.queryField('events', (t) =>
-    t.field({
-        type: [EventRef],
+    t.connection({
+        type: EventRef,
         description: 'Catálogo compartido de eventos, sin attendance.',
-        resolve: () => getEvents(),
+        resolve: (_root, args) =>
+            resolveOffsetConnection({ args }, ({ limit, offset }) =>
+                getEvents({ limit, offset })
+            ),
     })
 )
 
 builder.queryField('eventsWithAttendance', (t) =>
-    t.field({
-        type: [EventRef],
+    t.connection({
+        type: EventRef,
         description: 'Eventos con la attendance del usuario actual ya incluida (batch, sin N+1).',
-        resolve: () => getEventsWithAttendance(),
+        resolve: (_root, args) =>
+            resolveOffsetConnection({ args }, ({ limit, offset }) =>
+                getEventsWithAttendance({ limit, offset })
+            ),
     })
 )
 

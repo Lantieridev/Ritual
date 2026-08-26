@@ -35,10 +35,11 @@ export function StarRating({
 
     if (!onChange) {
         return (
-            <div className={`flex gap-0.5 ${className}`}>
+            <div className={`flex gap-0.5 ${className}`} aria-label={`${value} de 5 estrellas`} role="img">
                 {[1, 2, 3, 4, 5].map((star) => (
                     <span
                         key={star}
+                        aria-hidden="true"
                         className={`${SIZE_CLASS[size]} ${star <= value ? 'text-ritual-red' : 'text-ritual-border-2'}`}
                     >
                         ★
@@ -62,7 +63,7 @@ export function StarRating({
                     className={`${SIZE_CLASS[size]} transition-transform hover:scale-110 focus:outline-none`}
                     aria-label={`${star} estrella${star > 1 ? 's' : ''}`}
                 >
-                    <span className={displayValue >= star ? 'text-ritual-red' : 'text-ritual-border-2'}>★</span>
+                    <span aria-hidden="true" className={displayValue >= star ? 'text-ritual-red' : 'text-ritual-border-2'}>★</span>
                 </button>
             ))}
         </div>

@@ -28,6 +28,14 @@ const VALID_VENUE_ID = '11111111-1111-1111-1111-111111111111'
 const VALID_EVENT_ID = '22222222-2222-2222-2222-222222222222'
 const VALID_ARTIST_ID = '33333333-3333-3333-3333-333333333333'
 
+/**
+ * `removeEvent` consulta el RPC `is_moderator` antes de borrar nada, porque
+ * `lineups` no cascadea y un borrado frenado por RLS a mitad de camino dejaba
+ * el recital sin lineup. Por defecto los tests corren como moderador; los que
+ * prueban el rechazo lo sobrescriben.
+ */
+const moderatorRpc = vi.fn(() => Promise.resolve({ data: true, error: null }))
+
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
   const chain = () => builder
@@ -71,7 +79,7 @@ describe('insertEvent', () => {
     const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
     const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     const result = await insertEvent({
       name: 'Show',
@@ -88,7 +96,7 @@ describe('insertEvent', () => {
     const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
     const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     const result = await insertEvent({
       name: 'Show',
@@ -110,7 +118,7 @@ describe('insertEvent', () => {
     const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: { message: 'boom' } })
     const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     const result = await insertEvent({
       name: 'Show',
@@ -176,7 +184,7 @@ describe('addExternalEvent', () => {
       const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
       const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
       const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-      mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+      mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
       const result = await addExternalEvent(baseEvent)
 
@@ -193,9 +201,13 @@ describe('addExternalEvent', () => {
         'artists',
         'Bandalos Chinos'
       )
+      // La fecha se normaliza a ISO canónico antes de insertar: el crudo de
+      // cada fuente externa pasa por parseExternalDateTime, así que llega con
+      // los milisegundos explícitos. Mismo instante que el '...T20:00:00Z' de
+      // entrada.
       expect(eventsBuilder.insert).toHaveBeenCalledWith({
         name: 'Show en Niceto',
-        date: '2024-05-01T20:00:00Z',
+        date: '2024-05-01T20:00:00.000Z',
         venue_id: VALID_VENUE_ID,
       })
       expect(lineupsBuilder.insert).toHaveBeenCalledWith({
@@ -217,7 +229,7 @@ describe('addExternalEvent', () => {
     const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: { message: 'boom' } })
     const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     const result = await addExternalEvent(baseEvent)
 
@@ -242,7 +254,7 @@ describe('addExternalEvent', () => {
       if (table === 'lineups') return lineupsBuilder
       return { upsert: attendanceUpsert }
     })
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     const result = await addExternalEvent(baseEvent, undefined, '1. Cumbia Rara\n2. Ela')
 
@@ -266,7 +278,7 @@ describe('addExternalEvent', () => {
       if (table === 'lineups') return lineupsBuilder
       return { upsert: attendanceUpsert }
     })
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     await addExternalEvent(baseEvent)
 
@@ -289,7 +301,7 @@ describe('addExternalEvent', () => {
     const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
     const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     await addExternalEvent({
       title: '',
@@ -331,7 +343,7 @@ describe('modifyEvent', () => {
     const eventsBuilder = makeQueryBuilder({ data: null, error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
     const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     await modifyEvent(VALID_EVENT_ID, { artist_ids: [VALID_ARTIST_ID] })
 
@@ -345,7 +357,7 @@ describe('modifyEvent', () => {
     const eventsBuilder = makeQueryBuilder({ data: null, error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
     const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     const result = await modifyEvent(VALID_EVENT_ID, { artist_ids: ['not-a-uuid'] })
 
@@ -376,7 +388,7 @@ describe('removeEvent', () => {
     const eventsBuilder = makeQueryBuilder({ data: null, error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
     const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     await removeEvent(VALID_EVENT_ID)
 
@@ -388,7 +400,7 @@ describe('removeEvent', () => {
     const eventsBuilder = makeQueryBuilder({ data: null, error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: { message: 'boom' } })
     const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     const result = await removeEvent(VALID_EVENT_ID)
 
@@ -473,15 +485,43 @@ describe('insertEvent / modifyEvent / removeEvent — sin redirect', () => {
   })
 
   it('removeEvent deletes lineups and the event', async () => {
-    const eventsBuilder = makeQueryBuilder({ data: null, error: null })
+    // El delete del evento pide la fila de vuelta con .select('id'), así que
+    // el mock tiene que devolverla: es lo que distingue un borrado real de uno
+    // que RLS frenó, que en PostgREST llega como 0 filas sin error.
+    const eventsBuilder = makeQueryBuilder({ data: [{ id: VALID_EVENT_ID }], error: null })
     const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
     const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
 
     const result = await removeEvent(VALID_EVENT_ID)
 
     expect(lineupsBuilder.delete).toHaveBeenCalled()
     expect(eventsBuilder.delete).toHaveBeenCalled()
     expect(result).toEqual({})
+  })
+
+  it('removeEvent no borra nada cuando el usuario no es moderador', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: null, error: null })
+    const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
+    const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
+    const notModerator = vi.fn(() => Promise.resolve({ data: false, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: notModerator }))
+
+    const result = await removeEvent(VALID_EVENT_ID)
+
+    expect(result.error).toBeTruthy()
+    expect(lineupsBuilder.delete).not.toHaveBeenCalled()
+    expect(eventsBuilder.delete).not.toHaveBeenCalled()
+  })
+
+  it('removeEvent reporta error cuando RLS frena el borrado y no afecta filas', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: [], error: null })
+    const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
+    const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
+
+    const result = await removeEvent(VALID_EVENT_ID)
+
+    expect(result.error).toBeTruthy()
   })
 })

@@ -31,7 +31,7 @@ async function fetchVenue(id: string): Promise<GraphQLVenueWithEvents | null> {
     const { data } = await getClient().query<{ venue: GraphQLVenueWithEvents | null }>(
         VenueDetailQuery,
         { id }
-    )
+    ).toPromise()
     return data?.venue ?? null
 }
 

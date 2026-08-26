@@ -69,7 +69,7 @@ async function fetchArtistDetail(id: string) {
     const { data } = await getClient().query<{
         artist: GraphQLArtistWithEvents | null
         wishlistArtistIds: string[]
-    }>(ArtistDetailQuery, { id })
+    }>(ArtistDetailQuery, { id }).toPromise()
     return {
         artist: data?.artist ? toDomainArtist(data.artist) : null,
         wishlistIds: data?.wishlistArtistIds ?? [],

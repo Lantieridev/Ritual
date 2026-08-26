@@ -9,10 +9,12 @@ vi.mock('@/src/domains/events/data', () => ({
 
 vi.mock('@/src/domains/events/attendance-data', () => ({
   getAttendanceForEvent: vi.fn(),
+  getAttendanceForEventsBatch: vi.fn(),
 }))
 
 vi.mock('@/src/domains/events/photo-actions', () => ({
   getEventPhotos: vi.fn(),
+  getEventPhotosBatch: vi.fn(),
   deleteEventPhoto: vi.fn(),
 }))
 
@@ -30,16 +32,18 @@ vi.mock('@/src/domains/events/attendance-actions', () => ({
 }))
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
-  createClient: vi.fn().mockResolvedValue({}),
+  createClient: vi.fn().mockResolvedValue({
+    rpc: vi.fn().mockResolvedValue({ data: 'usuario', error: null })
+  }),
 }))
 
 vi.mock('@/src/core/auth/session', () => ({
-  getCurrentUserId: vi.fn().mockResolvedValue(null),
+  getCurrentUserId: vi.fn().mockResolvedValue('u1'),
 }))
 
 import { getEvents, getEventsWithAttendance, getEventById } from '@/src/domains/events/data'
-import { getAttendanceForEvent } from '@/src/domains/events/attendance-data'
-import { getEventPhotos, deleteEventPhoto } from '@/src/domains/events/photo-actions'
+import { getAttendanceForEvent, getAttendanceForEventsBatch } from '@/src/domains/events/attendance-data'
+import { getEventPhotosBatch, deleteEventPhoto } from '@/src/domains/events/photo-actions'
 import { insertEvent, modifyEvent, removeEvent, addExternalEvent } from '@/src/domains/events/service'
 import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import { POST } from '@/app/api/graphql/route'
@@ -75,18 +79,22 @@ describe('events GraphQL schema', () => {
   it('resolves the plain events query with venue and lineup, no attendance call at all', async () => {
     vi.mocked(getEvents).mockResolvedValue([event])
 
-    const body = await query('{ events { id name venue { name city } lineups { artist { name } isHeadliner } } }')
+    const body = await query('{ events { edges { node { id name venue { name city } lineups { artist { name } isHeadliner } } } } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({
-      events: [
-        {
-          id: 'e1',
-          name: 'Show en Niceto',
-          venue: { name: 'Niceto', city: 'CABA' },
-          lineups: [{ artist: { name: 'Bandalos Chinos' }, isHeadliner: true }],
-        },
-      ],
+      events: {
+        edges: [
+          {
+            node: {
+              id: 'e1',
+              name: 'Show en Niceto',
+              venue: { name: 'Niceto', city: 'CABA' },
+              lineups: [{ artist: { name: 'Bandalos Chinos' }, isHeadliner: true }],
+            }
+          }
+        ]
+      },
     })
     expect(getAttendanceForEvent).not.toHaveBeenCalled()
   })
@@ -111,27 +119,33 @@ describe('events GraphQL schema', () => {
       },
     ])
 
-    const body = await query('{ eventsWithAttendance { id attendance { status rating } } }')
+    const body = await query('{ eventsWithAttendance { edges { node { id attendance { status rating } } } } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({
-      eventsWithAttendance: [{ id: 'e1', attendance: [{ status: 'went', rating: 5 }] }],
+      eventsWithAttendance: {
+        edges: [
+          {
+            node: { id: 'e1', attendance: [{ status: 'went', rating: 5 }] }
+          }
+        ]
+      },
     })
     expect(getAttendanceForEvent).not.toHaveBeenCalled()
   })
 
-  it('resolves myAttendance and photos on a single event via their own per-event query', async () => {
+  it('resolves myAttendance and photos on a single event via the DataLoader batched queries', async () => {
     vi.mocked(getEventById).mockResolvedValue(event)
-    vi.mocked(getAttendanceForEvent).mockResolvedValue({
+    vi.mocked(getAttendanceForEventsBatch).mockResolvedValue([{
       id: 'att1',
       status: 'went',
       rating: 5,
       review: 'Buenísimo',
       notes: null,
-    })
-    vi.mocked(getEventPhotos).mockResolvedValue([
+    }])
+    vi.mocked(getEventPhotosBatch).mockResolvedValue([[
       { id: 'ph1', event_id: 'e1', storage_path: 'x.jpg', caption: 'Foto 1', created_at: '2026-03-02', url: 'https://x/x.jpg' },
-    ])
+    ]])
 
     const body = await query(`{
       event(id: "e1") {
@@ -149,8 +163,8 @@ describe('events GraphQL schema', () => {
         photos: [{ id: 'ph1', caption: 'Foto 1', url: 'https://x/x.jpg' }],
       },
     })
-    expect(getAttendanceForEvent).toHaveBeenCalledWith('e1')
-    expect(getEventPhotos).toHaveBeenCalledWith('e1')
+    expect(getAttendanceForEventsBatch).toHaveBeenCalledWith(['e1'], 'u1')
+    expect(getEventPhotosBatch).toHaveBeenCalledWith(['e1'])
   })
 
   it('resolves event(id) as null when it does not exist', async () => {
@@ -164,7 +178,7 @@ describe('events GraphQL schema', () => {
 
   it('resolves myAttendance as null when the user has no attendance for that event', async () => {
     vi.mocked(getEventById).mockResolvedValue(event)
-    vi.mocked(getAttendanceForEvent).mockResolvedValue(null)
+    vi.mocked(getAttendanceForEventsBatch).mockResolvedValue([null])
 
     const body = await query('{ event(id: "e1") { myAttendance { status } } }')
 
@@ -177,10 +191,18 @@ describe('events GraphQL schema', () => {
       { id: 'e2', name: null, date: '2026-04-01', venue_id: null, venues: null, lineups: null },
     ])
 
-    const body = await query('{ events { id name venue { name } lineups { artist { name } } } }')
+    const body = await query('{ events { edges { node { id name venue { name } lineups { artist { name } } } } } }')
 
     expect(body.errors).toBeUndefined()
-    expect(body.data).toEqual({ events: [{ id: 'e2', name: null, venue: null, lineups: [] }] })
+    expect(body.data).toEqual({
+      events: {
+        edges: [
+          {
+            node: { id: 'e2', name: null, venue: null, lineups: [] }
+          }
+        ]
+      }
+    })
   })
 })
 
@@ -292,6 +314,8 @@ describe('events GraphQL mutations', () => {
   })
 
   it('returns null from getOrCreateAttendance when there is no session', async () => {
+    const { getCurrentUserId } = await import('@/src/core/auth/session')
+    vi.mocked(getCurrentUserId).mockResolvedValueOnce(null)
     vi.mocked(getOrCreateAttendance).mockResolvedValue(null)
 
     const body = await query('mutation { getOrCreateAttendance(eventId: "e1") { id } }')

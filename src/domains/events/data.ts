@@ -50,13 +50,23 @@ export interface EventWithAttendance extends EventWithRelations {
 // cualquier visitante, logueado o no, paga el costo de traer todo.
 export const MAX_EVENTS = 1000
 
-export async function getEvents(): Promise<EventWithRelations[]> {
+export async function getEvents(options?: { limit?: number; offset?: number }): Promise<EventWithRelations[]> {
+  const limit = options?.limit ?? MAX_EVENTS
+  const offset = options?.offset ?? 0
+
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('events')
     .select(EVENTS_SELECT)
     .order('date', { ascending: false })
-    .limit(MAX_EVENTS)
+
+  if (options?.limit !== undefined || options?.offset !== undefined) {
+    query = query.range(offset, offset + limit - 1)
+  } else {
+    query = query.limit(limit)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Error cargando eventos:', error)
@@ -69,13 +79,23 @@ export async function getEvents(): Promise<EventWithRelations[]> {
  * Carga todos los eventos con su attendance del usuario actual.
  * Permite filtrar y mostrar badges de estado en el home.
  */
-export async function getEventsWithAttendance(): Promise<EventWithAttendance[]> {
+export async function getEventsWithAttendance(options?: { limit?: number; offset?: number }): Promise<EventWithAttendance[]> {
+  const limit = options?.limit ?? MAX_EVENTS
+  const offset = options?.offset ?? 0
+
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('events')
     .select(EVENTS_WITH_ATTENDANCE_SELECT)
     .order('date', { ascending: false })
-    .limit(MAX_EVENTS)
+
+  if (options?.limit !== undefined || options?.offset !== undefined) {
+    query = query.range(offset, offset + limit - 1)
+  } else {
+    query = query.limit(limit)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Error cargando eventos con attendance:', error)
@@ -114,3 +134,78 @@ export async function getEventById(
   return data as EventWithRelations
 }
 
+
+/**
+ * Sólo `id` y `date` de cada evento, para el sitemap. `getEvents()` trae
+ * `*` más los embeds de venues y lineups→artists, y el sitemap descartaba
+ * todo eso salvo el id — pagando el join completo en cada visita de un
+ * crawler.
+ */
+export async function getEventIdsForSitemap(): Promise<Array<{ id: string; date: string }>> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, date')
+    .order('date', { ascending: false })
+    .limit(MAX_EVENTS)
+
+  if (error) {
+    console.error('Error cargando ids de eventos para el sitemap:', error)
+    return []
+  }
+  return (data ?? []) as Array<{ id: string; date: string }>
+}
+
+/**
+ * Sólo los eventos donde el usuario registró asistencia (de cualquier estado:
+ * went, going o interested), con la suya adjunta.
+ *
+ * /wrapped llamaba a getEventsWithAttendance() —hasta MAX_EVENTS del catálogo
+ * compartido, con venue, lineup y attendance— para después quedarse nada más
+ * que con los 'went' del usuario del año elegido. Sumado a getPersonalStats()
+ * en el mismo Promise.all, eran dos barridas casi idénticas del catálogo por
+ * cada carga de la página.
+ *
+ * Igual que en stats, se parte de `attendance` filtrada por usuario y se
+ * embebe el evento, así la base devuelve sólo el historial propio.
+ */
+export async function getMyEvents(): Promise<EventWithAttendance[]> {
+  const userId = await getCurrentUserId()
+  if (!userId) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('attendance')
+    .select(`
+      id, status, user_id, rating, review,
+      events (
+        *,
+        venues ( name, city, country ),
+        lineups ( artists ( id, name, genre ) )
+      )
+    `)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error cargando los shows del usuario:', error)
+    return []
+  }
+
+  type Row = {
+    id: string
+    status: string
+    user_id: string
+    rating: number | null
+    review: string | null
+    events: Omit<EventWithAttendance, 'attendance'> | null
+  }
+
+  return (data as unknown as Row[])
+    .filter((row): row is Row & { events: Omit<EventWithAttendance, 'attendance'> } => row.events !== null)
+    .map((row) => ({
+      ...row.events,
+      attendance: [
+        { id: row.id, status: row.status, user_id: row.user_id, rating: row.rating, review: row.review },
+      ],
+    })) as EventWithAttendance[]
+}

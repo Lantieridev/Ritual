@@ -52,6 +52,25 @@ const noIndexHeaders = [
   { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
 ]
 
+/**
+ * El talón 3D vive en public/tickets/ y TicketEmbed lo monta como iframe
+ * same-origin. `X-Frame-Options: DENY` bloquea el framing incluso desde el
+ * propio origen, así que con los headers globales el iframe respondía 200 y
+ * el navegador lo descartaba con ERR_BLOCKED_BY_RESPONSE: el talón quedaba
+ * en negro dentro de la app, sin error visible en consola, aunque la misma
+ * URL abierta directo funcionara. Se afloja a same-origin sólo en esta ruta;
+ * el resto del sitio sigue con DENY.
+ */
+const ticketEmbedHeaders = securityHeaders.map((header) => {
+  if (header.key === 'X-Frame-Options') {
+    return { key: 'X-Frame-Options', value: 'SAMEORIGIN' }
+  }
+  if (header.key === 'Content-Security-Policy') {
+    return { ...header, value: header.value.replace("frame-ancestors 'none'", "frame-ancestors 'self'") }
+  }
+  return header
+})
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -76,6 +95,12 @@ const nextConfig: NextConfig = {
       {
         source: '/(.*)',
         headers: securityHeaders,
+      },
+      // El talón 3D se embebe como iframe same-origin; va después de la regla
+      // global para que su X-Frame-Options pise al DENY heredado.
+      {
+        source: '/tickets/:path*',
+        headers: ticketEmbedHeaders,
       },
       // No-index for personal/private pages
       {

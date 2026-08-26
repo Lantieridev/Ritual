@@ -50,6 +50,16 @@ export const routes = {
     detail: (id: string) => `/festivals/${id}` as const,
   },
 
+  // Admin & Moderation
+  admin: {
+    home: '/admin',
+    moderation: {
+      artists: '/admin/moderacion/artistas',
+      venues: '/admin/moderacion/sedes',
+      events: '/admin/moderacion/eventos',
+    },
+  },
+
   // Auth
   login: '/login',
   signup: '/signup',

@@ -1,6 +1,6 @@
 # Acceso por rol
 
-Ritual tiene dos roles reales hoy: **visitante sin sesión** y **usuario autenticado**. No hay roles de administrador ni de moderación todavía. Este documento existe para que quede claro, en un solo lugar, qué puede ver y hacer cada uno — la fuente de la verdad real es la política RLS de cada tabla en `supabase/migrations/`; esta tabla es un resumen legible, no un reemplazo.
+Ritual tiene cuatro niveles de acceso: **visitante sin sesión**, **usuario autenticado**, **moderador** y **admin**. Los dos últimos sólo gatean la cola de moderación y el borrado del catálogo; el detalle está en la sección "Roles" más abajo. Este documento existe para que quede claro, en un solo lugar, qué puede ver y hacer cada uno — la fuente de la verdad real es la política RLS de cada tabla en `supabase/migrations/`; esta tabla es un resumen legible, no un reemplazo.
 
 ## Resumen por área
 
@@ -25,4 +25,15 @@ El catálogo compartido (Artistas, Sedes, Festivales, Buscar, Stats) tiene senti
 
 Todo lo de la tabla de arriba está reforzado con Row Level Security en Postgres, no solo en la UI — un usuario no puede escribir datos de otro aunque manipule la request directamente. Cada Server Action de escritura además valida la sesión de entrada (`getCurrentUserId()`) antes de tocar la base, para fallar con un mensaje claro en vez de depender solo del rechazo silencioso de RLS.
 
-**Fase 1 de roles (`sdd/ritual-roles-moderation-phase-1/`):** existe una columna `role` (`usuario` / `moderador` / `admin`, default `usuario`) en `profiles`, pero todavía **no gatea nada del catálogo** — cualquier fila compartida (evento, artista, sede, festival) sigue siendo editable por cualquier usuario autenticado, no solo por admin/moderador. Lo único que el rol controla hoy es la mutación `assignRole` (solo un admin puede cambiar el rol de otro usuario), a través de una función `assign_user_role` en Postgres que además revalida el permiso ella misma. El campo `role` en `Profile` solo es visible para el dueño del perfil o para un admin — no es público. La cola de moderación del catálogo, el panel `/admin` y el log de auditoría son fases futuras, todavía sin implementar; cuando se implementen, esta tabla debe actualizarse.
+### Roles
+
+Existe una columna `role` en `profiles` (`usuario` / `moderador` / `admin`, default `usuario`). Lo que gatea hoy:
+
+- **`assignRole`**: sólo un admin cambia el rol de otro usuario, vía la función `assign_user_role`, que revalida el permiso por su cuenta. El campo `role` de `Profile` sólo lo ve el dueño del perfil o un admin.
+- **Cola de moderación** (`/admin/moderacion/*`): las queries `unverified*`, las mutations `approve*` y `merge*`, y la query `mergeTargets` exigen `admin` o `moderador` en el resolver. Del lado de la base, `approve_entity` y los tres `merge_*` son `SECURITY DEFINER` y revalidan el rol adentro, así que pegarle directo a PostgREST no lo saltea.
+- **Cambio de `status`** (verificado / sin verificar): un trigger `BEFORE UPDATE` en `artists`, `venues` y `events` rechaza la transición si quien la hace no es admin ni moderador. Va por trigger y no por policy porque en una policy de UPDATE no se pueden correlacionar la fila vieja y la nueva.
+- **Borrado del catálogo**: eliminar un evento o un festival está restringido a admin y moderador, en RLS y en el service. La **edición** sigue abierta a cualquier autenticado a propósito: el catálogo es colaborativo y el borrado es lo único sin vuelta atrás.
+
+**Pendiente:** la creación de festivales sigue abierta a cualquier autenticado, aunque el spec de la fase 2 (§4) los reserva a Admin. El log de auditoría tampoco existe todavía.
+
+El modelo es de **post-moderación**: lo que carga un usuario se publica al instante con `status = 'unverified'` y queda visible en la app pública. La cola sirve para revisarlo después, no para retenerlo. Falta una marca visual de "sin verificar" en las vistas públicas.

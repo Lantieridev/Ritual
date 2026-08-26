@@ -44,6 +44,34 @@ export async function getEventPhotos(eventId: string): Promise<EventPhoto[]> {
     }))
 }
 
+export async function getEventPhotosBatch(
+    eventIds: readonly string[]
+): Promise<EventPhoto[][]> {
+    if (eventIds.length === 0) return []
+
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('event_photos')
+        .select('id, event_id, storage_path, caption, created_at')
+        .in('event_id', eventIds)
+        .order('created_at', { ascending: true })
+
+    if (error || !data) return eventIds.map(() => [])
+
+    const photosByEventId = new Map<string, EventPhoto[]>()
+    for (const photo of data) {
+        if (!photosByEventId.has(photo.event_id)) {
+            photosByEventId.set(photo.event_id, [])
+        }
+        photosByEventId.get(photo.event_id)!.push({
+            ...photo,
+            url: supabase.storage.from(BUCKET).getPublicUrl(photo.storage_path).data.publicUrl,
+        })
+    }
+
+    return eventIds.map((id) => photosByEventId.get(id) ?? [])
+}
+
 /**
  * Sube una foto a Supabase Storage y guarda la referencia en la DB.
  * Acepta FormData con campos: eventId, file, caption (opcional).

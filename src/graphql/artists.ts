@@ -5,6 +5,7 @@ import {
     insertArtist,
     findOrCreateArtist,
     getWishlistArtistIds,
+    getWishlistArtists,
     toggleWishlist,
 } from '@/src/domains/artists/service'
 import { getArtistEvents } from '@/src/domains/artists/data'
@@ -59,13 +60,15 @@ ArtistRef.implement({
         genre: t.exposeString('genre', { nullable: true }),
         imageUrl: t.exposeString('image_url', { nullable: true }),
         spotifyId: t.exposeString('spotify_id', { nullable: true }),
+        status: t.exposeString('status', { nullable: true }),
         // `getArtists()` no trae la relación y `getArtistById()` sí, así que
         // el campo la carga bajo demanda solo cuando no vino ya resuelta —
         // para que pedir `events` desde la query de listado devuelva el
         // historial real y no un array vacío silencioso.
         events: t.field({
             type: [ArtistEventRef],
-            resolve: (artist) => ('events' in artist ? artist.events : getArtistEvents(artist.id)),
+            resolve: (artist, _args, context) =>
+                'events' in artist ? artist.events : context.artistEventsLoader.load(artist.id),
         }),
     }),
 })
@@ -93,6 +96,23 @@ builder.queryField('wishlistArtistIds', (t) =>
         type: ['ID'],
         description: 'IDs de los artistas que el usuario actual sigue. Vacío si no hay sesión.',
         resolve: () => getWishlistArtistIds(),
+    })
+)
+
+const WishlistArtistRef = builder.objectRef<{ id: string; name: string }>('WishlistArtist')
+WishlistArtistRef.implement({
+    fields: (t) => ({
+        id: t.exposeID('id'),
+        name: t.exposeString('name'),
+    }),
+})
+
+builder.queryField('wishlistArtists', (t) =>
+    t.field({
+        type: [WishlistArtistRef],
+        description:
+            'Artistas que el usuario actual sigue, con su nombre. Evita traer el catálogo entero sólo para resolverlos.',
+        resolve: () => getWishlistArtists(),
     })
 )
 

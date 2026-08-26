@@ -40,3 +40,34 @@ export async function getAttendanceForEvent(
         notes: data.notes,
     }
 }
+
+export async function getAttendanceForEventsBatch(
+    eventIds: readonly string[],
+    userId: string
+): Promise<(EventAttendance | null)[]> {
+    if (!userId || eventIds.length === 0) return eventIds.map(() => null)
+
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('attendance')
+        .select('id, event_id, status, rating, review, notes')
+        .in('event_id', eventIds)
+        .eq('user_id', userId)
+
+    if (error || !data) return eventIds.map(() => null)
+
+    const attendanceByEventId = new Map(
+        data.map((row) => [
+            row.event_id,
+            {
+                id: row.id,
+                status: row.status as AttendanceStatus,
+                rating: row.rating,
+                review: row.review,
+                notes: row.notes,
+            }
+        ])
+    )
+
+    return eventIds.map((id) => attendanceByEventId.get(id) ?? null)
+}

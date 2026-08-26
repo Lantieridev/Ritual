@@ -4,6 +4,7 @@ vi.mock('@/src/domains/artists/data', () => ({
   getArtists: vi.fn(),
   getArtistById: vi.fn(),
   getArtistEvents: vi.fn(),
+  getArtistEventsBatch: vi.fn(),
 }))
 
 vi.mock('@/src/domains/artists/service', () => ({
@@ -23,7 +24,7 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue(null),
 }))
 
-import { getArtistEvents } from '@/src/domains/artists/data'
+import { getArtistEvents, getArtistEventsBatch } from '@/src/domains/artists/data'
 import {
   listArtists,
   findArtistById,
@@ -165,22 +166,22 @@ describe('artists GraphQL parity additions', () => {
         attendance: [{ status: 'went', rating: 5, review: 'brutal' }],
       },
     ])
-    expect(getArtistEvents).not.toHaveBeenCalled()
+    expect(getArtistEventsBatch).not.toHaveBeenCalled()
   })
 
   it('loads the show history on demand when the row came from the list query', async () => {
     vi.mocked(listArtists).mockResolvedValue([
       { id: 'a1', name: 'Bandalos Chinos', genre: null, image_url: null, spotify_id: null },
     ])
-    vi.mocked(getArtistEvents).mockResolvedValue([
+    vi.mocked(getArtistEventsBatch).mockResolvedValue([[
       { id: 'e1', name: 'Show', date: '2026-01-01', venues: null, event_photos: [], attendance: [] },
-    ])
+    ]])
 
     const body = await query('{ artists { id events { id } } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ artists: [{ id: 'a1', events: [{ id: 'e1' }] }] })
-    expect(getArtistEvents).toHaveBeenCalledWith('a1')
+    expect(getArtistEventsBatch).toHaveBeenCalledWith(['a1'])
   })
 
   // La wishlist no tenia ninguna representacion en el schema: sin esto el

@@ -16,7 +16,7 @@ export const alpogoAdapter: ExternalSourceAdapter = {
       }
 
       const res = await fetchWithRetry(url.toString(), {
-        method: 'GET',
+        method: 'POST',
         // Next.js cache bypass for external background fetching, though cron will handle it
       })
 

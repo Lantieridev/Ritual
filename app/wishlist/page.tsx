@@ -37,7 +37,7 @@ export default async function WishlistPage() {
     const { data } = await getClient().query<{
         wishlistArtistIds: string[]
         artists: GraphQLArtist[]
-    }>(WishlistPageQuery, {})
+    }>(WishlistPageQuery, {}).toPromise()
     const artistIds = data?.wishlistArtistIds ?? []
 
     if (artistIds.length === 0) {

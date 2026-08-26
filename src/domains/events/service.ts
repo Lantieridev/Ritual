@@ -1,6 +1,7 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import { validateUUID, validateDate, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { findOrCreateByName } from '@/src/core/lib/find-or-create'
+import { parseExternalDateTime } from '@/src/core/lib/dates'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, EventCreateInput, EventUpdateInput, FutureEvent } from '@/src/core/types'
 
@@ -108,8 +109,16 @@ export async function addExternalEvent(
   const venueName = sanitizeText(event.venue?.name, MAX_VENUE_NAME_LENGTH)
   if (!venueName) return { error: 'El evento no tiene sede.' }
 
-  const dateStr = event.datetime
-  if (!dateStr) return { error: 'El evento no tiene fecha.' }
+  // `events.date` es `timestamptz not null`, y varias fuentes externas mandan
+  // la fecha en prosa ("Domingo 30 de Agosto, 2026") o abreviada sin año
+  // ("13 SEP"). Pasar el crudo hacía que Postgres rechazara el insert y que
+  // `sanitizeError` lo devolviera como un error genérico, así que importar
+  // sólo funcionaba desde las fuentes que ya mandaban ISO.
+  const parsedDate = parseExternalDateTime(event.datetime)
+  if (!parsedDate) {
+    return { error: 'No se pudo interpretar la fecha del evento. Cargalo a mano.' }
+  }
+  const dateStr = parsedDate.toISOString()
 
   const artistName =
     sanitizeText(artistNameForLineup, MAX_ARTIST_NAME_LENGTH) ||
@@ -253,16 +262,42 @@ export async function removeEvent(id: string): Promise<ActionResult> {
   if (idErr) return { error: idErr }
 
   const supabase = await createClient()
+
+  // El permiso se chequea antes de tocar nada. `lineups` no tiene ON DELETE
+  // CASCADE, así que hay que borrarlo primero para que el DELETE del evento no
+  // choque contra la foreign key — y si el borrado del evento después lo
+  // frenara RLS, el recital quedaría sin lineup igual. Preguntar primero evita
+  // esa pérdida parcial.
+  const { data: canDelete, error: roleError } = await supabase.rpc('is_moderator')
+  if (roleError) {
+    console.error('No se pudo verificar el rol para eliminar el evento:', roleError)
+    return { error: sanitizeError(roleError) }
+  }
+  if (!canDelete) {
+    return { error: 'Solo un moderador puede eliminar un recital del catálogo.' }
+  }
+
   const { error: lineupsError } = await supabase.from('lineups').delete().eq('event_id', id)
   if (lineupsError) {
     console.error('Error eliminando lineups:', lineupsError)
     return { error: sanitizeError(lineupsError) }
   }
 
-  const { error: eventError } = await supabase.from('events').delete().eq('id', id)
+  // Se pide la fila borrada de vuelta: un DELETE que RLS bloquea no es un
+  // error para PostgREST, afecta 0 filas y devuelve `error: null`. Sin este
+  // chequeo, un borrado denegado se reportaba como éxito.
+  const { data: deleted, error: eventError } = await supabase
+    .from('events')
+    .delete()
+    .eq('id', id)
+    .select('id')
+
   if (eventError) {
     console.error('Error eliminando evento:', eventError)
     return { error: sanitizeError(eventError) }
+  }
+  if (!deleted || deleted.length === 0) {
+    return { error: 'No se pudo eliminar el recital.' }
   }
 
   return {}

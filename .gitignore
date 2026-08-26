@@ -43,3 +43,13 @@ next-env.d.ts
 
 # local editor/agent tooling
 .claude/
+
+# MCP server: dependencias y build. El patrón /node_modules de arriba está
+# anclado a la raíz, así que no cubre mcp/node_modules — sin esto un
+# `git add .` mete más de 4300 archivos al repo.
+mcp/node_modules/
+mcp/dist/
+
+# Scripts de refactor de un solo uso y scratch de exploración.
+/refactor.js
+/refactor-waterfall.js

@@ -1,6 +1,7 @@
+import * as React from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getEventsWithAttendance } from '@/src/domains/events/data'
+import { getMyEvents } from '@/src/domains/events/data'
 import { buildHomeFeed, buildHomeHeroState } from '@/src/domains/events/home-view'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
 import { gql } from 'urql'
@@ -34,8 +35,7 @@ interface NearbyCard {
 
 const HomePageQuery = gql`
   query HomePage {
-    wishlistArtistIds
-    artists { id name }
+    wishlistArtists { id name }
     festivals {
       id
       name
@@ -80,14 +80,15 @@ function toHeroFestival(festival: HomeFestival) {
  * mucho esto conviene moverlo a un fetch client-side diferido.
  */
 async function getNearbyShows(
-  wishlistArtistIds: string[],
-  catalog: Array<Pick<GraphQLArtist, 'id' | 'name'>>
+  wishlistArtists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
 ): Promise<NearbyCard[]> {
   if (!isTicketmasterConfigured()) return []
-  if (wishlistArtistIds.length === 0) return []
+  if (wishlistArtists.length === 0) return []
 
-  const wishlisted = new Set(wishlistArtistIds.slice(0, 6))
-  const artists = catalog.filter((a) => wishlisted.has(a.id))
+  // La query ya devuelve los artistas de la wishlist con su nombre. Antes se
+  // pedían los ids por un lado y el catálogo COMPLETO de artistas por otro,
+  // sólo para cruzarlos en memoria y quedarse con seis.
+  const artists = wishlistArtists.slice(0, 6)
 
   const results = await Promise.allSettled(
     artists.map(async (artist) => {
@@ -112,45 +113,11 @@ async function getNearbyShows(
   return withImages
 }
 
-export default async function HomePage() {
-  const [allEvents, { data }] = await Promise.all([
-    getEventsWithAttendance(),
-    getClient().query<{
-      wishlistArtistIds: string[]
-      artists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
-      festivals: HomeFestival[]
-    }>(HomePageQuery, {}),
-  ])
-  const festivals = (data?.festivals ?? []).map(toHeroFestival)
-  const now = new Date()
-
-  const { nextShow, byYear, years } = buildHomeFeed(allEvents, 'went', now)
-  const heroState = buildHomeHeroState(nextShow, festivals, now)
-
-  const heroEvent = heroState.kind === 'show-today' ? heroState.event : heroState.kind === 'normal' ? heroState.nextShow : undefined
-  const heroHeadliner = heroEvent?.lineups?.[0]?.artists.name ?? heroEvent?.name ?? null
-  const heroImage =
-    heroHeadliner && isSpotifyConfigured()
-      ? await searchSpotifyArtist(heroHeadliner).then(({ artist }) => (artist ? getBestSpotifyImage(artist.images) : null))
-      : null
-
-  const [nearbyShows, upcomingFestivals] = await Promise.all([
-    getNearbyShows(data?.wishlistArtistIds ?? [], data?.artists ?? []),
-    Promise.resolve(
-      festivals
-        .filter((f) => !isPastEvent(f.end_date ?? f.start_date, now))
-        .filter((f) => !(heroState.kind === 'festival' && f.id === heroState.festival.id))
-        .slice(0, 4)
-    ),
-  ])
-
-  const hasArchive = byYear && years.length > 0
+async function NearbyShowsWrapper({ wishlistArtists }: { wishlistArtists: Array<Pick<GraphQLArtist, 'id' | 'name'>> }) {
+  const nearbyShows = await getNearbyShows(wishlistArtists)
+  if (nearbyShows.length === 0) return null
 
   return (
-    <>
-      <HomeHero state={heroState} backgroundImage={heroImage} />
-
-      {nearbyShows.length > 0 && (
         <section className="min-h-screen flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-bg">
           <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
             <div>
@@ -192,7 +159,46 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
-      )}
+  )
+}
+
+export default async function HomePage() {
+  const [allEvents, { data }] = await Promise.all([
+    getMyEvents(),
+    getClient().query<{
+      wishlistArtists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
+      festivals: HomeFestival[]
+    }>(HomePageQuery, {}).toPromise(),
+  ])
+  const festivals = (data?.festivals ?? []).map(toHeroFestival)
+  const now = new Date()
+
+  const { nextShow, byYear, years } = buildHomeFeed(allEvents, 'went', now)
+  const heroState = buildHomeHeroState(nextShow, festivals, now)
+
+  const heroEvent = heroState.kind === 'show-today' ? heroState.event : heroState.kind === 'normal' ? heroState.nextShow : undefined
+  const heroHeadliner = heroEvent?.lineups?.[0]?.artists.name ?? heroEvent?.name ?? null
+  const heroImagePromise =
+    heroHeadliner && isSpotifyConfigured()
+      ? searchSpotifyArtist(heroHeadliner).then(({ artist }) => (artist ? getBestSpotifyImage(artist.images) : null))
+      : Promise.resolve(null)
+
+  const upcomingFestivals = festivals
+    .filter((f) => !isPastEvent(f.end_date ?? f.start_date, now))
+    .filter((f) => !(heroState.kind === 'festival' && f.id === heroState.festival.id))
+    .slice(0, 4)
+
+  const hasArchive = byYear && years.length > 0
+
+  return (
+    <>
+      <React.Suspense fallback={<HomeHero state={heroState} backgroundImage={null} />}>
+        <HomeHero state={heroState} backgroundImage={heroImagePromise} />
+      </React.Suspense>
+
+      <React.Suspense fallback={<div className="min-h-screen bg-ritual-bg animate-pulse flex items-center justify-center"><p className="text-ritual-gray-text font-label uppercase">Buscando shows cerca tuyo...</p></div>}>
+        <NearbyShowsWrapper wishlistArtists={data?.wishlistArtists ?? []} />
+      </React.Suspense>
 
       {upcomingFestivals.length > 0 && (
         <section className="min-h-screen flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-panel">
