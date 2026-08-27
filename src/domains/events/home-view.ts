@@ -1,6 +1,8 @@
-import { isPastEvent, eventYear, daysUntil, toDateOnly, todayDateOnly } from '@/src/core/lib/dates'
+import { isPastEvent, eventYear, daysUntil, toDateOnly, todayDateOnly, eventTimeOfDay } from '@/src/core/lib/dates'
 import { nearestUpcoming } from '@/src/core/lib/dates'
+import { formatDate } from '@/src/core/lib/utils'
 import type { EventWithAttendance, EventWithRelations } from '@/src/domains/events/service'
+import type { EventWeather } from '@/src/domains/weather/weather-service'
 
 export type HomeFilter = 'all' | 'upcoming' | 'past' | 'interested' | 'going' | 'went'
 
@@ -185,4 +187,49 @@ export function heroEventOf(state: HomeHeroState): EventWithRelations | undefine
         default:
             return undefined
     }
+}
+
+/**
+ * Texto del badge de hora del hero mobile (#82): "Esta noche · HH:MM" cuando
+ * el show es hoy, o la fecha formateada + HH:MM para la cuenta regresiva.
+ */
+export function heroBadgeText(state: Extract<HomeHeroState, { kind: 'show-today' | 'normal' }>): string {
+    const event = state.kind === 'show-today' ? state.event : state.nextShow
+    const time = eventTimeOfDay(event.date)
+    if (state.kind === 'show-today') return `Esta noche · ${time}`
+    return `${formatDate(event.date, { day: 'numeric', month: 'short' })} · ${time}`
+}
+
+/** Cuántos shows entran en "Lo último que viste" del hero mobile (#82). */
+export const RECENT_SEEN_LIMIT = 3
+
+/**
+ * Los `limit` shows vistos ('went') más recientes, sin importar si tienen
+ * puntaje — el puntaje se muestra si existe, nunca se inventa un placeholder.
+ * Un 'went' fechado en el futuro es dato inconsistente, no un show reciente
+ * (mismo criterio que el archivo de `buildHomeHeroState` arriba).
+ */
+export function pickRecentSeen(
+    myEvents: EventWithAttendance[],
+    now: Date = new Date(),
+    limit: number = RECENT_SEEN_LIMIT
+): EventWithAttendance[] {
+    return myEvents
+        .filter((ev) => ev.attendance?.[0]?.status === 'went' && daysUntil(ev.date, now) <= 0)
+        .sort((a, b) => (toDateOnly(b.date) < toDateOnly(a.date) ? -1 : toDateOnly(b.date) > toDateOnly(a.date) ? 1 : 0))
+        .slice(0, limit)
+}
+
+/** Tag de clima del hero mobile (#82): sólo dos valores posibles, sin escala. */
+export function weatherTag(w: EventWeather): string {
+    return w.isRain ? 'llueve' : 'no llueve'
+}
+
+/**
+ * Si el deep link `?entrada=hoy` (banda de entrada, #82) debe abrir el talón
+ * al cargar Home. Comparación estricta con el literal `'hoy'` — nunca se
+ * interpola el param en una URL, redirect o texto (R1-007).
+ */
+export function resolveInitialOpen(entrada: string | string[] | undefined, state: HomeHeroState): boolean {
+    return entrada === 'hoy' && state.kind === 'show-today'
 }

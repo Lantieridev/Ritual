@@ -10,6 +10,7 @@ import {
   combineDateAndTime,
   eventTimeOfDay,
   parseExternalDateTime,
+  hasTimeOfDay,
   APP_TIMEZONE,
 } from './dates'
 
@@ -266,5 +267,18 @@ describe('parseExternalDateTime', () => {
     expect(parseExternalDateTime('')).toBeNull()
     expect(parseExternalDateTime(null)).toBeNull()
     expect(parseExternalDateTime(undefined)).toBeNull()
+  })
+})
+
+// Distingue una fecha "sin hora" (input <input type="date">, formato bare
+// "YYYY-MM-DD") de un timestamp completo — el badge de "Esta noche" (#82)
+// necesita saber si mostrar la hora o no.
+describe('hasTimeOfDay', () => {
+  it('es false para una fecha sin componente de hora', () => {
+    expect(hasTimeOfDay('2026-09-20')).toBe(false)
+  })
+
+  it('es true para un timestamp completo con hora', () => {
+    expect(hasTimeOfDay('2026-09-20T21:00:00-03:00')).toBe(true)
   })
 })

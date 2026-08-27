@@ -54,6 +54,16 @@ export function toDateOnly(isoString: string): string {
     }
 }
 
+/**
+ * Whether a stored date string carries an actual time-of-day component, as
+ * opposed to a bare "YYYY-MM-DD" (from `<input type="date">`, or an import
+ * without a real time). Used to decide whether a badge/label should append
+ * an "HH:mm" — e.g. "Esta noche · 21:00" only when there IS a time to show.
+ */
+export function hasTimeOfDay(dateStr: string): boolean {
+    return !BARE_DATE.test(dateStr)
+}
+
 /** Today's calendar date (YYYY-MM-DD) in the app's timezone, not the server's. */
 export function todayDateOnly(reference: Date = new Date()): string {
     return new Intl.DateTimeFormat('en-CA', { timeZone: APP_TIMEZONE }).format(reference)
