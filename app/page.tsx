@@ -134,9 +134,10 @@ async function NearbyShowsWrapper({ wishlistArtists }: { wishlistArtists: Array<
                 href={routes.events.new}
                 className="group relative shrink-0 basis-64 hover:basis-96 transition-[flex-basis] duration-500 overflow-hidden bg-ritual-surface"
               >
+                <div className="absolute inset-0 ritual-photo-fallback" />
                 {image && (
                   <div
-                    className="absolute inset-0 ritual-photo"
+                    className="absolute inset-0 ritual-photo ritual-photo-bg"
                     style={{ backgroundImage: `url(${image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
                   />
                 )}

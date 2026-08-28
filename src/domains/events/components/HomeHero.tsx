@@ -59,9 +59,10 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
           pelada. Si no hay imagen —usuario nuevo, o las fuentes externas
           caídas— el degradado sobre `bg-ritual-panel` se ve igual que antes.
         */}
+        <div className="absolute inset-0 ritual-photo-fallback" />
         {resolvedBg && (
           <div
-            className="absolute inset-0 ritual-photo"
+            className="absolute inset-0 ritual-photo ritual-photo-bg"
             style={{ backgroundImage: `url(${resolvedBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
           />
         )}
@@ -91,9 +92,13 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
 
   return (
     <section className="relative min-h-screen snap-start overflow-hidden bg-ritual-panel">
+      {/* El bloque tonal va siempre, debajo de la foto: si la fuente externa
+          no resolvió imagen el hero igual tiene volumen en vez de negro
+          plano, que es como el diseño lo piensa sin fotos. */}
+      <div className="absolute inset-0 ritual-photo-fallback" />
       {resolvedBg && (
         <div
-          className="absolute inset-0 ritual-photo"
+          className="absolute inset-0 ritual-photo ritual-photo-bg"
           style={{ backgroundImage: `url(${resolvedBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
         />
       )}

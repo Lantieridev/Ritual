@@ -154,6 +154,36 @@ html {
   filter: grayscale(1) contrast(1.3) brightness(0.6);
 }
 
+/*
+ * Variante para cuando la foto va como `background-image` del propio
+ * elemento en vez de un <img> hijo — que es el caso del hero de Inicio y de
+ * las tarjetas de "Cerca tuyo".
+ *
+ * Sin esto el tratamiento no se aplicaba: los selectores de arriba apuntan a
+ * `img` y a `> :first-child`, y esos elementos no tienen hijos. La foto salía
+ * a color y sin contraste, y sólo la capa de duotono de `::after` la tocaba.
+ *
+ * El brillo es .85 y no .6 a propósito. El README del handoff dice .6, pero
+ * el prototipo real usa .85/.9 en los heros y .6 se come la foto entera
+ * contra el fondo negro. Ante la contradicción manda el prototipo, que es lo
+ * que se ve en pantalla.
+ */
+.ritual-photo-bg {
+  filter: grayscale(1) contrast(1.18) brightness(0.85);
+}
+
+/*
+ * Bloque tonal de respaldo — el diseño está pensado para leerse sin foto
+ * ("se lee como bloque tonal", handoff §Fidelity), y con la foto ausente el
+ * hero quedaba en negro plano. Este degradado ocupa el hueco con volumen en
+ * vez de vacío, y queda debajo de la foto cuando sí hay.
+ */
+.ritual-photo-fallback {
+  background:
+    radial-gradient(120% 90% at 68% 18%, rgba(237, 235, 230, 0.22) 0%, transparent 62%),
+    linear-gradient(160deg, var(--color-ritual-surface-high) 0%, var(--color-ritual-panel) 48%, var(--color-ritual-bg) 100%);
+}
+
 .ritual-photo::after {
   content: '';
   position: absolute;
