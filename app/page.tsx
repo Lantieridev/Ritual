@@ -113,7 +113,7 @@ async function NearbyShowsWrapper({ wishlistArtists }: { wishlistArtists: Array<
   if (nearbyShows.length === 0) return null
 
   return (
-        <section className="min-h-screen flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-bg">
+        <section className="min-h-screen snap-start flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-bg">
           <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
             <div>
               <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">
@@ -208,7 +208,7 @@ export default async function HomePage() {
       </React.Suspense>
 
       {upcomingFestivals.length > 0 && (
-        <section className="min-h-screen flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-panel">
+        <section className="min-h-screen snap-start flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-panel">
           <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">Se vienen · festivales</p>
           <h2 className="font-display text-[7vh] leading-[0.9] uppercase text-ritual-bone mt-2 mb-10">
             Las romerías<br />del año

@@ -107,6 +107,29 @@ body {
 }
 
 /*
+ * Scroll snap del Inicio — 01 del handoff: tres pantallas completas que
+ * enganchan y scroll libre al final.
+ *
+ * Va en `html` porque el snap tiene que declararse en el elemento que
+ * scrollea, y en esta app scrollea el documento. No afecta al resto de las
+ * páginas: `scroll-snap-type` es inerte mientras ningún descendiente declare
+ * `scroll-snap-align`, y sólo lo declaran las secciones del Inicio.
+ *
+ * `proximity` y no `mandatory` a propósito: mandatory secuestra el scroll y
+ * vuelve imposible parar entre dos secciones, que en una página con contenido
+ * libre al final se siente roto.
+ */
+html {
+  scroll-snap-type: y proximity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-snap-type: none;
+  }
+}
+
+/*
  * Foco visible integrado a la paleta — WCAG 2.4.7. Sin esto queda el
  * outline azul default del navegador, que funciona pero desentona con la
  * paleta negro/gris/rojo. :focus-visible en vez de :focus para no mostrar

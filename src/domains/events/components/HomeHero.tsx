@@ -24,7 +24,7 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
 
   if (state.kind === 'festival') {
     return (
-      <section className="relative min-h-screen flex flex-col justify-center px-6 md:px-10 pt-16 overflow-hidden bg-ritual-panel">
+      <section className="relative min-h-screen snap-start flex flex-col justify-center px-6 md:px-10 pt-16 overflow-hidden bg-ritual-panel">
         <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">
           Está pasando ahora
         </p>
@@ -51,7 +51,7 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
 
   if (!event) {
     return (
-      <section className="relative min-h-screen flex flex-col justify-center items-start px-6 md:px-10 pt-16 bg-ritual-panel overflow-hidden">
+      <section className="relative min-h-screen snap-start flex flex-col justify-center items-start px-6 md:px-10 pt-16 bg-ritual-panel overflow-hidden">
         {/*
           El estado vacío también recibe fondo. La página lo resuelve del
           último show del archivo cuando no hay ninguno agendado, así que
@@ -90,7 +90,7 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
   const days = state.kind === 'show-today' ? 0 : state.daysUntil
 
   return (
-    <section className="relative min-h-screen overflow-hidden bg-ritual-panel">
+    <section className="relative min-h-screen snap-start overflow-hidden bg-ritual-panel">
       {resolvedBg && (
         <div
           className="absolute inset-0 ritual-photo"
@@ -99,23 +99,65 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg via-ritual-bg/40 to-transparent" />
 
-      <div className="relative flex flex-col justify-end min-h-screen px-6 md:px-10 pb-16 pt-24">
-        {days !== null && days > 0 && (
-          <div
-            className="font-display leading-none text-ritual-red-hover"
-            style={{ fontSize: '20vh', WebkitTextStroke: '2px #D6202A', color: 'transparent' }}
-          >
-            {days}
-          </div>
-        )}
+      {/* El contador va absoluto arriba a la izquierda y en hueco, no en el
+          flujo: en el diseño es la marca de la pantalla, y la foto se lee a
+          través de él. Valores tomados del prototipo, no aproximados. */}
+      {days !== null && days > 0 && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute z-10 font-display select-none"
+          style={{
+            left: '44px',
+            top: '12vh',
+            fontSize: '23vh',
+            lineHeight: '.78',
+            letterSpacing: '-.03em',
+            color: 'transparent',
+            WebkitTextStroke: '2px rgba(237,235,230,.5)',
+          }}
+        >
+          {days}
+        </div>
+      )}
 
+      {/* El talón está siempre en cuadro, fundido con la foto. Al abrir sólo
+          cambian transform y opacity: animar width/height reiniciaría el
+          renderer de three.js del iframe y produce glitch. */}
+      <div
+        className="pointer-events-none absolute z-10 hidden md:block motion-safe:transition-[transform,opacity] motion-safe:duration-[1050ms]"
+        style={{
+          left: '46%',
+          top: '-14%',
+          width: '60%',
+          height: '128%',
+          mixBlendMode: 'screen',
+          transitionTimingFunction: 'var(--ease-ritual)',
+          transform: open ? 'translateX(-16%) scale(1.06)' : 'translateX(0) scale(1)',
+          opacity: open ? 1 : 0.85,
+        }}
+      >
+        <TicketEmbed
+          material="hierro"
+          artistLine1={headliner.toUpperCase()}
+          venue={venueName || 'A confirmar'}
+          address={venueLocation}
+          when={formatDate(event.date, { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}
+          date={event.date.slice(0, 10)}
+          seat="Campo general"
+          seatShort="Campo General"
+          className="w-full h-full"
+          title={`Entrada — ${headliner}`}
+        />
+      </div>
+
+      <div className="relative z-20 flex flex-col justify-end min-h-screen px-6 md:px-10 pb-16 pt-24">
         {days === 0 && (
           <span className="font-label text-[11px] tracking-[0.32em] bg-ritual-red text-ritual-bone px-3 py-1.5 w-fit uppercase font-bold">
             es hoy
           </span>
         )}
 
-        <h1 className="font-display text-[10vh] leading-[0.82] uppercase text-ritual-bone mt-2">
+        <h1 className="font-display text-[11vh] leading-[0.82] uppercase text-ritual-bone mt-2">
           {headliner}
         </h1>
         {venueName && (
@@ -141,27 +183,25 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
         </div>
       </div>
 
+      {/* Apertura continua: el panel entra sobre la misma pantalla, sin
+          navegar y sin tapar el talón — el diseño oscurece la foto y corre el
+          objeto, no lo reemplaza por un modal. */}
+      <div
+        className="pointer-events-none absolute inset-0 z-[15] bg-ritual-bg motion-safe:transition-opacity motion-safe:duration-[620ms]"
+        style={{ transitionTimingFunction: 'var(--ease-ritual)', opacity: open ? 0.72 : 0 }}
+        aria-hidden="true"
+      />
+
       {open && (
-        <div className="absolute inset-0 z-20 flex flex-col md:flex-row items-center justify-center gap-8 bg-ritual-bg/95 p-8">
-          <div className="w-full max-w-md aspect-[3/4]">
-            <TicketEmbed
-              material="hierro"
-              artistLine1={headliner.toUpperCase()}
-              venue={venueName || 'A confirmar'}
-              address={venueLocation}
-              when={formatDate(event.date, { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}
-              date={event.date.slice(0, 10)}
-              seat="Campo general"
-              seatShort="Campo General"
-              className="w-full h-full"
-              title={`Entrada — ${headliner}`}
-            />
-          </div>
-          <div className="text-ritual-bone">
+        <div className="absolute inset-x-0 bottom-0 z-30 px-6 md:px-10 pb-16">
+          <div className="max-w-md border-l-[3px] border-ritual-red bg-ritual-surface/95 px-6 py-6 backdrop-blur-sm">
             <p className="font-label text-[10px] tracking-[0.16em] text-ritual-red-hover uppercase mb-2">Entrada válida</p>
-            <p className="font-display text-4xl uppercase">{headliner}</p>
+            <p className="font-display text-4xl uppercase text-ritual-bone">{headliner}</p>
             <p className="font-subtitle font-black uppercase text-ritual-gray-light-3 mt-1">
               {venueName}{venueLocation && ` · ${venueLocation}`}
+            </p>
+            <p className="font-label text-[10px] tracking-[0.16em] text-ritual-gray-text uppercase mt-3">
+              {formatDate(event.date, { weekday: 'long', day: 'numeric', month: 'long' })} · Campo general
             </p>
             <button
               type="button"
