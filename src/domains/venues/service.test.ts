@@ -15,9 +15,19 @@ vi.mock('@/src/domains/venues/data', () => ({
   getVenueById: vi.fn(),
 }))
 
+/**
+ * Nominatim se mockea siempre: sin esto el alta de sede sale a internet de
+ * verdad en cada corrida de la suite, lo que la vuelve lenta, dependiente de
+ * un tercero y de resultado distinto según haya red.
+ */
+vi.mock('@/src/core/lib/nominatim', () => ({
+  geocodeVenue: vi.fn().mockResolvedValue({ lat: null, lng: null }),
+}))
+
 import { listVenues, findVenueById, insertVenue, findOrCreateVenue } from '@/src/domains/venues/service'
 import { getVenues, getVenueById } from '@/src/domains/venues/data'
 import { getCurrentUserId } from '@/src/core/auth/session'
+import { geocodeVenue } from '@/src/core/lib/nominatim'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -91,7 +101,39 @@ describe('insertVenue', () => {
       city: 'CABA',
       address: 'Cordoba 5500',
       country: 'Argentina',
+      lat: null,
+      lng: null,
     })
+    expect(result).toEqual({ id: 'v-new' })
+  })
+
+  it('geocodifica la sede y guarda las coordenadas — de eso depende el clima del show', async () => {
+    vi.mocked(geocodeVenue).mockResolvedValue({ lat: -34.5874, lng: -58.43891 })
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: { id: 'v-new' }, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    await insertVenue({ name: 'Niceto Club', city: 'CABA', address: 'Cordoba 5500', country: 'AR' })
+
+    expect(geocodeVenue).toHaveBeenCalledWith({
+      name: 'Niceto Club',
+      address: 'Cordoba 5500',
+      city: 'CABA',
+      country: 'AR',
+    })
+    const builder = fromMock.mock.results[0].value as { insert: ReturnType<typeof vi.fn> }
+    expect(builder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ lat: -34.5874, lng: -58.43891 })
+    )
+  })
+
+  // El ADR 0003 manda: un servicio externo caído no bloquea una acción propia.
+  it('crea la sede igual cuando la geocodificación falla', async () => {
+    vi.mocked(geocodeVenue).mockResolvedValue({ lat: null, lng: null, error: 'Nominatim caído' })
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: { id: 'v-new' }, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await insertVenue({ name: 'Niceto Club' })
+
     expect(result).toEqual({ id: 'v-new' })
   })
 

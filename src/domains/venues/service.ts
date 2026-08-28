@@ -1,6 +1,7 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import { sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { findOrCreateByName } from '@/src/core/lib/find-or-create'
+import { geocodeVenue } from '@/src/core/lib/nominatim'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, Venue, VenueCreateInput } from '@/src/core/types'
 import { getVenues, getVenueById, getVenueEventsBatch } from './data'
@@ -56,14 +57,28 @@ export async function insertVenue(
 
   const name = sanitizeText(formData.name, MAX_NAME)
   if (!name) return { error: 'El nombre de la sede es obligatorio.' }
+
+  const city = sanitizeText(formData.city, MAX_CITY)
+  const address = sanitizeText(formData.address, MAX_ADDRESS)
+  const country = sanitizeText(formData.country, MAX_COUNTRY)
+
+  // Las coordenadas se resuelven acá y no en un job posterior porque son lo
+  // que enciende el clima del show: una sede recién creada ya lo muestra.
+  // `geocodeVenue` nunca tira y devuelve null ante cualquier problema, así que
+  // la sede se crea igual sin coordenadas — no vale bloquear un alta por un
+  // servicio de terceros (ADR 0003).
+  const { lat, lng } = await geocodeVenue({ name, address, city, country })
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('venues')
     .insert({
       name,
-      city: sanitizeText(formData.city, MAX_CITY),
-      address: sanitizeText(formData.address, MAX_ADDRESS),
-      country: sanitizeText(formData.country, MAX_COUNTRY),
+      city,
+      address,
+      country,
+      lat,
+      lng,
     })
     .select('id')
     .single()
@@ -101,10 +116,26 @@ export async function findOrCreateVenue(
   const cleanName = sanitizeText(name, MAX_NAME)
   if (!cleanName) return { error: 'El nombre de la sede es obligatorio.' }
 
+  const cleanCity = sanitizeText(city, MAX_CITY)
+  const cleanCountry = sanitizeText(country, MAX_COUNTRY)
+
+  // Se geocodifica antes del upsert y no después porque `findOrCreateByName`
+  // es atómico y no distingue "creada" de "ya existía". En la práctica este
+  // camino viene del combobox, que sólo ofrece "+ Crear" cuando no hubo match,
+  // así que casi siempre es un alta real. `ignoreDuplicates` protege el caso
+  // de carrera: si la sede ya existía, sus coordenadas no se pisan.
+  const { lat, lng } = await geocodeVenue({
+    name: cleanName,
+    city: cleanCity,
+    country: cleanCountry,
+  })
+
   const supabase = await createClient()
   const result = await findOrCreateByName(supabase, 'venues', cleanName, {
-    city: sanitizeText(city, MAX_CITY),
-    country: sanitizeText(country, MAX_COUNTRY),
+    city: cleanCity,
+    country: cleanCountry,
+    lat,
+    lng,
   })
   if ('error' in result) return { error: result.error }
 
