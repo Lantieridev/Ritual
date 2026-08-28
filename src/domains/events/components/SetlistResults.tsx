@@ -6,6 +6,7 @@ import { useMutation, gql } from 'urql'
 import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
+import { safeHref } from '@/src/core/lib/validation'
 import type { Setlist } from '@/src/core/lib/setlistfm'
 import { parseSetlistDate } from '@/src/core/lib/setlistfm'
 
@@ -20,12 +21,22 @@ interface SetlistResultsProps {
 }
 
 function getSongs(setlist: Setlist): string[] {
-    return setlist.sets.set.flatMap((s) => s.song.map((song) => song.name))
+    // Guardas por consistencia con `normalizeSetlist`, no por un fallo
+    // observado: sobre 200 setlists reales de 10 artistas, la API siempre
+    // devolvió `sets.set` como array (vacío cuando el show no tiene canciones
+    // cargadas). Cuestan nada y cubren una deriva futura del contrato.
+    return (setlist.sets?.set ?? []).flatMap((s) =>
+        (s?.song ?? []).map((song) => song?.name).filter((name): name is string => Boolean(name))
+    )
 }
 
 /**
  * Lista de shows pasados de Setlist.fm con botón "Agregar a mis recitales".
  * Muestra el setlist (canciones) de cada show.
+ *
+ * Cada fila enlaza a su página en setlist.fm y el pie acredita la fuente: los
+ * términos de la API exigen un link de atribución cada vez que se muestran sus
+ * datos, así que la atribución es parte del contrato de uso, no decoración.
  */
 export function SetlistResults({ setlists }: SetlistResultsProps) {
     const router = useRouter()
@@ -80,11 +91,13 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
             <div className="mt-10 flex flex-col items-center gap-3 py-16 text-center">
                 <p className="text-zinc-500 text-sm">No se encontraron shows pasados en Setlist.fm.</p>
                 <p className="text-zinc-600 text-xs">Probá con el nombre exacto del artista en inglés.</p>
+                <SetlistFmAttribution />
             </div>
         )
     }
 
     return (
+        <>
         <ul className="mt-6 divide-y divide-white/[0.06]">
             {setlists.map((setlist) => {
                 const isLoading = loadingId === setlist.id
@@ -119,7 +132,18 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
 
                             {/* Info */}
                             <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-white truncate">{setlist.artist.name}</p>
+                                {safeHref(setlist.url) ? (
+                                    <a
+                                        href={safeHref(setlist.url)!}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-semibold text-white truncate hover:text-ritual-red-hover transition-colors inline-block max-w-full"
+                                    >
+                                        {setlist.artist.name} ↗
+                                    </a>
+                                ) : (
+                                    <p className="font-semibold text-white truncate">{setlist.artist.name}</p>
+                                )}
                                 <p className="text-sm text-zinc-500 mt-0.5 truncate">
                                     📍 {venueLabel}
                                 </p>
@@ -170,5 +194,28 @@ export function SetlistResults({ setlists }: SetlistResultsProps) {
                 )
             })}
         </ul>
+        <SetlistFmAttribution />
+        </>
+    )
+}
+
+/**
+ * Atribución obligatoria por los términos de la API de Setlist.fm: "place an
+ * attribution link each time you use setlist.fm data on your website". Va
+ * también en el estado vacío, porque la consulta se hizo igual.
+ */
+function SetlistFmAttribution() {
+    return (
+        <p className="mt-6 text-[10px] uppercase tracking-[0.14em] text-zinc-600">
+            Datos de shows pasados por{' '}
+            <a
+                href="https://www.setlist.fm/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-zinc-500 underline underline-offset-4 hover:text-zinc-300 transition-colors"
+            >
+                setlist.fm
+            </a>
+        </p>
     )
 }

@@ -124,12 +124,13 @@ export function parseSetlistDate(dateStr: string): string {
  * para poder importarlo con addEventFromBandsintown.
  */
 export function normalizeSetlist(setlist: Setlist) {
-    // Los tipos describen la respuesta completa, pero Setlist.fm devuelve
-    // setlists parciales con normalidad: un show cargado sin canciones viene
-    // con `sets.set` vacío o con sets sin `song`, y los venues incompletos
-    // pueden no traer `city`. Sin estas guardas el acceso encadenado tira
-    // TypeError y rompe el render entero en vez de degradar — verificado con
-    // las tres formas parciales que devuelve la API.
+    // Guardas defensivas, no la reparación de un fallo observado. Medido
+    // contra la API real (200 setlists de 10 artistas, 2026-08-28): siempre
+    // devolvió `sets.set` como array —vacío cuando el show no tiene canciones
+    // cargadas— y siempre trajo `venue.city.country`. Los tipos declaran esos
+    // campos como obligatorios y la evidencia los respalda; las guardas quedan
+    // porque cuestan nada y un acceso encadenado sin ellas tira TypeError y
+    // rompe el render entero si el contrato deriva.
     const allSongs = (setlist.sets?.set ?? []).flatMap((s) =>
         (s?.song ?? []).map((song) => song?.name).filter((name): name is string => Boolean(name))
     )

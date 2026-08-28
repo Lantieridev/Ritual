@@ -46,8 +46,45 @@ describe('SetlistResults', () => {
 
   it('renders the artist and venue', () => {
     render(<SetlistResults setlists={[setlist]} />)
-    expect(screen.getByText('Bandalos Chinos')).toBeInTheDocument()
+    expect(screen.getByText(/Bandalos Chinos/)).toBeInTheDocument()
     expect(screen.getByText(/Niceto, CABA, Argentina/)).toBeInTheDocument()
+  })
+
+  // Los términos de la API de Setlist.fm exigen un link de atribución cada vez
+  // que se muestran sus datos. Es una obligación del contrato de uso, así que
+  // se testea como cualquier otro requisito, no se deja a criterio visual.
+  it('credits setlist.fm with a link whenever it renders results', () => {
+    render(<SetlistResults setlists={[setlist]} />)
+
+    const attribution = screen.getByRole('link', { name: 'setlist.fm' })
+    expect(attribution).toHaveAttribute('href', 'https://www.setlist.fm/')
+    expect(attribution).toHaveAttribute('rel', expect.stringContaining('noopener'))
+  })
+
+  it('credits setlist.fm in the empty state too — the query still hit their API', () => {
+    render(<SetlistResults setlists={[]} />)
+
+    expect(screen.getByRole('link', { name: 'setlist.fm' })).toHaveAttribute(
+      'href',
+      'https://www.setlist.fm/'
+    )
+  })
+
+  it('links each show to its own setlist.fm page', () => {
+    render(<SetlistResults setlists={[setlist]} />)
+
+    expect(screen.getByRole('link', { name: /Bandalos Chinos/ })).toHaveAttribute(
+      'href',
+      'https://setlist.fm/sl-1'
+    )
+  })
+
+  it('falls back to plain text when the setlist url is unsafe, instead of rendering a bad link', () => {
+    const unsafe = { ...setlist, url: 'javascript:alert(1)' }
+    render(<SetlistResults setlists={[unsafe]} />)
+
+    expect(screen.queryByRole('link', { name: /Bandalos Chinos/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Bandalos Chinos')).toBeInTheDocument()
   })
 
   it('expands and collapses the song list', async () => {
