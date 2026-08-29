@@ -170,6 +170,20 @@ html {
  */
 .ritual-photo-bg {
   filter: grayscale(1) contrast(1.18) brightness(0.85);
+  /*
+   * `lighten` hace que el bloque tonal de abajo actúe como piso: el hero nunca
+   * queda más oscuro que él.
+   *
+   * Hace falta porque el diseño da por sentadas fotos con exposición normal
+   * —su stand-in es un gris claro— y las reales no lo son. Medido: la foto de
+   * Los Piojos que devuelve Spotify tiene brillo medio 12/255, un 5%. Con
+   * brightness(.85) encima queda en 10/255 y el hero se ve negro liso, sin la
+   * forma que el diseño muestra.
+   *
+   * Con `lighten` una foto oscura deja pasar el degradado y una normal se
+   * impone, así que las dos se leen como el mockup en vez de sólo las claras.
+   */
+  mix-blend-mode: lighten;
 }
 
 /*
@@ -183,13 +197,19 @@ html {
  * sin inventar una forma que el diseño no tiene.
  */
 .ritual-photo-fallback {
+  /*
+   * La columna llega hasta `gray-muted-2` en su punto más claro, no hasta un
+   * token de superficie. Los de superficie (#101013–#1A1A20) están pensados
+   * para paneles y son demasiado oscuros para leerse como una foto: contra el
+   * fondo negro no se distinguen. En el prototipo esta zona es un gris medio
+   * bien visible, que es lo que le da forma al hero.
+   */
   background:
+    radial-gradient(52% 86% at 56% 44%, rgba(120, 118, 126, 0.34) 0%, rgba(74, 74, 82, 0.18) 46%, transparent 78%),
     linear-gradient(
-      100deg,
-      var(--color-ritual-bg) 0%,
-      var(--color-ritual-panel-2) 26%,
-      var(--color-ritual-surface-high-2) 52%,
-      var(--color-ritual-panel-2) 74%,
+      180deg,
+      var(--color-ritual-panel-2) 0%,
+      var(--color-ritual-panel) 52%,
       var(--color-ritual-bg) 100%
     );
 }
