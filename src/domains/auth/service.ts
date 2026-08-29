@@ -87,6 +87,30 @@ export async function modifyProfile(input: ProfileUpdateInput): Promise<ActionRe
     return {}
 }
 
+/**
+ * Marca el tour de onboarding como visto (issue #20), sea porque el usuario
+ * lo terminó o porque lo saltó — no se distingue: lo que importa es no
+ * volver a mostrarlo. Idempotente: pisa la fecha si se llama de nuevo, nunca
+ * fallaría por "ya estaba marcado".
+ */
+export async function completeOnboarding(): Promise<ActionResult> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'No estás autenticado.' }
+
+    const { error } = await supabase
+        .from('profiles')
+        .update({ onboarding_completed_at: new Date().toISOString() })
+        .eq('id', user.id)
+
+    if (error) {
+        console.error('Complete onboarding error:', error)
+        return { error: sanitizeError(error) }
+    }
+
+    return {}
+}
+
 export async function assignUserRole(userId: string, role: string): Promise<ActionResult> {
     const supabase = await createClient()
     // Goes through the assign_user_role RPC, not a raw table update — it's the

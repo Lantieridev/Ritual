@@ -278,4 +278,6 @@ export interface Profile {
   bio?: string | null
   location?: string | null
   updated_at?: string | null
+  /** Cuándo terminó/saltó el tour de onboarding (issue #20). Null = todavía no lo vio. */
+  onboarding_completed_at?: string | null
 }

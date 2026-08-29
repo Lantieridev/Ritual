@@ -4,6 +4,7 @@ vi.mock('@/src/domains/auth/service', () => ({
   findProfile: vi.fn(),
   modifyProfile: vi.fn(),
   assignUserRole: vi.fn(),
+  completeOnboarding: vi.fn(),
 }))
 
 const mocks = vi.hoisted(() => ({
@@ -21,7 +22,7 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue(null),
 }))
 
-import { findProfile, modifyProfile, assignUserRole } from '@/src/domains/auth/service'
+import { findProfile, modifyProfile, assignUserRole, completeOnboarding } from '@/src/domains/auth/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { POST } from '@/app/api/graphql/route'
 
@@ -49,6 +50,28 @@ describe('auth GraphQL schema', () => {
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ me: { id: 'u1', username: 'martin' } })
     expect(findProfile).toHaveBeenCalledWith()
+  })
+
+  it('expone onboardingCompletedAt tal cual, sin transformar', async () => {
+    vi.mocked(findProfile).mockResolvedValue({
+      id: 'u1',
+      username: 'martin',
+      bio: null,
+      onboarding_completed_at: '2026-08-29T00:00:00.000Z',
+    })
+
+    const body = await query('{ me { onboardingCompletedAt } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ me: { onboardingCompletedAt: '2026-08-29T00:00:00.000Z' } })
+  })
+
+  it('onboardingCompletedAt es null para quien todavía no vio el tour', async () => {
+    vi.mocked(findProfile).mockResolvedValue({ id: 'u1', username: 'martin', bio: null, onboarding_completed_at: null })
+
+    const body = await query('{ me { onboardingCompletedAt } }')
+
+    expect(body.data).toEqual({ me: { onboardingCompletedAt: null } })
   })
 
   it('resolves "me" as null when there is no session', async () => {
@@ -175,5 +198,26 @@ describe('auth GraphQL mutations', () => {
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ assignRole: { success: true, error: null } })
     expect(assignUserRole).toHaveBeenCalledWith('target', 'moderador')
+  })
+
+  it('completeOnboarding no pide ningún argumento y delega al service', async () => {
+    vi.mocked(completeOnboarding).mockResolvedValue({})
+
+    const body = await query('mutation { completeOnboarding { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ completeOnboarding: { success: true, error: null } })
+    expect(completeOnboarding).toHaveBeenCalledWith()
+  })
+
+  it('completeOnboarding reporta el error del service sin tirar una excepción de GraphQL', async () => {
+    vi.mocked(completeOnboarding).mockResolvedValue({ error: 'No estás autenticado.' })
+
+    const body = await query('mutation { completeOnboarding { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({
+      completeOnboarding: { success: false, error: 'No estás autenticado.' },
+    })
   })
 })

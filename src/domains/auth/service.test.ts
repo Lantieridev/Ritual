@@ -10,7 +10,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { modifyProfile, assignUserRole } from '@/src/domains/auth/service'
+import { modifyProfile, assignUserRole, completeOnboarding } from '@/src/domains/auth/service'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -18,6 +18,7 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   builder.select = vi.fn(chain)
   builder.eq = vi.fn(chain)
   builder.upsert = vi.fn(chain)
+  builder.update = vi.fn(chain)
   builder.single = vi.fn(() => Promise.resolve(result))
   builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
     Promise.resolve(result).then(onFulfilled, onRejected)
@@ -180,6 +181,46 @@ describe('assignUserRole', () => {
     mockCreateClient.mockReturnValue(Promise.resolve(supabase))
 
     const result = await assignUserRole('user-1', 'admin')
+
+    expect(result).toEqual({ error: 'Ocurrió un error inesperado. Intentá de nuevo.' })
+  })
+})
+
+describe('completeOnboarding', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('requires a logged-in user', async () => {
+    const supabase = makeSupabase({ user: null })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await completeOnboarding()
+
+    expect(result).toEqual({ error: 'No estás autenticado.' })
+  })
+
+  it('sets onboarding_completed_at for the current user and returns empty object on success', async () => {
+    const supabase = makeSupabase({ user: { id: 'u1' } })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await completeOnboarding()
+
+    expect(supabase.from).toHaveBeenCalledWith('profiles')
+    const updateMock = supabase.profileBuilder.update as ReturnType<typeof vi.fn>
+    expect(updateMock).toHaveBeenCalledWith({ onboarding_completed_at: expect.any(String) })
+    expect(supabase.profileBuilder.eq).toHaveBeenCalledWith('id', 'u1')
+    expect(result).toEqual({})
+  })
+
+  it('surfaces error via sanitizeError on failure', async () => {
+    const supabase = makeSupabase({
+      user: { id: 'u1' },
+      profileResult: { data: null, error: { message: 'connection reset' } },
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await completeOnboarding()
 
     expect(result).toEqual({ error: 'Ocurrió un error inesperado. Intentá de nuevo.' })
   })

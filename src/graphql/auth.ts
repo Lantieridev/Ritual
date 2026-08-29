@@ -1,6 +1,6 @@
 import { builder } from './builder'
 import { findProfile } from '@/src/domains/auth/service'
-import { modifyProfile, assignUserRole } from '@/src/domains/auth/service'
+import { modifyProfile, assignUserRole, completeOnboarding } from '@/src/domains/auth/service'
 import type { Profile } from '@/src/core/types'
 import { MutationResultRef, toMutationResult } from './shared'
 
@@ -16,6 +16,7 @@ ProfileRef.implement({
         bio: t.exposeString('bio', { nullable: true }),
         location: t.exposeString('location', { nullable: true }),
         updatedAt: t.exposeString('updated_at', { nullable: true }),
+        onboardingCompletedAt: t.exposeString('onboarding_completed_at', { nullable: true }),
         // Only the profile's own owner or an admin can see a role — anyone
         // else would let an anonymous caller enumerate which accounts are
         // moderador/admin by querying profile(id) across ids, a targeting
@@ -82,6 +83,14 @@ builder.mutationField('updateProfile', (t) =>
                     avatar_url: args.input.avatarUrl ?? undefined,
                 })
             ),
+    })
+)
+
+builder.mutationField('completeOnboarding', (t) =>
+    t.field({
+        type: MutationResultRef,
+        description: 'Marca el tour de onboarding como visto — terminado o salteado, no se distingue.',
+        resolve: async () => toMutationResult(await completeOnboarding()),
     })
 )
 

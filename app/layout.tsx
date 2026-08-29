@@ -39,6 +39,8 @@ import { isAuthSessionMissingError } from "@supabase/supabase-js";
 import { createClient } from "@/src/core/lib/supabase/server";
 
 import { GraphQLProvider } from "@/src/graphql/provider";
+import { findProfile } from "@/src/domains/auth/service";
+import { OnboardingTour } from "@/src/domains/auth/components";
 
 export default async function RootLayout({
   children,
@@ -51,6 +53,12 @@ export default async function RootLayout({
     console.error("supabase.auth.getUser() failed in root layout:", getUserError);
   }
 
+  // Resuelto acá, server-side, en vez de que el tour dispare su propia query
+  // al montar: evita el flash de "nada" mientras esa query resuelve, y a un
+  // visitante sin sesión no le cuesta ni siquiera la consulta a profiles.
+  const profile = user ? await findProfile(user.id) : null;
+  const showOnboarding = Boolean(user) && !profile?.onboarding_completed_at;
+
   return (
     <html lang="es" className="dark">
       <body className={`${fontVariables} antialiased font-sans`}>
@@ -58,6 +66,7 @@ export default async function RootLayout({
           <Navbar user={user} />
           {children}
           <Footer />
+          {showOnboarding && <OnboardingTour />}
         </GraphQLProvider>
       </body>
     </html>
