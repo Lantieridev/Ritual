@@ -35,12 +35,22 @@ export async function signup(prevState: AuthActionState, formData: FormData) {
 
     const email = formData.get('email') as string
     const password = formData.get('password') as string
+    const location = (formData.get('location') as string | null)?.trim()
 
+    // location viaja como user metadata, no como un UPDATE aparte después del
+    // signUp: si el proyecto pide confirmar el email, signUp() no deja
+    // sesión activa hasta que se confirma, y un UPDATE a profiles corriendo
+    // sin sesión no pasa la policy "auth.uid() = id" — fallaría en silencio
+    // en cualquier entorno con confirmación de email activada, aunque
+    // funcione en local (acá está desactivada). El trigger handle_new_user()
+    // corre SECURITY DEFINER y ya lee full_name/avatar_url de acá mismo, así
+    // que location sigue el mismo camino que esos dos campos.
     const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
             emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/auth/callback`,
+            ...(location ? { data: { location } } : {}),
         },
     })
 

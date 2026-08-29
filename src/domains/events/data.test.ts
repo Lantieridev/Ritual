@@ -10,7 +10,7 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn(),
 }))
 
-import { getEventsWithAttendance, MAX_EVENTS } from '@/src/domains/events/data'
+import { getEventsWithAttendance, getUpcomingEventsInCity, MAX_EVENTS } from '@/src/domains/events/data'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
@@ -93,6 +93,83 @@ describe('getEventsWithAttendance', () => {
     vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
 
     const result = await getEventsWithAttendance()
+
+    expect(result).toEqual([])
+  })
+})
+
+describe('getUpcomingEventsInCity', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function makeCityBuilder(result: { data: unknown; error: unknown }) {
+    const builder: Record<string, unknown> = {}
+    const chain = () => builder
+    builder.select = vi.fn(chain)
+    builder.ilike = vi.fn(chain)
+    builder.in = vi.fn(chain)
+    builder.gte = vi.fn(chain)
+    builder.order = vi.fn(chain)
+    builder.limit = vi.fn(chain)
+    builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
+      Promise.resolve(result).then(onFulfilled, onRejected)
+    return builder
+  }
+
+  it('busca sedes por ciudad y después eventos futuros en esas sedes', async () => {
+    const venuesBuilder = makeCityBuilder({ data: [{ id: 'v1' }, { id: 'v2' }], error: null })
+    const eventsBuilder = makeCityBuilder({ data: [{ id: 'e1', name: 'Show en tu ciudad' }], error: null })
+    const fromMock = vi.fn((table: string) => (table === 'venues' ? venuesBuilder : eventsBuilder))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const now = new Date('2026-01-01T00:00:00Z')
+    const result = await getUpcomingEventsInCity('Córdoba', now)
+
+    expect(venuesBuilder.ilike).toHaveBeenCalledWith('city', 'Córdoba')
+    expect(eventsBuilder.in).toHaveBeenCalledWith('venue_id', ['v1', 'v2'])
+    expect(eventsBuilder.gte).toHaveBeenCalledWith('date', now.toISOString())
+    expect(result).toEqual([{ id: 'e1', name: 'Show en tu ciudad' }])
+  })
+
+  it('no consulta eventos si ninguna sede matchea la ciudad', async () => {
+    const venuesBuilder = makeCityBuilder({ data: [], error: null })
+    const fromMock = vi.fn(() => venuesBuilder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getUpcomingEventsInCity('Ushuaia')
+
+    expect(result).toEqual([])
+    expect(fromMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('devuelve lista vacía sin consultar nada si la ciudad viene vacía', async () => {
+    const fromMock = vi.fn()
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getUpcomingEventsInCity('   ')
+
+    expect(result).toEqual([])
+    expect(fromMock).not.toHaveBeenCalled()
+  })
+
+  it('devuelve lista vacía si falla la consulta de sedes', async () => {
+    const venuesBuilder = makeCityBuilder({ data: null, error: { message: 'boom' } })
+    const fromMock = vi.fn(() => venuesBuilder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getUpcomingEventsInCity('CABA')
+
+    expect(result).toEqual([])
+  })
+
+  it('devuelve lista vacía si falla la consulta de eventos', async () => {
+    const venuesBuilder = makeCityBuilder({ data: [{ id: 'v1' }], error: null })
+    const eventsBuilder = makeCityBuilder({ data: null, error: { message: 'boom' } })
+    const fromMock = vi.fn((table: string) => (table === 'venues' ? venuesBuilder : eventsBuilder))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getUpcomingEventsInCity('CABA')
 
     expect(result).toEqual([])
   })

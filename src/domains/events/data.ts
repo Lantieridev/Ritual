@@ -209,3 +209,52 @@ export async function getMyEvents(): Promise<EventWithAttendance[]> {
       ],
     })) as EventWithAttendance[]
 }
+
+const NEARBY_LIMIT = 6
+
+/**
+ * Shows futuros del catálogo compartido cuya sede está en `city` — issue #55.
+ * Distinto de "Cerca tuyo" (wishlist vía Ticketmaster, sin nada geográfico
+ * real pese al nombre): esto es geografía real contra `venues.city`, sin
+ * mirar wishlist ni attendance.
+ *
+ * Dos consultas en vez de un filtro anidado (`.eq('venues.city', city)`
+ * sobre un join): más predecible que depender de que Supabase-js resuelva
+ * bien un filtro sobre una tabla embebida, y esta ruta no es hot-path.
+ *
+ * Match exacto (case-insensitive), no normalizado — el propio issue #55 lo
+ * deja anotado como decisión de diseño aparte, no bloqueante para una
+ * primera versión: "CABA" en el perfil no matchea "Buenos Aires" en venues.
+ */
+export async function getUpcomingEventsInCity(city: string, now: Date = new Date()): Promise<EventWithRelations[]> {
+  const trimmed = city.trim()
+  if (!trimmed) return []
+
+  const supabase = await createClient()
+
+  const { data: venueRows, error: venueError } = await supabase
+    .from('venues')
+    .select('id')
+    .ilike('city', trimmed)
+
+  if (venueError) {
+    console.error('Error buscando sedes por ciudad:', venueError)
+    return []
+  }
+  const venueIds = (venueRows ?? []).map((v) => v.id as string)
+  if (venueIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('events')
+    .select(EVENTS_SELECT)
+    .in('venue_id', venueIds)
+    .gte('date', now.toISOString())
+    .order('date', { ascending: true })
+    .limit(NEARBY_LIMIT)
+
+  if (error) {
+    console.error('Error buscando shows por ciudad:', error)
+    return []
+  }
+  return (data ?? []) as unknown as EventWithRelations[]
+}

@@ -71,6 +71,23 @@ export function SignupForm() {
                 />
             </div>
 
+            <div className="space-y-1.5">
+                <label className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text" htmlFor="location">
+                    Ubicación <span className="normal-case text-ritual-gray-mid">(opcional)</span>
+                </label>
+                <input
+                    id="location"
+                    name="location"
+                    type="text"
+                    autoComplete="address-level2"
+                    className="w-full border-0 border-b border-ritual-border bg-transparent px-0 py-2 font-figure text-xl text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none"
+                    placeholder="Ej. Buenos Aires, Argentina"
+                />
+                <p className="font-body text-xs text-ritual-gray-text">
+                    Para mostrarte shows y buscar cerca tuyo. Se puede cargar después.
+                </p>
+            </div>
+
             {state?.error && (
                 <p role="alert" className="font-body text-sm text-ritual-red-hover bg-ritual-red/10 border border-ritual-red/20 p-3">
                     {state.error}

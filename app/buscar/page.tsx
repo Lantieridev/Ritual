@@ -13,6 +13,8 @@ import { isSetlistFmConfigured, getSetlistsByArtist } from '@/src/core/lib/setli
 import { searchCatalog } from '@/src/domains/search/service'
 import { formatDate } from '@/src/core/lib/utils'
 import { EmptyState } from '@/src/core/components/ui/EmptyState'
+import { createClient } from '@/src/core/lib/supabase/server'
+import { findProfile } from '@/src/domains/auth/service'
 
 export const metadata: Metadata = {
   title: 'Buscar | RITUAL',
@@ -73,6 +75,20 @@ export default async function BuscarPage({ searchParams }: PageProps) {
       const result = await getSetlistsByArtist(params.artist.trim())
       slSetlists = result.setlists
       slError = result.error
+    }
+  }
+
+  // Prellena el campo de ciudad con la del perfil (issue #55) — sólo el
+  // valor por defecto del input, nunca `params.location`: escribirlo ahí
+  // dispararía una búsqueda apenas se entra a la página, antes de que el
+  // usuario haya tocado nada.
+  let profileLocation: string | undefined
+  if (tab === 'cartelera' && !params.location?.trim()) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const profile = await findProfile(user.id)
+      profileLocation = profile?.location ?? undefined
     }
   }
 
@@ -140,7 +156,7 @@ export default async function BuscarPage({ searchParams }: PageProps) {
             <SearchEventsForm
               configured={anyConfigured}
               initialArtist={params.artist}
-              initialLocation={params.location}
+              initialLocation={params.location ?? profileLocation}
               showLocationTab={source === 'future'}
               source={source}
             />

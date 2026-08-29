@@ -1,7 +1,7 @@
 import * as React from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { listMyEvents } from '@/src/domains/events/service'
+import { listMyEvents, listUpcomingEventsInCity } from '@/src/domains/events/service'
 import { buildHomeFeed, buildHomeHeroState } from '@/src/domains/events/home-view'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
 import { gql } from 'urql'
@@ -17,6 +17,8 @@ import {
 } from '@/src/core/lib/ticketmaster'
 import { getArtistImage } from '@/src/core/lib/artist-image'
 import type { FutureEvent } from '@/src/core/types'
+import { findProfile } from '@/src/domains/auth/service'
+import { getCurrentUserId } from '@/src/core/auth/session'
 
 export const metadata: Metadata = {
   title: 'RITUAL — Tu historial de recitales',
@@ -158,14 +160,73 @@ async function NearbyShowsWrapper({ wishlistArtists }: { wishlistArtists: Array<
   )
 }
 
+/**
+ * "En tu ciudad": geografía real contra `venues.city`, distinto de "Cerca
+ * tuyo" (arriba) que es wishlist vía Ticketmaster sin nada geográfico pese
+ * al nombre — issue #55. Sin fetch de imagen por card a propósito: son
+ * shows que ya están en el catálogo local, no candidatos externos que haga
+ * falta ilustrar uno por uno.
+ */
+async function CityShowsWrapper({ city }: { city: string | undefined }) {
+  if (!city) return null
+  const events = await listUpcomingEventsInCity(city)
+  if (events.length === 0) return null
+
+  return (
+    <section className="min-h-screen snap-start flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-panel">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
+        <div>
+          <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">
+            En tu ciudad
+          </p>
+          <h2 className="font-display text-[7vh] leading-[0.9] uppercase text-ritual-bone mt-2">
+            Se viene<br />cerca tuyo
+          </h2>
+        </div>
+        <p className="font-body italic text-ritual-gray-text max-w-xs text-right">
+          Shows del catálogo en {city}.
+        </p>
+      </div>
+      <ul className="divide-y divide-ritual-border-subtle">
+        {events.map((ev) => {
+          const headliner = ev.lineups?.[0]?.artists.name ?? ev.name ?? 'Recital'
+          return (
+            <li key={ev.id}>
+              <Link href={routes.events.detail(ev.id)} className="group flex items-center gap-4 py-4">
+                <div className="w-16 shrink-0">
+                  <p className="font-label text-[10px] text-ritual-gray-text uppercase">
+                    {formatDate(ev.date, { day: 'numeric', month: 'short' })}
+                  </p>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-dense font-extrabold text-ritual-bone truncate">{headliner}</p>
+                  {ev.venues && <p className="font-label text-[10px] text-ritual-gray-text">{ev.venues.name}</p>}
+                </div>
+                <span className="font-label text-[9px] tracking-[0.16em] text-ritual-red-hover uppercase opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  Ver →
+                </span>
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
 export default async function HomePage() {
-  const [allEvents, { data }] = await Promise.all([
+  const [allEvents, { data }, userId] = await Promise.all([
     listMyEvents(),
     getClient().query<{
       wishlistArtists: Array<Pick<GraphQLArtist, 'id' | 'name'>>
       festivals: HomeFestival[]
     }>(HomePageQuery, {}).toPromise(),
+    getCurrentUserId(),
   ])
+  // getCurrentUserId() ya va cacheado por request (ver session.ts) — layout.tsx
+  // y listMyEvents() ya pagan este costo, así que este llamado no suma una
+  // validación de JWT nueva.
+  const profile = userId ? await findProfile(userId) : null
   const festivals = (data?.festivals ?? []).map(toHeroFestival)
   const now = new Date()
 
@@ -207,6 +268,10 @@ export default async function HomePage() {
 
       <React.Suspense fallback={<div className="min-h-screen bg-ritual-bg animate-pulse flex items-center justify-center"><p className="text-ritual-gray-text font-label uppercase">Buscando shows cerca tuyo...</p></div>}>
         <NearbyShowsWrapper wishlistArtists={data?.wishlistArtists ?? []} />
+      </React.Suspense>
+
+      <React.Suspense fallback={null}>
+        <CityShowsWrapper city={profile?.location ?? undefined} />
       </React.Suspense>
 
       {upcomingFestivals.length > 0 && (
