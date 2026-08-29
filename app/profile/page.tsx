@@ -1,13 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { SignOutButton } from '@/src/domains/auth/components'
 import { findProfile } from '@/src/domains/auth/service'
-import { listEventsWithAttendance } from '@/src/domains/events/service'
+import { listMyEvents } from '@/src/domains/events/service'
 import { safeHref } from '@/src/core/lib/validation'
-import { formatDate } from '@/src/core/lib/utils'
 import { routes } from '@/src/core/lib/routes'
-import { StarRating, LinkButton } from '@/src/core/components/ui'
+import { LinkButton } from '@/src/core/components/ui'
 import { PageShell } from '@/src/core/components/layout'
 
 export const metadata = {
@@ -29,14 +27,16 @@ export default async function ProfilePage() {
         redirect('/login')
     }
 
-    const [profile, allEvents] = await Promise.all([
+    const [profile, myEvents] = await Promise.all([
         findProfile(user.id),
-        listEventsWithAttendance(),
+        listMyEvents(),
     ])
 
-    const wentEvents = allEvents
-        .filter((e) => e.attendance?.[0]?.status === 'went')
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    // Sólo el conteo para el sello del carnet — la lista completa (con orden,
+    // agrupamiento por año y filtro Todos/Próximos/Vividos) vive en /agenda,
+    // issue #65. listMyEvents ya trae nada más que attendance propia (no el
+    // catálogo entero), así que este conteo no dispara una consulta extra.
+    const wentCount = myEvents.filter((e) => e.attendance?.[0]?.status === 'went').length
 
     const displayName = profile?.full_name || user.email?.split('@')[0] || 'Sin nombre'
     const seal = monogram(profile?.full_name, user.email?.[0] ?? '?')
@@ -71,13 +71,16 @@ export default async function ProfilePage() {
                         {/* Cifras */}
                         <div className="flex md:flex-col gap-6 md:gap-2 justify-center font-figure text-2xl text-ritual-bone text-center md:text-right shrink-0">
                             <div>
-                                {wentEvents.length}
+                                {wentCount}
                                 <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-text mt-0.5">shows</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="pt-4 mt-4 border-t border-ritual-border-subtle flex flex-wrap gap-3">
+                        <LinkButton href={routes.agenda} className="px-5 py-2">
+                            Ver mi agenda
+                        </LinkButton>
                         <LinkButton href={routes.profile + '/edit'} variant="secondary" className="px-5 py-2">
                             Editar carnet
                         </LinkButton>
@@ -96,37 +99,6 @@ export default async function ProfilePage() {
                         <p className="font-body text-ritual-bone mt-1">{user.email}</p>
                     </div>
                 </section>
-
-                {/* La base de datos de tus shows */}
-                {wentEvents.length > 0 && (
-                    <section>
-                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">
-                            Tu base de datos — {wentEvents.length} shows
-                        </h2>
-                        <ul className="divide-y divide-ritual-border-subtle">
-                            {wentEvents.map((ev) => {
-                                const rating = ev.attendance?.[0]?.rating
-                                const review = ev.attendance?.[0]?.review
-                                return (
-                                    <li key={ev.id} className="py-4">
-                                        <Link href={routes.events.detail(ev.id)} className="flex items-start gap-4 group">
-                                            <div className="w-12 shrink-0 text-center">
-                                                <p className="font-label text-[9px] font-bold text-ritual-gray-text uppercase">{formatDate(ev.date, { month: 'short' })}</p>
-                                                <p className="font-display text-xl text-ritual-bone leading-none">{new Date(ev.date).getDate()}</p>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-dense font-extrabold text-ritual-bone truncate">{ev.name || ev.lineups?.[0]?.artists.name || 'Recital'}</p>
-                                                {ev.venues && <p className="font-label text-[10px] text-ritual-gray-text">{ev.venues.name}</p>}
-                                                {review && <p className="font-body italic text-sm text-ritual-gray-light-3 mt-1.5">&ldquo;{review}&rdquo;</p>}
-                                            </div>
-                                            {rating != null && <StarRating value={rating} size="xs" className="shrink-0" />}
-                                        </Link>
-                                    </li>
-                                )
-                            })}
-                        </ul>
-                    </section>
-                )}
             </div>
         </PageShell>
     )

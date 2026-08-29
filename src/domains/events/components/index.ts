@@ -4,3 +4,5 @@ export { EventForm } from './EventForm'
 export { DeleteEventButton } from './DeleteEventButton'
 export { DeleteEventAction } from './DeleteEventAction'
 export { EventWeather } from './EventWeather'
+export { AgendaView } from './AgendaView'
+

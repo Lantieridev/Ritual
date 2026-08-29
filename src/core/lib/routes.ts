@@ -10,6 +10,8 @@ export const routes = {
   wishlist: '/wishlist',
   search: '/search',
   wrapped: '/wrapped',
+  /** Todos los shows propios, con tabs Todos/Próximos/Vividos — issue #65. */
+  agenda: '/agenda',
   /** Unifica los catálogos de artistas/sedes/festivales en pestañas. */
   collection: '/coleccion',
   /** Ajustes del modo recital activo: ventana y plantilla del checklist — issue #9. */
