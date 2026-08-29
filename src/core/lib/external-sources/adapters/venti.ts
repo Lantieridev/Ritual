@@ -1,58 +1,32 @@
-import { FutureEvent } from '@/src/core/types'
-import { ExternalSearchRequest, ExternalSearchResponse, ExternalSourceAdapter } from '../types'
-import { fetchWithRetry } from '@/src/core/lib/http'
+import { ExternalSearchResponse, ExternalSourceAdapter } from '../types'
 
 export const ventiAdapter: ExternalSourceAdapter = {
   id: 'venti',
   name: 'Venti',
   type: 'api',
   isConfigured: () => true,
-  search: async (query: ExternalSearchRequest): Promise<ExternalSearchResponse> => {
-    try {
-      const url = new URL('https://venti.com.ar/api/event/')
-      if (query.keyword) {
-        url.searchParams.set('q', query.keyword)
-      }
-
-      const res = await fetchWithRetry(url.toString(), {
-        method: 'GET',
-      })
-
-      if (!res.ok) {
-        return { events: [], total: 0, error: `Venti responded with status: ${res.status}` }
-      }
-
-      const data = await res.json()
-      
-      const rawEvents = Array.isArray(data) ? data : (data.events || data.data || [])
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const events: FutureEvent[] = rawEvents.map((ev: any) => ({
-        id: `venti-${ev.id || Math.random()}`,
-        title: ev.name || ev.title || 'Unknown Event',
-        datetime: ev.date || ev.datetime || ev.start_date || '',
-        venue: {
-          name: ev.venue || ev.location?.name || 'Unknown Venue',
-          city: ev.city || ev.location?.city || query.city || null,
-        },
-        lineup: [],
-        url: ev.url || ev.link || `https://venti.com.ar/event/${ev.slug || ev.id}`,
-        image: ev.image || ev.image_url || ev.cover,
-      }))
-
-      let filteredEvents = events
-      if (query.city) {
-        const cityLower = query.city.toLowerCase()
-        filteredEvents = events.filter(e => e.venue.city?.toLowerCase().includes(cityLower))
-      }
-
-      return {
-        events: filteredEvents,
-        total: filteredEvents.length
-      }
-    } catch (error) {
-      console.error('Venti adapter error:', error)
-      return { events: [], total: 0, error: 'Failed to fetch from Venti API' }
+  /**
+   * Roto de verdad, confirmado en vivo (no un típico "el sitio está caído
+   * momentáneamente"): venti.com.ar migró a venti.live y el JSON endpoint
+   * `/api/event/` que este adapter llamaba ya no existe (404 permanente,
+   * no transitorio). El sitio nuevo es un SPA renderizado 100% client-side
+   * -un fetch de servidor a `venti.live/eventos` devuelve un shell de
+   * ~3.8KB sin ningún dato de evento adentro, así que tampoco hay HTML para
+   * scrapear con cheerio como hacen los demás adapters `type: 'scrape'`.
+   *
+   * La única forma real de sacar datos de ahí sería un browser headless
+   * ejecutando el JS del sitio -infraestructura que no existe en este
+   * repo hoy (el enum `type: 'headless'` en `../types` está anticipado
+   * pero nada lo implementa todavía). Hacerle andar de nuevo es una
+   * decisión de arquitectura aparte, no un fix de una línea, así que en
+   * vez de seguir pegándole a una URL muerta todos los días en el cron,
+   * esto devuelve el error explicado sin gastar el fetch.
+   */
+  search: async (): Promise<ExternalSearchResponse> => {
+    return {
+      events: [],
+      total: 0,
+      error: 'Venti migró a venti.live (SPA client-side); el API endpoint viejo ya no existe y el sitio nuevo necesita un browser headless para leer sus eventos -no implementado.',
     }
-  }
+  },
 }

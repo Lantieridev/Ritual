@@ -42,14 +42,22 @@ export function parsePulsoTicketsHTML(html: string, query: ExternalSearchRequest
   $('div.group').each((_, el) => {
     const linkEl = $(el).find('a[href*="/evento/"]').first()
     const url = linkEl.attr('href') || ''
-    
+
     if (!url || seenUrls.has(url)) return
-    seenUrls.add(url)
 
     const titleEl = $(el).find('h3')
     const title = titleEl.text().trim()
-    
+
+    // Bug real, confirmado contra el HTML en vivo: el sitio repite el mismo
+    // evento en dos `div.group` (un carrusel de banners sin h3, y la card
+    // real con título/fecha/venue). Antes se marcaba la url como "vista"
+    // apenas aparecía, así que la primera tarjeta -vacía, sin título- ganaba
+    // la carrera y la segunda -la única con datos- se descartaba por
+    // duplicada. Con un solo evento cargado en el sitio esto vaciaba el
+    // resultado entero sin ningún error. Ahora sólo se marca como vista una
+    // vez que la tarjeta efectivamente aportó un evento válido.
     if (!title) return
+    seenUrls.add(url)
 
     if (query.keyword && !title.toLowerCase().includes(query.keyword.toLowerCase())) {
       return

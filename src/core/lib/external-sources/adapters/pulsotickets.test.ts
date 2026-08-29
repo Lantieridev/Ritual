@@ -4,12 +4,17 @@ import path from 'path'
 import { parsePulsoTicketsHTML } from './pulsotickets'
 
 describe('PulsoTickets Adapter', () => {
-  it('should parse events from HTML fixture', () => {
+  // Bug real, encontrado contra el sitio en vivo (no en este fixture, que
+  // originalmente sólo tenía la card válida): pulsotickets.com repite el
+  // mismo evento en un carrusel de banners sin h3 antes de la card real con
+  // título/fecha/venue. El fixture ahora incluye esa card decoy primero,
+  // igual que el HTML real, para no volver a perder esta regresión.
+  it('parses the real event even when a decoy carousel card without a title shares its url', () => {
     const html = fs.readFileSync(path.join(__dirname, '__fixtures__', 'pulsotickets.html'), 'utf8')
     const events = parsePulsoTicketsHTML(html, {})
-    
+
     expect(events.length).toBeGreaterThan(0)
-    
+
     const firstEvent = events[0]
     expect(firstEvent.title).toBe('PopFest 101.5')
     expect(firstEvent.url).toContain('pulsotickets.com')
