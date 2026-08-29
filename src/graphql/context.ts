@@ -6,6 +6,8 @@ import DataLoader from 'dataloader'
 import { getAttendanceForEventsBatch, getEventPhotosBatch, type EventAttendance, type EventPhoto } from '@/src/domains/events/service'
 import { listArtistEventsBatch, type ArtistEvent } from '@/src/domains/artists/service'
 import { listVenueEventsBatch, listVenueTipsBatch, type VenueEvent, type VenueTip } from '@/src/domains/venues/service'
+import { listExpenseSplitsBatch, type ExpenseSplitUser } from '@/src/domains/expenses/service'
+import { listUsernamesByIdsBatch } from '@/src/domains/auth/service'
 
 export interface GraphQLContext {
     supabase: SupabaseClient
@@ -16,6 +18,8 @@ export interface GraphQLContext {
     artistEventsLoader: DataLoader<string, ArtistEvent[]>
     venueEventsLoader: DataLoader<string, VenueEvent[]>
     venueTipsLoader: DataLoader<string, VenueTip[]>
+    expenseSplitsLoader: DataLoader<string, ExpenseSplitUser[]>
+    usernameByIdLoader: DataLoader<string, string | null>
 }
 
 export async function createGraphQLContext(): Promise<GraphQLContext> {
@@ -63,6 +67,14 @@ export async function createGraphQLContext(): Promise<GraphQLContext> {
         return listVenueTipsBatch(keys)
     })
 
+    const expenseSplitsLoader = new DataLoader<string, ExpenseSplitUser[]>(async (keys) => {
+        return listExpenseSplitsBatch(keys)
+    })
+
+    const usernameByIdLoader = new DataLoader<string, string | null>(async (keys) => {
+        return listUsernamesByIdsBatch(keys)
+    })
+
     return {
         supabase,
         userId,
@@ -72,5 +84,7 @@ export async function createGraphQLContext(): Promise<GraphQLContext> {
         artistEventsLoader,
         venueEventsLoader,
         venueTipsLoader,
+        expenseSplitsLoader,
+        usernameByIdLoader,
     }
 }

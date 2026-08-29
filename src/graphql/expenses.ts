@@ -1,7 +1,7 @@
 import { builder } from './builder'
 import { listExpenses, findExpenseById, summarizeExpenses } from '@/src/domains/expenses/service'
-import type { ExpenseSummary } from '@/src/domains/expenses/service'
-import { insertExpense, modifyExpense, removeExpense } from '@/src/domains/expenses/service'
+import type { ExpenseSummary, ExpenseSplitUser } from '@/src/domains/expenses/service'
+import { insertExpense, modifyExpense, removeExpense, addExpenseSplit, removeExpenseSplit } from '@/src/domains/expenses/service'
 import { MutationResultRef, toMutationResult } from './shared'
 import { findEventById } from '@/src/domains/events/service'
 import { estimateSpendForEvent, listExpensesForEvent } from '@/src/domains/expenses/service'
@@ -18,6 +18,14 @@ export const ExpenseRef = builder.objectRef<{
     created_at?: string
 }>('Expense')
 
+const ExpenseSplitUserRef = builder.objectRef<ExpenseSplitUser>('ExpenseSplitUser')
+ExpenseSplitUserRef.implement({
+    fields: (t) => ({
+        userId: t.exposeID('user_id'),
+        username: t.exposeString('username', { nullable: true }),
+    }),
+})
+
 ExpenseRef.implement({
     fields: (t) => ({
         id: t.exposeID('id'),
@@ -28,6 +36,18 @@ ExpenseRef.implement({
         eventId: t.exposeID('event_id', { nullable: true }),
         date: t.exposeString('date'),
         createdAt: t.exposeString('created_at', { nullable: true }),
+        // Issue #58 ("Crew") — con quién se comparte este gasto.
+        splits: t.field({
+            type: [ExpenseSplitUserRef],
+            resolve: (expense, _args, context) => context.expenseSplitsLoader.load(expense.id),
+        }),
+        // Quién pagó, para el resumen de "quién le debe a quién" cuando el
+        // gasto es compartido y el caller no es el dueño.
+        ownerUsername: t.field({
+            type: 'String',
+            nullable: true,
+            resolve: (expense, _args, context) => context.usernameByIdLoader.load(expense.user_id),
+        }),
     }),
 })
 
@@ -172,5 +192,45 @@ builder.queryField('estimateSpendForEvent', (t) =>
             if (!event) return null
             return estimateSpendForEvent(event, ctx.userId)
         }
+    })
+)
+
+// Payload propio, no MutationResultRef: el cliente necesita el user_id real
+// del tageado para poder sacarlo del split después sin esperar un refetch
+// (ilike es case-insensitive, así que lo tipeado no siempre es el username
+// real tal cual está guardado).
+const AddExpenseSplitResultRef = builder.objectRef<{ error?: string; userId?: string; username?: string }>(
+    'AddExpenseSplitResult'
+)
+AddExpenseSplitResultRef.implement({
+    fields: (t) => ({
+        success: t.boolean({ resolve: (r) => !r.error }),
+        error: t.exposeString('error', { nullable: true }),
+        userId: t.exposeID('userId', { nullable: true }),
+        username: t.exposeString('username', { nullable: true }),
+    }),
+})
+
+builder.mutationField('addExpenseSplit', (t) =>
+    t.field({
+        type: AddExpenseSplitResultRef,
+        description: 'Comparte un gasto con otro usuario de Ritual, por username — issue #58.',
+        args: {
+            expenseId: t.arg.id({ required: true }),
+            username: t.arg.string({ required: true }),
+        },
+        resolve: (_root, args) => addExpenseSplit(String(args.expenseId), args.username),
+    })
+)
+
+builder.mutationField('removeExpenseSplit', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            expenseId: t.arg.id({ required: true }),
+            userId: t.arg.id({ required: true }),
+        },
+        resolve: async (_root, args) =>
+            toMutationResult(await removeExpenseSplit(String(args.expenseId), String(args.userId))),
     })
 )

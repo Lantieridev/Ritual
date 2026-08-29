@@ -8,6 +8,7 @@ vi.mock('./data', () => ({
   getExpensesForEvent: vi.fn(),
   getExpensesSummary: vi.fn(),
   getVenueArtistSpendEstimate: vi.fn(),
+  getExpenseSplitsBatch: vi.fn(),
 }))
 
 vi.mock('@/src/domains/events/service', () => ({
@@ -35,6 +36,8 @@ import {
   insertExpense,
   modifyExpense,
   removeExpense,
+  addExpenseSplit,
+  removeExpenseSplit,
 } from './service'
 import type { EventWithRelations } from '@/src/core/types'
 
@@ -387,5 +390,179 @@ describe('removeExpense', () => {
 
     expect(result.error).toBeTruthy()
     expect(result.error).not.toContain('boom')
+  })
+})
+
+describe('addExpenseSplit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  /**
+   * Un mock por tabla, para las consultas que hace addExpenseSplit. El chequeo
+   * de asistencia va por RPC (user_attends_event), no por SELECT directo a
+   * attendance -- esa tabla sólo tiene la policy "el dueño ve su propia fila",
+   * así que un SELECT corrido con la sesión de quien comparte el gasto nunca
+   * podría ver la asistencia de un tercero (bug real, encontrado en vivo).
+   */
+  function setUpTables(overrides: {
+    expense?: { data: unknown; error: unknown }
+    profile?: { data: unknown; error: unknown }
+    attends?: { data: unknown; error: unknown }
+    insert?: { data: unknown; error: unknown }
+  }) {
+    const expenseBuilder: Record<string, unknown> = {}
+    expenseBuilder.select = vi.fn(() => expenseBuilder)
+    expenseBuilder.eq = vi.fn(() => expenseBuilder)
+    expenseBuilder.single = vi.fn(() => Promise.resolve(overrides.expense ?? { data: null, error: null }))
+
+    const profileBuilder: Record<string, unknown> = {}
+    profileBuilder.select = vi.fn(() => profileBuilder)
+    profileBuilder.ilike = vi.fn(() => profileBuilder)
+    profileBuilder.maybeSingle = vi.fn(() => Promise.resolve(overrides.profile ?? { data: null, error: null }))
+
+    const splitsBuilder: Record<string, unknown> = {}
+    splitsBuilder.insert = vi.fn(() => Promise.resolve(overrides.insert ?? { data: null, error: null }))
+
+    const fromMock = vi.fn((table: string) => {
+      if (table === 'expenses') return expenseBuilder
+      if (table === 'profiles') return profileBuilder
+      return splitsBuilder
+    })
+    const rpcMock = vi.fn(() => Promise.resolve(overrides.attends ?? { data: false, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: rpcMock }))
+    return { expenseBuilder, profileBuilder, splitsBuilder, fromMock, rpcMock }
+  }
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await addExpenseSplit(VALID_EXPENSE_ID, 'lucia')
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects an empty username without touching the database', async () => {
+    const result = await addExpenseSplit(VALID_EXPENSE_ID, '   ')
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects when the caller is not the expense owner', async () => {
+    setUpTables({ expense: { data: { id: VALID_EXPENSE_ID, user_id: 'someone-else', event_id: VALID_EVENT_ID }, error: null } })
+    const result = await addExpenseSplit(VALID_EXPENSE_ID, 'lucia')
+    expect(result).toEqual({ error: 'Sólo quien cargó el gasto puede compartirlo.' })
+  })
+
+  it('rejects an expense with no event_id', async () => {
+    setUpTables({ expense: { data: { id: VALID_EXPENSE_ID, user_id: 'user-1', event_id: null }, error: null } })
+    const result = await addExpenseSplit(VALID_EXPENSE_ID, 'lucia')
+    expect(result).toEqual({ error: 'Sólo se pueden compartir gastos atados a un show.' })
+  })
+
+  it('rejects a username that does not exist', async () => {
+    setUpTables({
+      expense: { data: { id: VALID_EXPENSE_ID, user_id: 'user-1', event_id: VALID_EVENT_ID }, error: null },
+      profile: { data: null, error: null },
+    })
+    const result = await addExpenseSplit(VALID_EXPENSE_ID, 'nadie')
+    expect(result).toEqual({ error: 'No existe ningún usuario "nadie".' })
+  })
+
+  it('rejects sharing an expense with yourself', async () => {
+    setUpTables({
+      expense: { data: { id: VALID_EXPENSE_ID, user_id: 'user-1', event_id: VALID_EVENT_ID }, error: null },
+      profile: { data: { id: 'user-1' }, error: null },
+    })
+    const result = await addExpenseSplit(VALID_EXPENSE_ID, 'yo-mismo')
+    expect(result).toEqual({ error: 'No podés compartir un gasto con vos mismo.' })
+  })
+
+  it('rejects a user without attendance on the same event', async () => {
+    const { rpcMock } = setUpTables({
+      expense: { data: { id: VALID_EXPENSE_ID, user_id: 'user-1', event_id: VALID_EVENT_ID }, error: null },
+      profile: { data: { id: 'user-2' }, error: null },
+      attends: { data: false, error: null },
+    })
+    const result = await addExpenseSplit(VALID_EXPENSE_ID, 'lucia')
+    expect(result).toEqual({ error: '"lucia" no tiene marcada su asistencia a este show.' })
+    expect(rpcMock).toHaveBeenCalledWith('user_attends_event', {
+      check_event_id: VALID_EVENT_ID,
+      check_user_id: 'user-2',
+    })
+  })
+
+  it(
+    'adds the split when every check passes, returning the real resolved user_id/username ' +
+      '(not the typed username — the lookup is case-insensitive, so they can differ)',
+    async () => {
+      const { splitsBuilder } = setUpTables({
+        expense: { data: { id: VALID_EXPENSE_ID, user_id: 'user-1', event_id: VALID_EVENT_ID }, error: null },
+        profile: { data: { id: 'user-2', username: 'Lucia' }, error: null },
+        attends: { data: true, error: null },
+        insert: { data: null, error: null },
+      })
+
+      const result = await addExpenseSplit(VALID_EXPENSE_ID, 'lucia')
+
+      expect(splitsBuilder.insert).toHaveBeenCalledWith({ expense_id: VALID_EXPENSE_ID, user_id: 'user-2' })
+      expect(result).toEqual({ userId: 'user-2', username: 'Lucia' })
+    }
+  )
+
+  it('maps a duplicate split (23505) to a friendly message', async () => {
+    setUpTables({
+      expense: { data: { id: VALID_EXPENSE_ID, user_id: 'user-1', event_id: VALID_EVENT_ID }, error: null },
+      profile: { data: { id: 'user-2' }, error: null },
+      attends: { data: true, error: null },
+      insert: { data: null, error: { code: '23505', message: 'duplicate key' } },
+    })
+
+    const result = await addExpenseSplit(VALID_EXPENSE_ID, 'lucia')
+
+    expect(result).toEqual({ error: 'Ya está compartido con "lucia".' })
+  })
+})
+
+describe('removeExpenseSplit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  function makeDeleteBuilder(result: { data: unknown; error: unknown }) {
+    const builder: Record<string, unknown> = {}
+    const chain = () => builder
+    builder.delete = vi.fn(chain)
+    builder.eq = vi.fn(chain)
+    builder.select = vi.fn(() => Promise.resolve(result))
+    return builder
+  }
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await removeExpenseSplit(VALID_EXPENSE_ID, 'user-2')
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('succeeds when RLS allows the delete (caller owns the expense)', async () => {
+    const builder = makeDeleteBuilder({ data: [{ id: 'split-1' }], error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await removeExpenseSplit(VALID_EXPENSE_ID, 'user-2')
+
+    expect(builder.eq).toHaveBeenCalledWith('expense_id', VALID_EXPENSE_ID)
+    expect(builder.eq).toHaveBeenCalledWith('user_id', 'user-2')
+    expect(result).toEqual({})
+  })
+
+  it('reports an error when RLS silently blocks the delete (0 rows affected, no error)', async () => {
+    const builder = makeDeleteBuilder({ data: [], error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await removeExpenseSplit(VALID_EXPENSE_ID, 'user-2')
+
+    expect(result).toEqual({ error: 'No se pudo sacar el gasto compartido.' })
   })
 })

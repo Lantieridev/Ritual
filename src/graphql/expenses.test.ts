@@ -9,6 +9,9 @@ vi.mock('@/src/domains/expenses/service', () => ({
   insertExpense: vi.fn(),
   modifyExpense: vi.fn(),
   removeExpense: vi.fn(),
+  addExpenseSplit: vi.fn(),
+  removeExpenseSplit: vi.fn(),
+  listExpenseSplitsBatch: vi.fn(),
 }))
 
 vi.mock('@/src/domains/events/data', () => ({
@@ -41,6 +44,9 @@ import {
   insertExpense,
   modifyExpense,
   removeExpense,
+  addExpenseSplit,
+  removeExpenseSplit,
+  listExpenseSplitsBatch,
 } from '@/src/domains/expenses/service'
 import { getEventById } from '@/src/domains/events/data'
 import type { EventWithRelations } from '@/src/core/types'
@@ -294,5 +300,56 @@ describe('expenses GraphQL mutations', () => {
 
     expect(body.errors).toBeDefined()
     expect(insertExpense).not.toHaveBeenCalled()
+  })
+
+  it('adds an expense split', async () => {
+    vi.mocked(addExpenseSplit).mockResolvedValue({})
+
+    const body = await query('mutation { addExpenseSplit(expenseId: "ex1", username: "lucia") { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ addExpenseSplit: { success: true, error: null } })
+    expect(addExpenseSplit).toHaveBeenCalledWith('ex1', 'lucia')
+  })
+
+  it('reports addExpenseSplit failure through success:false', async () => {
+    vi.mocked(addExpenseSplit).mockResolvedValue({ error: '"lucia" no tiene marcada su asistencia a este show.' })
+
+    const body = await query('mutation { addExpenseSplit(expenseId: "ex1", username: "lucia") { success error } }')
+
+    expect(body.data).toEqual({
+      addExpenseSplit: { success: false, error: '"lucia" no tiene marcada su asistencia a este show.' },
+    })
+  })
+
+  it('removes an expense split', async () => {
+    vi.mocked(removeExpenseSplit).mockResolvedValue({})
+
+    const body = await query('mutation { removeExpenseSplit(expenseId: "ex1", userId: "u2") { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ removeExpenseSplit: { success: true, error: null } })
+    expect(removeExpenseSplit).toHaveBeenCalledWith('ex1', 'u2')
+  })
+})
+
+describe('Expense.splits', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('resolves splits via the DataLoader, batched by expense id', async () => {
+    vi.mocked(listExpenses).mockResolvedValue([
+      { id: 'ex1', user_id: 'u1', amount: 100, category: 'Entrada', note: null, event_id: 'ev1', date: '2026-01-01', created_at: '2026-01-01' },
+    ])
+    vi.mocked(listExpenseSplitsBatch).mockResolvedValue([[{ user_id: 'u2', username: 'lucia' }]])
+
+    const body = await query('{ expenses { id splits { userId username } } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({
+      expenses: [{ id: 'ex1', splits: [{ userId: 'u2', username: 'lucia' }] }],
+    })
+    expect(listExpenseSplitsBatch).toHaveBeenCalledWith(['ex1'])
   })
 })

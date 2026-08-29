@@ -27,3 +27,25 @@ export async function getProfile(userId?: string): Promise<Profile | null> {
 
     return data as Profile
 }
+
+/**
+ * Usernames de varios usuarios, por id — para el DataLoader de
+ * `Expense.ownerUsername` (issue #58): un gasto compartido necesita mostrar
+ * quién lo pagó, no sólo quién está tageado en el split.
+ */
+export async function getUsernamesByIdsBatch(userIds: readonly string[]): Promise<Array<string | null>> {
+    if (userIds.length === 0) return []
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .in('id', userIds as string[])
+
+    if (error) {
+        console.error('Error cargando usernames:', error)
+        return userIds.map(() => null)
+    }
+
+    const usernameById = new Map((data ?? []).map((p) => [p.id, p.username as string | null]))
+    return userIds.map((id) => usernameById.get(id) ?? null)
+}

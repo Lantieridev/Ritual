@@ -6,7 +6,7 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
-import { getProfile } from '@/src/domains/auth/data'
+import { getProfile, getUsernamesByIdsBatch } from '@/src/domains/auth/data'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -81,5 +81,49 @@ describe('getProfile', () => {
     const profile = await getProfile()
 
     expect(profile).toBeNull()
+  })
+})
+
+describe('getUsernamesByIdsBatch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function makeBuilder(result: { data: unknown; error: unknown }) {
+    const builder: Record<string, unknown> = {}
+    const chain = () => builder
+    builder.select = vi.fn(chain)
+    builder.in = vi.fn(chain)
+    builder.then = (onFulfilled: (v: unknown) => unknown) => Promise.resolve(result).then(onFulfilled)
+    return builder
+  }
+
+  it('returns [] without querying when the id list is empty', async () => {
+    const fromMock = vi.fn()
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getUsernamesByIdsBatch([])
+
+    expect(result).toEqual([])
+    expect(fromMock).not.toHaveBeenCalled()
+  })
+
+  it('preserves the order of the requested ids, with null for missing profiles', async () => {
+    const builder = makeBuilder({ data: [{ id: 'u2', username: 'lucia' }], error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await getUsernamesByIdsBatch(['u1', 'u2'])
+
+    expect(builder.in).toHaveBeenCalledWith('id', ['u1', 'u2'])
+    expect(result).toEqual([null, 'lucia'])
+  })
+
+  it('returns null for every id if the query fails', async () => {
+    const builder = makeBuilder({ data: null, error: { message: 'boom' } })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await getUsernamesByIdsBatch(['u1', 'u2'])
+
+    expect(result).toEqual([null, null])
   })
 })

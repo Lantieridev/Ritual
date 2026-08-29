@@ -8,12 +8,13 @@ import {
   getExpensesForEvent,
   getExpensesSummary,
   getVenueArtistSpendEstimate,
+  getExpenseSplitsBatch,
 } from './data'
-import type { ExpenseSummary, VenueArtistSpendEstimate } from './data'
+import type { ExpenseSummary, VenueArtistSpendEstimate, ExpenseSplitUser } from './data'
 import { listEvents } from '@/src/domains/events/service'
 import type { Expense, EventWithRelations } from '@/src/core/types'
 
-export type { ExpenseSummary, VenueArtistSpendEstimate }
+export type { ExpenseSummary, VenueArtistSpendEstimate, ExpenseSplitUser }
 
 /**
  * Use-case / application-service layer for the expenses domain.
@@ -200,5 +201,82 @@ export async function removeExpense(id: string): Promise<ActionResult> {
   if (error) {
     return { error: sanitizeError(error) }
   }
+  return {}
+}
+
+/** Tageados de un gasto — issue #58. */
+export async function listExpenseSplitsBatch(expenseIds: readonly string[]): Promise<ExpenseSplitUser[][]> {
+  return getExpenseSplitsBatch(expenseIds)
+}
+
+/**
+ * Comparte un gasto con otro usuario de Ritual, por username. Sólo el dueño
+ * del gasto puede hacerlo (RLS lo exige igual, esto es la validación de
+ * negocio con mensaje entendible en vez de dejar que RLS tire un 42501
+ * genérico). Requiere que el gasto esté atado a un evento —splits sin
+ * evento no tienen con qué validar que el tageado "estuvo ahí"— y que el
+ * tageado tenga attendance en ese mismo evento (issue #58: "no invitar
+ * externos sin cuenta").
+ */
+export async function addExpenseSplit(
+  expenseId: string,
+  username: string
+): Promise<ActionResult<{ userId?: string; username?: string }>> {
+  const r = await requireUserId()
+  if ('error' in r) return r
+
+  const cleanUsername = sanitizeText(username, 50)
+  if (!cleanUsername) return { error: 'Ingresá un nombre de usuario.' }
+
+  const supabase = await createClient()
+
+  const { data: expense, error: expenseError } = await supabase
+    .from('expenses')
+    .select('id, user_id, event_id')
+    .eq('id', expenseId)
+    .single()
+  if (expenseError || !expense) return { error: 'No se encontró el gasto.' }
+  if (expense.user_id !== r.userId) return { error: 'Sólo quien cargó el gasto puede compartirlo.' }
+  if (!expense.event_id) return { error: 'Sólo se pueden compartir gastos atados a un show.' }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .ilike('username', cleanUsername)
+    .maybeSingle()
+  if (profileError || !profile) return { error: `No existe ningún usuario "${cleanUsername}".` }
+  if (profile.id === r.userId) return { error: 'No podés compartir un gasto con vos mismo.' }
+
+  const { data: attends, error: attendsError } = await supabase.rpc('user_attends_event', {
+    check_event_id: expense.event_id,
+    check_user_id: profile.id,
+  })
+  if (attendsError || !attends) {
+    return { error: `"${cleanUsername}" no tiene marcada su asistencia a este show.` }
+  }
+
+  const { error } = await supabase
+    .from('expense_splits')
+    .insert({ expense_id: expenseId, user_id: profile.id })
+  if (error) {
+    if (error.code === '23505') return { error: `Ya está compartido con "${cleanUsername}".` }
+    return { error: sanitizeError(error) }
+  }
+  return { userId: profile.id, username: profile.username ?? undefined }
+}
+
+export async function removeExpenseSplit(expenseId: string, userId: string): Promise<ActionResult> {
+  const r = await requireUserId()
+  if ('error' in r) return r
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('expense_splits')
+    .delete()
+    .eq('expense_id', expenseId)
+    .eq('user_id', userId)
+    .select('id')
+  if (error) return { error: sanitizeError(error) }
+  if (!data || data.length === 0) return { error: 'No se pudo sacar el gasto compartido.' }
   return {}
 }

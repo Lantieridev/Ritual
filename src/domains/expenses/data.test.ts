@@ -6,7 +6,7 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
-import { getExpenses, getExpensesSummary, getExpensesForEvent, getVenueArtistSpendEstimate } from '@/src/domains/expenses/data'
+import { getExpenses, getExpensesSummary, getExpensesForEvent, getVenueArtistSpendEstimate, getExpenseSplitsBatch } from '@/src/domains/expenses/data'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -59,18 +59,40 @@ describe('getExpensesForEvent', () => {
     vi.clearAllMocks()
   })
 
-  it('reads only the expenses linked to the given event, through the session-aware client', async () => {
+  it('reads the own expenses linked to the given event, through the session-aware client', async () => {
     const mockExpenses = [
       { id: 'exp-1', user_id: 'user-1', amount: 5000, category: 'Entrada', note: null, event_id: 'ev-1', date: '2026-07-01', created_at: '2026-07-01' },
     ]
-    const fromMock = vi.fn(() => makeQueryBuilder({ data: mockExpenses, error: null }))
+    const expensesBuilder = makeQueryBuilder({ data: mockExpenses, error: null })
+    const splitsBuilder = makeQueryBuilder({ data: [], error: null })
+    const fromMock = vi.fn((table: string) => (table === 'expenses' ? expensesBuilder : splitsBuilder))
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
 
     const result = await getExpensesForEvent('ev-1', 'user-1')
 
-    expect(mockCreateClient).toHaveBeenCalledTimes(1)
     expect(fromMock).toHaveBeenCalledWith('expenses')
+    expect(fromMock).toHaveBeenCalledWith('expense_splits')
     expect(result).toEqual(mockExpenses)
+  })
+
+  it('adds expenses shared via expense_splits, without duplicating the own ones', async () => {
+    const ownExpense = { id: 'exp-1', user_id: 'user-1', amount: 5000, category: 'Entrada', note: null, event_id: 'ev-1', date: '2026-07-02', created_at: '2026-07-02' }
+    const sharedExpense = { id: 'exp-2', user_id: 'user-2', amount: 3000, category: 'Bebidas', note: null, event_id: 'ev-1', date: '2026-07-01', created_at: '2026-07-01' }
+
+    const ownBuilder = makeQueryBuilder({ data: [ownExpense], error: null })
+    const splitsBuilder = makeQueryBuilder({ data: [{ expense_id: 'exp-2' }], error: null })
+    const sharedBuilder = makeQueryBuilder({ data: [sharedExpense], error: null })
+    let expensesCallCount = 0
+    const fromMock = vi.fn((table: string) => {
+      if (table === 'expense_splits') return splitsBuilder
+      expensesCallCount += 1
+      return expensesCallCount === 1 ? ownBuilder : sharedBuilder
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getExpensesForEvent('ev-1', 'user-1')
+
+    expect(result).toEqual([ownExpense, sharedExpense])
   })
 
   it('returns an empty list without touching the client when there is no user id', async () => {
@@ -187,5 +209,58 @@ describe('getVenueArtistSpendEstimate', () => {
     const result = await getVenueArtistSpendEstimate('user-1', 'venue-1', [], 'ev-1')
 
     expect(result).toBeNull()
+  })
+})
+
+describe('getExpenseSplitsBatch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns [] for each id without querying anything when the list is empty', async () => {
+    const fromMock = vi.fn()
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getExpenseSplitsBatch([])
+
+    expect(result).toEqual([])
+    expect(fromMock).not.toHaveBeenCalled()
+  })
+
+  it('groups tagged users by expense_id and resolves their usernames', async () => {
+    const splitsBuilder = makeQueryBuilder({
+      data: [
+        { expense_id: 'exp-1', user_id: 'u2' },
+        { expense_id: 'exp-1', user_id: 'u3' },
+        { expense_id: 'exp-2', user_id: 'u2' },
+      ],
+      error: null,
+    })
+    const profilesBuilder = makeQueryBuilder({
+      data: [
+        { id: 'u2', username: 'lucia' },
+        { id: 'u3', username: null },
+      ],
+      error: null,
+    })
+    const fromMock = vi.fn((table: string) => (table === 'expense_splits' ? splitsBuilder : profilesBuilder))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getExpenseSplitsBatch(['exp-1', 'exp-2', 'exp-3'])
+
+    expect(result).toEqual([
+      [{ user_id: 'u2', username: 'lucia' }, { user_id: 'u3', username: null }],
+      [{ user_id: 'u2', username: 'lucia' }],
+      [],
+    ])
+  })
+
+  it('returns [] for each id if the splits query fails', async () => {
+    const splitsBuilder = makeQueryBuilder({ data: null, error: { message: 'boom' } })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => splitsBuilder) }))
+
+    const result = await getExpenseSplitsBatch(['exp-1'])
+
+    expect(result).toEqual([[]])
   })
 })

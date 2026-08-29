@@ -2,7 +2,7 @@ import { createClient } from '@/src/core/lib/supabase/server'
 import { ActionResult } from '@/src/core/types'
 import { revalidatePath } from 'next/cache'
 import { sanitizeText, sanitizeError } from '@/src/core/lib/validation'
-import { getProfile } from './data'
+import { getProfile, getUsernamesByIdsBatch } from './data'
 import type { Profile } from '@/src/core/types'
 
 /**
@@ -12,6 +12,11 @@ import type { Profile } from '@/src/core/types'
  */
 export async function findProfile(userId?: string): Promise<Profile | null> {
     return getProfile(userId)
+}
+
+/** Usernames de varios usuarios, por id — issue #58. */
+export async function listUsernamesByIdsBatch(userIds: readonly string[]): Promise<Array<string | null>> {
+    return getUsernamesByIdsBatch(userIds)
 }
 
 /**

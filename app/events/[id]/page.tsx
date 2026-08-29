@@ -11,6 +11,7 @@ import { safeHref } from '@/src/core/lib/validation'
 import { LinkButton } from '@/src/core/components/ui'
 import { DeleteEventAction, EventWeather, EventChat } from '@/src/domains/events/components'
 import { EventExpensesPanel } from '@/src/domains/expenses/components'
+import type { ExpenseWithSplits } from '@/src/domains/expenses/components'
 import { AttendanceStatusButtons } from '@/src/domains/events/components/AttendanceStatusButtons'
 import { RatingAndReviewForm } from '@/src/domains/events/components/RatingAndReviewForm'
 import { PhotoGallery } from '@/src/domains/events/components/PhotoGallery'
@@ -36,7 +37,8 @@ import {
 const EventDetailPageQuery = gql`
   query EventDetailPage($eventId: ID!) {
     expenses(eventId: $eventId) {
-      id amount category note date eventId
+      id amount category note date eventId userId ownerUsername
+      splits { userId username }
     }
     estimateSpendForEvent(eventId: $eventId) {
       averageTotal
@@ -90,7 +92,34 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   if (!event) notFound()
 
   const { data } = await getClient().query(EventDetailPageQuery, { eventId: id }).toPromise()
-  const expenses = data?.expenses ?? []
+  // GraphQL responde en camelCase (userId, eventId); EventExpensesPanel y
+  // computeDebts esperan el shape de la fila de Postgres (user_id, event_id)
+  // -sin este mapeo esos campos quedan undefined y "es mío"/las deudas
+  // se rompen en silencio en cuanto la página se recarga de verdad
+  // (bug real, encontrado probando issue #58 en vivo).
+  const expenses: ExpenseWithSplits[] = (data?.expenses ?? []).map(
+    (e: {
+      id: string
+      amount: number
+      category: string
+      note: string | null
+      date: string
+      eventId: string | null
+      userId: string
+      ownerUsername: string | null
+      splits: { userId: string; username: string | null }[]
+    }) => ({
+      id: e.id,
+      amount: e.amount,
+      category: e.category,
+      note: e.note,
+      date: e.date,
+      event_id: e.eventId,
+      user_id: e.userId,
+      ownerUsername: e.ownerUsername,
+      splits: e.splits.map((s) => ({ user_id: s.userId, username: s.username })),
+    })
+  )
   const spendEstimate = data?.estimateSpendForEvent ?? null
 
   const mainArtist = event.lineups?.[0]?.artists
@@ -320,6 +349,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               defaultDate={expensesDefaultDate}
               spendEstimate={spendEstimate}
               detailHref={routes.events.expenses(event.id)}
+              currentUserId={userId}
             />
           </section>
         )}

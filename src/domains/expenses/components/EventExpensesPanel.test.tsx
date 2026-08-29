@@ -2,14 +2,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { Expense } from '@/src/core/types'
+import type { ExpenseWithSplits } from '@/src/domains/expenses/components/EventExpensesPanel'
 
-// El panel dejó de recibir las escrituras por prop: dispara las tres
-// mutations de gastos directo, así que los dobles se enganchan en
-// useMutation y se enrutan por el nombre de la operación.
+// El panel dejó de recibir las escrituras por prop: dispara las mutations
+// de gastos directo, así que los dobles se enganchan en useMutation y se
+// enrutan por el nombre de la operación.
 const createExpenseMock = vi.fn()
 const updateExpenseMock = vi.fn()
 const deleteExpenseMock = vi.fn()
+const addSplitMock = vi.fn()
+const removeSplitMock = vi.fn()
 
 vi.mock('urql', async () => {
   const actual = await vi.importActual<typeof import('urql')>('urql')
@@ -19,6 +21,8 @@ vi.mock('urql', async () => {
       const name = doc.definitions?.[0]?.name?.value
       if (name === 'CreateExpense') return [{ fetching: false }, createExpenseMock]
       if (name === 'UpdateExpense') return [{ fetching: false }, updateExpenseMock]
+      if (name === 'AddExpenseSplit') return [{ fetching: false }, addSplitMock]
+      if (name === 'RemoveExpenseSplit') return [{ fetching: false }, removeSplitMock]
       return [{ fetching: false }, deleteExpenseMock]
     },
   }
@@ -28,10 +32,10 @@ import { EventExpensesPanel } from '@/src/domains/expenses/components/EventExpen
 import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
 import { transportError } from '@/src/graphql/transport-failure.testing'
 
-const baseExpenses: Expense[] = [
-  { id: 'x1', user_id: 'u1', amount: 5000, category: 'Comida y bebida', note: null, event_id: 'ev-1', date: '2026-05-01' },
-  { id: 'x2', user_id: 'u1', amount: 3000, category: 'Comida y bebida', note: 'Birra', event_id: 'ev-1', date: '2026-05-01' },
-  { id: 'x3', user_id: 'u1', amount: 15000, category: 'Entrada', note: null, event_id: 'ev-1', date: '2026-05-01' },
+const baseExpenses: ExpenseWithSplits[] = [
+  { id: 'x1', user_id: 'u1', amount: 5000, category: 'Comida y bebida', note: null, event_id: 'ev-1', date: '2026-05-01', splits: [] },
+  { id: 'x2', user_id: 'u1', amount: 3000, category: 'Comida y bebida', note: 'Birra', event_id: 'ev-1', date: '2026-05-01', splits: [] },
+  { id: 'x3', user_id: 'u1', amount: 15000, category: 'Entrada', note: null, event_id: 'ev-1', date: '2026-05-01', splits: [] },
 ]
 
 function renderPanel(overrides: Partial<React.ComponentProps<typeof EventExpensesPanel>> = {}) {
@@ -42,6 +46,7 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof EventExpense
       defaultDate="2026-05-01"
       spendEstimate={null}
       detailHref="/events/ev-1/gastos"
+      currentUserId="u1"
       {...overrides}
     />
   )
