@@ -7,6 +7,7 @@ import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { parseExternalDateTime } from '@/src/core/lib/dates'
+import { formatPriceRange } from '@/src/domains/events/price-range'
 import { FutureEvent } from '@/src/core/types'
 
 const AddExternalEventMutation = gql`
@@ -94,6 +95,7 @@ export function FutureEventsResults({ events, searchQuery, compact }: FutureEven
                     })
                     : ev.datetime
                 const venueLabel = [ev.venue.name, ev.venue.city].filter(Boolean).join(', ')
+                const priceLabel = formatPriceRange(ev.priceRange)
 
                 return (
                     <li
@@ -109,9 +111,18 @@ export function FutureEventsResults({ events, searchQuery, compact }: FutureEven
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-white truncate text-sm">{ev.title}</p>
+                            <div className="flex items-center gap-2 min-w-0">
+                                <p className="font-semibold text-white truncate text-sm">{ev.title}</p>
+                                <span
+                                    title="Dato verificado por Ticketmaster, no cargado a mano por un usuario"
+                                    className="shrink-0 inline-flex items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-300"
+                                >
+                                    🎟️ Verificado
+                                </span>
+                            </div>
                             <p className="text-xs text-zinc-500 mt-0.5 truncate">
                                 📍 {venueLabel}
+                                {priceLabel && <span className="text-zinc-400"> · {priceLabel}</span>}
                             </p>
                             {error && (
                                 <p className="mt-1 text-xs text-red-400">{error}</p>

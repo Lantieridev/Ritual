@@ -49,6 +49,24 @@ describe('FutureEventsResults', () => {
     expect(screen.getByText(/Niceto, CABA/)).toBeInTheDocument()
   })
 
+  // Issue #57: el dato ya viaja desde Ticketmaster y se tiraba antes de
+  // llegar a la UI.
+  it('shows the price range when Ticketmaster reports one', () => {
+    render(<FutureEventsResults events={[{ ...event, priceRange: { min: 15000, max: 45000, currency: 'ARS' } }]} />)
+    expect(screen.getByText(/15\.000/)).toBeInTheDocument()
+    expect(screen.getByText(/45\.000/)).toBeInTheDocument()
+  })
+
+  it('degrades cleanly (no price text, no error) when there is no price range', () => {
+    render(<FutureEventsResults events={[event]} />)
+    expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
+  })
+
+  it('marks every result as a verified Ticketmaster result, distinct from a manually loaded event', () => {
+    render(<FutureEventsResults events={[event]} />)
+    expect(screen.getByText(/Verificado/)).toBeInTheDocument()
+  })
+
   it('adds the event and navigates to its detail page on success', async () => {
     mockAddExternalEvent.mockResolvedValue({
       data: { addExternalEvent: { eventId: 'new-event-1' } },
