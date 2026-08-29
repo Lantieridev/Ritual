@@ -48,9 +48,9 @@ export async function createGraphQLContext(): Promise<GraphQLContext> {
         return getEventPhotosBatch(keys)
     })
 
-    // `Artist.events` y `Venue.events` quedaron fuera del pase de DataLoader
-    // del commit fbf4b23. Sin batchear, pedir `events` sobre las queries de
-    // listado (que no paginan) dispara un select anidado por fila.
+    // Igual que attendanceLoader/photosLoader arriba: sin batchear, pedir
+    // `events` sobre las queries de listado (que no paginan) dispararía un
+    // select anidado por fila.
     const artistEventsLoader = new DataLoader<string, ArtistEvent[]>(async (keys) => {
         return listArtistEventsBatch(keys)
     })

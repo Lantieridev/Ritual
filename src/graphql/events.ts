@@ -108,13 +108,11 @@ EventRef.implement({
         // join, no una query por evento) — nunca dispara una consulta nueva
         // acá, por eso es segura de usar sobre una lista completa sin N+1.
         attendance: t.field({ type: [AttendanceRowRef], resolve: (e) => e.attendance ?? [] }),
-        // A diferencia de `attendance`, estos dos SÍ hacen una consulta por
-        // evento (getAttendanceForEvent/getEventPhotos) — están pensados
-        // para pedirse sobre un `event(id)` puntual (la ficha de un show),
-        // no sobre una lista completa; pedirlos dentro de `events`/
-        // `eventsWithAttendance` para muchos eventos a la vez sería N+1.
-        // Si en algún momento hace falta ese caso, la solución es un
-        // DataLoader que batchee por event_id, no resolver así como está.
+        // A diferencia de `attendance`, estos dos pasan por un DataLoader
+        // (`attendanceLoader`/`photosLoader`, definidos en context.ts) en vez
+        // de consultar directo: pedirlos sobre una lista completa de eventos
+        // agrupa las claves del mismo tick en una sola consulta con `IN (...)`,
+        // no una por evento.
         myAttendance: t.field({
             type: EventAttendanceRef,
             nullable: true,

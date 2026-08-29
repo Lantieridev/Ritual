@@ -11,14 +11,9 @@ Las páginas en **`app/`** solo importan de `core` y `domains`; no hay lógica d
 
 Para agregar un nuevo dominio: crear `domains/nuevo-dominio/` con data, service y components, sumar su archivo en `graphql/` si expone API, y las rutas en `app/`.
 
-**Historia:** la capa `actions.ts` que describía este documento se eliminó en el issue #23 y su contenido vive hoy en `service.ts`.
+**Historia:** la capa `actions.ts` que describía este documento se eliminó (issue #23) y su contenido vive hoy en `service.ts`.
 
-La regla de que todo pase por `service.ts` — declarada en los comentarios de cada dominio desde el issue #25 — se cerró en dos tandas:
-
-- **2026-08-26**: `events`, `artists`, `venues` y `expenses` (commit `ced3ddb`), y `moderation`, que era el único dominio sin `data.ts` propio (commit `4bae471`).
-- **2026-08-29**: `auth` y `stats`, que habían quedado afuera de la primera pasada. `stats` no tenía `service.ts` y se creó; `auth` lo tenía pero nadie lo usaba para leer el perfil.
-
-Hoy **ningún archivo de `app/` o `src/graphql/` importa un `data.ts`**, y ningún dominio importa el `data.ts` de otro. Verificable con:
+Todo dominio expone su lectura y escritura a través de `service.ts` — ningún archivo de `app/` o `src/graphql/` importa un `data.ts` directo, y ningún dominio importa el `data.ts` de otro. `moderation` es la única excepción a la forma habitual: no tiene `data.ts` propio porque no cachea nada, habla contra Supabase directo desde `service.ts`. Verificable con:
 
 ```bash
 grep -rn "domains/[a-z]*/data'" src app --include="*.ts" --include="*.tsx" | grep -v "\.test\."
