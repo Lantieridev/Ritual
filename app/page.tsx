@@ -172,6 +172,17 @@ async function CityShowsWrapper({ city }: { city: string | undefined }) {
   const events = await listUpcomingEventsInCity(city)
   if (events.length === 0) return null
 
+  // Mismo tratamiento visual que "Cerca tuyo" (foto + degradado, carrusel que
+  // se ensancha al pasar el mouse) — son shows reales del catálogo, no menos
+  // dignos de una foto que los candidatos de wishlist de la sección de arriba.
+  const withImages = await Promise.all(
+    events.map(async (ev) => {
+      const headliner = ev.lineups?.[0]?.artists.name ?? ev.name ?? 'Recital'
+      const { image } = await getArtistImage(headliner)
+      return { ev, headliner, image }
+    })
+  )
+
   return (
     <section className="min-h-screen snap-start flex flex-col justify-center px-6 md:px-10 py-20 bg-ritual-panel">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
@@ -187,29 +198,35 @@ async function CityShowsWrapper({ city }: { city: string | undefined }) {
           Shows del catálogo en {city}.
         </p>
       </div>
-      <ul className="divide-y divide-ritual-border-subtle">
-        {events.map((ev) => {
-          const headliner = ev.lineups?.[0]?.artists.name ?? ev.name ?? 'Recital'
-          return (
-            <li key={ev.id}>
-              <Link href={routes.events.detail(ev.id)} className="group flex items-center gap-4 py-4">
-                <div className="w-16 shrink-0">
-                  <p className="font-label text-[10px] text-ritual-gray-text uppercase">
-                    {formatDate(ev.date, { day: 'numeric', month: 'short' })}
-                  </p>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-dense font-extrabold text-ritual-bone truncate">{headliner}</p>
-                  {ev.venues && <p className="font-label text-[10px] text-ritual-gray-text">{ev.venues.name}</p>}
-                </div>
-                <span className="font-label text-[9px] tracking-[0.16em] text-ritual-red-hover uppercase opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  Ver →
-                </span>
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
+      <div className="flex gap-3 h-[52vh] overflow-x-auto">
+        {withImages.map(({ ev, headliner, image }) => (
+          <Link
+            key={ev.id}
+            href={routes.events.detail(ev.id)}
+            className="group relative shrink-0 basis-64 hover:basis-96 transition-[flex-basis] duration-500 overflow-hidden bg-ritual-surface"
+          >
+            <div className="absolute inset-0 ritual-photo-fallback" />
+            {image && (
+              <div
+                className="absolute inset-0 ritual-photo ritual-photo-bg motion-safe:transition-transform motion-safe:duration-700 group-hover:scale-105"
+                style={{ backgroundImage: `url(${image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg via-transparent to-transparent" />
+            <div className="relative flex flex-col justify-end h-full p-4">
+              <p className="font-display text-3xl leading-[0.88] uppercase text-ritual-bone">{headliner}</p>
+              {ev.venues && (
+                <p className="font-subtitle font-bold text-sm uppercase text-ritual-gray-light-3 mt-1">
+                  {ev.venues.name}
+                </p>
+              )}
+              <p className="font-label text-[10px] text-ritual-gray-light-2 mt-1">
+                {formatDate(ev.date, { day: 'numeric', month: 'short' })}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
     </section>
   )
 }

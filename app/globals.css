@@ -307,6 +307,28 @@ html {
 }
 
 /*
+ * Entrada de una grilla — cada hijo la dispara con su propio `--i` (índice)
+ * vía inline style, así el conjunto entero no aparece de golpe. `both` para
+ * que quede en el estado final (opacity 1) en vez de volver al inicial
+ * cuando termina la animación.
+ */
+@keyframes ritual-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ritual-rise {
+  animation: ritual-rise .4s ease-out both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ritual-rise {
+    animation: none;
+  }
+}
+
+/*
  * Hovers del prototipo. `.btn` para los secundarios y `.cta` para la acción
  * principal, que además abre el interletrado — el diseño usa el espaciado
  * como refuerzo del énfasis, no solo el brillo.

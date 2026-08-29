@@ -79,14 +79,21 @@ export default async function StatsPage() {
                                 Logros — {unlockedCount}/{achievements.length}
                             </h2>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                {achievements.map((a) => (
+                                {achievements.map((a, i) => (
                                     <div
                                         key={a.id}
-                                        className={`border px-4 py-4 ${a.unlocked
-                                            ? 'border-ritual-red bg-ritual-surface'
+                                        style={{ '--i': i } as React.CSSProperties}
+                                        className={`ritual-rise group relative border px-4 py-4 motion-safe:transition-[transform,box-shadow] motion-safe:duration-300 ${a.unlocked
+                                            ? 'border-ritual-red bg-ritual-surface hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_var(--color-ritual-red),0_8px_24px_-8px_rgba(220,38,38,0.5)]'
                                             : 'border-dashed border-ritual-border-subtle opacity-50'
                                             }`}
                                     >
+                                        {/* Mismo motivo geométrico que ya usa EmptyState — relleno cuando está
+                                            desbloqueado, hueco cuando todavía no. */}
+                                        <div
+                                            className={`w-3 h-3 mb-3 rotate-45 ${a.unlocked ? 'bg-ritual-red' : 'border border-ritual-border-2'}`}
+                                            aria-hidden="true"
+                                        />
                                         <p className={`font-dense font-extrabold uppercase ${a.unlocked ? 'text-ritual-bone' : 'text-ritual-gray-text'}`}>
                                             {a.label}
                                         </p>

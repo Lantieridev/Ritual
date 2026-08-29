@@ -72,7 +72,11 @@ export function AgendaView({ events }: AgendaViewProps) {
                     />
                 )
             ) : (
-                <div className="space-y-10">
+                // `key={filter}` fuerza a React a desmontar y remontar este bloque
+                // al cambiar de tab, así la animación de entrada se dispara de
+                // nuevo en vez de quedar consumida la primera vez que el
+                // componente montó.
+                <div key={filter} className="space-y-10 ritual-rise">
                     {years.map((year) => (
                         <div key={year}>
                             <p className="font-label text-[10px] tracking-[0.14em] text-ritual-gray-text uppercase mb-3">
