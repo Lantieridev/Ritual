@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getStats } from '@/src/domains/stats/service'
+import { computeAchievements } from '@/src/domains/stats/achievements'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { StarRating } from '@/src/core/components/ui'
@@ -19,6 +20,8 @@ export default async function StatsPage() {
     const currentYear = String(new Date().getFullYear())
 
     const hasData = stats.totalShows > 0
+    const achievements = computeAchievements(stats)
+    const unlockedCount = achievements.filter((a) => a.unlocked).length
 
     return (
         <main className="min-h-screen bg-ritual-bg text-ritual-bone">
@@ -70,6 +73,28 @@ export default async function StatsPage() {
                                 </div>
                             </div>
                         )}
+
+                        <section>
+                            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-6">
+                                Logros — {unlockedCount}/{achievements.length}
+                            </h2>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {achievements.map((a) => (
+                                    <div
+                                        key={a.id}
+                                        className={`border px-4 py-4 ${a.unlocked
+                                            ? 'border-ritual-red bg-ritual-surface'
+                                            : 'border-dashed border-ritual-border-subtle opacity-50'
+                                            }`}
+                                    >
+                                        <p className={`font-dense font-extrabold uppercase ${a.unlocked ? 'text-ritual-bone' : 'text-ritual-gray-text'}`}>
+                                            {a.label}
+                                        </p>
+                                        <p className="font-label text-[10px] text-ritual-gray-text mt-1">{a.description}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
 
                         {years.length > 0 && (
                             <section>

@@ -81,6 +81,11 @@ export default async function ProfilePage() {
                         <LinkButton href={routes.agenda} className="px-5 py-2">
                             Ver mi agenda
                         </LinkButton>
+                        {/* Los logros en sí (issue #61) viven en /stats, calculados junto
+                            al resto de las estadísticas — evita duplicar el fetch acá. */}
+                        <LinkButton href={routes.stats} variant="secondary" className="px-5 py-2">
+                            Ver mis logros
+                        </LinkButton>
                         <LinkButton href={routes.profile + '/edit'} variant="secondary" className="px-5 py-2">
                             Editar carnet
                         </LinkButton>
