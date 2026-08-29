@@ -16,7 +16,7 @@ vi.mock('server-only', () => ({}))
 
 vi.mock('next/image', () => ({
   default: (props: Record<string, unknown>) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- stripped so they don't land on the DOM <img>
+     
     const { fill, priority, ...rest } = props
     return React.createElement('img', rest)
   },

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { saveMemory } from '@/src/domains/events/attendance-actions'
+import { saveMemory } from '@/src/domains/events/service'
 import { StarRating } from '@/src/core/components/ui'
 
 interface RatingAndReviewFormProps {

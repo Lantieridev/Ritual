@@ -6,8 +6,33 @@ import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, EventCreateInput, EventUpdateInput, FutureEvent, EventWithRelations } from '@/src/core/types'
 import { getEvents, getEventsWithAttendance, getEventById, getEventIdsForSitemap, getMyEvents } from './data'
 import type { EventWithAttendance } from './data'
+import { getAttendanceForEvent, getAttendanceForEventsBatch } from './attendance-data'
+import type { EventAttendance } from './attendance-data'
+import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from './attendance-actions'
+import type { AttendanceStatus } from './attendance-actions'
+import { getEventPhotos, getEventPhotosBatch, uploadEventPhoto, deleteEventPhoto } from './photo-actions'
+import type { EventPhoto } from './photo-actions'
 
-export type { EventWithRelations, EventWithAttendance }
+export type { EventWithRelations, EventWithAttendance, EventAttendance, AttendanceStatus, EventPhoto }
+
+/**
+ * Attendance y fotos de un evento puntual: mismos casos de uso, repartidos en
+ * attendance-data.ts/attendance-actions.ts/photo-actions.ts porque son un
+ * costado bien separado de la escritura del evento en sí (arriba). Se
+ * reexportan acá para que sean el único seam del dominio — antes `app/` y
+ * `src/graphql/` los importaban directo de esos tres archivos.
+ */
+export {
+  getAttendanceForEvent,
+  getAttendanceForEventsBatch,
+  getOrCreateAttendance,
+  setAttendanceStatus,
+  saveMemory,
+  getEventPhotos,
+  getEventPhotosBatch,
+  uploadEventPhoto,
+  deleteEventPhoto,
+}
 
 /**
  * Capa de casos de uso del dominio de eventos.

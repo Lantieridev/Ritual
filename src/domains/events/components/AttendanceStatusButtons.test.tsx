@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 
 const mockSetAttendanceStatus = vi.fn()
 
-vi.mock('@/src/domains/events/attendance-actions', () => ({
+vi.mock('@/src/domains/events/service', () => ({
   setAttendanceStatus: (...args: unknown[]) => mockSetAttendanceStatus(...args),
 }))
 

@@ -7,6 +7,11 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
+      // Sin esto, destructurar sólo para excluir una clave (el patrón
+      // `const { x, ...rest } = obj` cuando lo que importa es `rest`, no `x`)
+      // marca `x` como no usada. Es el caso exacto que ignoreRestSiblings
+      // existe para cubrir.
+      "@typescript-eslint/no-unused-vars": ["warn", { ignoreRestSiblings: true }],
       "no-restricted-imports": [
         "error",
         {
@@ -44,10 +49,6 @@ const eslintConfig = defineConfig([
     // Vendored: third-party libs plus the copied omelette starter components,
     // which are overwritten wholesale whenever the starter is re-copied.
     "public/tickets/**",
-
-    // Single-use codemods run against app/page.tsx, kept out of the app build.
-    "refactor.js",
-    "refactor-waterfall.js",
   ]),
 ]);
 

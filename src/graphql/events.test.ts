@@ -1,17 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { EventWithAttendance } from '@/src/domains/events/service'
 
-vi.mock('@/src/domains/events/attendance-data', () => ({
-  getAttendanceForEvent: vi.fn(),
-  getAttendanceForEventsBatch: vi.fn(),
-}))
-
-vi.mock('@/src/domains/events/photo-actions', () => ({
-  getEventPhotos: vi.fn(),
-  getEventPhotosBatch: vi.fn(),
-  deleteEventPhoto: vi.fn(),
-}))
-
 vi.mock('@/src/domains/events/service', () => ({
   insertEvent: vi.fn(),
   modifyEvent: vi.fn(),
@@ -20,9 +9,11 @@ vi.mock('@/src/domains/events/service', () => ({
   listEvents: vi.fn(),
   listEventsWithAttendance: vi.fn(),
   findEventById: vi.fn(),
-}))
-
-vi.mock('@/src/domains/events/attendance-actions', () => ({
+  getAttendanceForEvent: vi.fn(),
+  getAttendanceForEventsBatch: vi.fn(),
+  getEventPhotos: vi.fn(),
+  getEventPhotosBatch: vi.fn(),
+  deleteEventPhoto: vi.fn(),
   getOrCreateAttendance: vi.fn(),
   setAttendanceStatus: vi.fn(),
   saveMemory: vi.fn(),
@@ -38,8 +29,6 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue('u1'),
 }))
 
-import { getAttendanceForEvent, getAttendanceForEventsBatch } from '@/src/domains/events/attendance-data'
-import { getEventPhotosBatch, deleteEventPhoto } from '@/src/domains/events/photo-actions'
 import {
   insertEvent,
   modifyEvent,
@@ -48,8 +37,14 @@ import {
   listEvents,
   listEventsWithAttendance,
   findEventById,
+  getAttendanceForEvent,
+  getAttendanceForEventsBatch,
+  getEventPhotosBatch,
+  deleteEventPhoto,
+  getOrCreateAttendance,
+  setAttendanceStatus,
+  saveMemory,
 } from '@/src/domains/events/service'
-import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import { POST } from '@/app/api/graphql/route'
 
 async function query(source: string) {

@@ -1,6 +1,5 @@
 import { builder } from './builder'
 import { resolveOffsetConnection } from '@pothos/plugin-relay'
-import { deleteEventPhoto } from '@/src/domains/events/photo-actions'
 import {
     insertEvent,
     modifyEvent,
@@ -9,9 +8,12 @@ import {
     listEvents,
     listEventsWithAttendance,
     findEventById,
+    getOrCreateAttendance,
+    setAttendanceStatus,
+    saveMemory,
+    deleteEventPhoto,
 } from '@/src/domains/events/service'
 import type { EventWithAttendance } from '@/src/domains/events/service'
-import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from '@/src/domains/events/attendance-actions'
 import type { EventWithRelations, LineupRow } from '@/src/core/types'
 import type { FutureEvent } from '@/src/core/types'
 import { MutationResultRef, toMutationResult } from './shared'
