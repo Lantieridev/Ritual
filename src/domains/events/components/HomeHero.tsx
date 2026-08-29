@@ -99,10 +99,39 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
       {resolvedBg && (
         <div
           className="absolute inset-0 ritual-photo ritual-photo-bg"
-          style={{ backgroundImage: `url(${resolvedBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+          style={{
+            backgroundImage: `url(${resolvedBg})`,
+            backgroundSize: 'cover',
+            // El prototipo encuadra la foto arriba y apenas a la derecha: es
+            // donde suele caer la cara, y deja el aire de la izquierda para
+            // el contador y el nombre.
+            backgroundPosition: '52% 26%',
+          }}
         />
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-ritual-bg via-ritual-bg/40 to-transparent" />
+      {/* Al abrir la entrada el scrim se retira casi del todo (1 → .25): la
+          foto se revela justo cuando el talón pasa a ser el protagonista. */}
+      <div
+        className="pointer-events-none absolute inset-0 ritual-hero-scrim-x motion-safe:transition-opacity motion-safe:duration-700"
+        style={{ opacity: open ? 0.25 : 1 }}
+      />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 ritual-hero-scrim-y" />
+
+      {/*
+        Todo el texto del hero vive en una sola capa —como el `.layer` del
+        prototipo— para que al abrir la entrada se retire junto: se desvanece
+        y se corre 26px a la izquierda, dejándole la pantalla al talón. Antes
+        se quedaba fijo y competía con el objeto.
+      */}
+      <div
+        className="absolute inset-0 motion-safe:transition-[opacity,transform] motion-safe:duration-[620ms]"
+        style={{
+          transitionTimingFunction: 'var(--ease-ritual)',
+          opacity: open ? 0 : 1,
+          transform: open ? 'translateX(-26px)' : 'translateX(0)',
+          pointerEvents: open ? 'none' : undefined,
+        }}
+      >
 
       {/* El contador va absoluto arriba a la izquierda y en hueco, no en el
           flujo: en el diseño es la marca de la pantalla, y la foto se lee a
@@ -123,6 +152,25 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
         >
           {days}
         </div>
+      )}
+
+      {/* El kicker cuelga del contador: sin él el número gigante no dice de
+          qué es. Va sobre un bloque opaco para recortarse contra la foto. */}
+      {days !== null && days > 0 && (
+        <p
+          className="pointer-events-none absolute z-10 font-label uppercase"
+          style={{
+            left: '48px',
+            top: 'calc(12vh + 18vh)',
+            background: 'var(--color-ritual-panel)',
+            padding: '6px 12px',
+            fontSize: '11px',
+            letterSpacing: '.4em',
+            color: 'var(--color-ritual-red)',
+          }}
+        >
+          días para el ritual
+        </p>
       )}
 
       {/* El talón está siempre en cuadro, fundido con la foto. Al abrir sólo
@@ -175,17 +223,29 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="font-figure text-xl tracking-wider bg-ritual-red text-ritual-bone px-8 py-3.5"
+            className="ritual-cta font-figure text-xl tracking-wider bg-ritual-red text-ritual-bone px-8 py-3.5"
           >
             ABRIR MI ENTRADA
           </button>
           <Link
             href={routes.events.detail(event.id)}
-            className="font-label text-[10px] tracking-[0.14em] text-ritual-gray-text uppercase border border-ritual-border px-6 py-3.5"
+            className="ritual-btn font-label text-[10px] tracking-[0.14em] text-ritual-gray-text uppercase border border-ritual-border-2 px-4 py-3"
           >
-            Ver el show
+            Ver función
           </Link>
         </div>
+      </div>
+
+      </div>
+
+      {/* Sin esto el scroll snap se lee como que la pantalla termina acá. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 flex flex-col items-center gap-1.5 ritual-bob">
+        <span className="font-label text-[9px] tracking-[0.24em] uppercase text-ritual-gray-mid-2">
+          seguí bajando
+        </span>
+        <span className="font-figure text-[18px] leading-none text-ritual-gray-mid-2" aria-hidden="true">
+          ↓
+        </span>
       </div>
 
       {/* Apertura continua: el panel entra sobre la misma pantalla, sin
@@ -193,7 +253,7 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
           objeto, no lo reemplaza por un modal. */}
       <div
         className="pointer-events-none absolute inset-0 z-[15] bg-ritual-bg motion-safe:transition-opacity motion-safe:duration-[620ms]"
-        style={{ transitionTimingFunction: 'var(--ease-ritual)', opacity: open ? 0.72 : 0 }}
+        style={{ transitionTimingFunction: "var(--ease-ritual)", opacity: open ? 0.62 : 0 }}
         aria-hidden="true"
       />
 

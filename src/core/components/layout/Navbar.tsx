@@ -11,16 +11,26 @@ import { ProfileDropdown } from './ProfileDropdown'
 // una cuenta — mostrarlos a un visitante sin sesión solo lleva a una
 // pantalla vacía o a un aviso de "iniciá sesión", así que quedan aparte y
 // solo se agregan al menú cuando hay un usuario logueado.
+/*
+ * Etiquetas y orden tomados del diseño v4. Dos decisiones suyas que conviene
+ * no "corregir" después:
+ *
+ * - "Números" y no "Stats": la ruta sigue siendo /stats, pero la app habla en
+ *   castellano y el handoff nombra así a esa pantalla (§9).
+ * - Wishlist no está: el handoff la resuelve como un estado del artista, no
+ *   como una pantalla, y Colección ya la muestra en el estante "Los huecos".
+ *   La ruta /wishlist sigue existiendo y accesible por URL.
+ */
 const PUBLIC_NAV_LINKS = [
     { label: 'Inicio', href: routes.home },
     { label: 'Buscar', href: routes.events.search },
     { label: 'Colección', href: routes.collection },
-    { label: 'Stats', href: routes.stats },
+    { label: 'Números', href: routes.stats },
 ]
 
 const AUTHENTICATED_NAV_LINKS = [
-    { label: 'Wishlist', href: routes.wishlist },
     { label: 'Gastos', href: routes.expenses.list },
+    { label: 'Perfil', href: routes.profile },
 ]
 
 /**
@@ -82,6 +92,17 @@ export function Navbar({ user }: NavbarProps) {
 
                 {/* Auth Section */}
                 <div className="shrink-0 flex items-center gap-4">
+                    {/* Cargar un show es la acción principal de la app y en el
+                        diseño vive en la nav, no escondida en una pantalla.
+                        Sólo con sesión: sin cuenta no hay dónde guardarlo. */}
+                    {user && (
+                        <Link
+                            href={routes.events.new}
+                            className="ritual-cta hidden sm:inline-flex font-label text-[10px] tracking-[0.14em] uppercase bg-ritual-red text-ritual-bone px-4 py-2"
+                        >
+                            + Cargar show
+                        </Link>
+                    )}
                     {user ? (
                         <ProfileDropdown user={user} />
                     ) : (

@@ -175,13 +175,54 @@ html {
 /*
  * Bloque tonal de respaldo — el diseño está pensado para leerse sin foto
  * ("se lee como bloque tonal", handoff §Fidelity), y con la foto ausente el
- * hero quedaba en negro plano. Este degradado ocupa el hueco con volumen en
- * vez de vacío, y queda debajo de la foto cuando sí hay.
+ * hero quedaba en negro plano.
+ *
+ * El prototipo usa acá una foto stand-in (`assets/standin-artista.png`) que
+ * NO viene en el bundle, así que esto la sustituye: una columna de luz
+ * vertical desenfocada que ocupa el mismo lugar y deja el mismo volumen,
+ * sin inventar una forma que el diseño no tiene.
  */
 .ritual-photo-fallback {
   background:
-    radial-gradient(120% 90% at 68% 18%, rgba(237, 235, 230, 0.22) 0%, transparent 62%),
-    linear-gradient(160deg, var(--color-ritual-surface-high) 0%, var(--color-ritual-panel) 48%, var(--color-ritual-bg) 100%);
+    linear-gradient(
+      100deg,
+      var(--color-ritual-bg) 0%,
+      var(--color-ritual-panel-2) 26%,
+      var(--color-ritual-surface-high-2) 52%,
+      var(--color-ritual-panel-2) 74%,
+      var(--color-ritual-bg) 100%
+    );
+}
+
+/*
+ * Las dos cortinas del hero, con las paradas exactas del prototipo.
+ *
+ * La horizontal es la que hacía falta y no estaba: oscurece los bordes y deja
+ * el centro abierto, que es lo que permite leer el texto de la izquierda sin
+ * tapar la foto en el medio. Sin ella el hero se veía o ilegible o plano.
+ */
+.ritual-hero-scrim-x {
+  background: linear-gradient(
+    90deg,
+    rgba(11, 11, 12, 0.9) 4%,
+    rgba(11, 11, 12, 0.1) 56%,
+    rgba(11, 11, 12, 0.6) 100%
+  );
+}
+
+/*
+ * La inferior cubre el 58% de abajo, no la pantalla entera: por encima de esa
+ * altura la foto tiene que verse limpia.
+ */
+.ritual-hero-scrim-y {
+  height: 58%;
+  background: linear-gradient(
+    0deg,
+    var(--color-ritual-panel) 0%,
+    rgba(11, 11, 12, 0.88) 28%,
+    rgba(11, 11, 12, 0.4) 54%,
+    transparent 100%
+  );
 }
 
 .ritual-photo::after {
@@ -218,4 +259,46 @@ html {
   33% { transform: translate(-1%, 1%); }
   66% { transform: translate(1%, -1%); }
   100% { transform: translate(0, 0); }
+}
+
+/*
+ * Cabeceo del indicador "seguí bajando" del Inicio — `vBob` en el prototipo.
+ * Es la única señal de que el hero no es toda la página: sin ella el scroll
+ * snap se lee como que la pantalla termina ahí.
+ */
+@keyframes ritual-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+.ritual-bob {
+  animation: ritual-bob 2.6s ease-in-out infinite;
+}
+
+/*
+ * Hovers del prototipo. `.btn` para los secundarios y `.cta` para la acción
+ * principal, que además abre el interletrado — el diseño usa el espaciado
+ * como refuerzo del énfasis, no solo el brillo.
+ */
+.ritual-btn {
+  transition: filter 0.32s var(--ease-ritual);
+}
+
+.ritual-btn:hover {
+  filter: brightness(1.1);
+}
+
+.ritual-cta {
+  transition: filter 0.32s var(--ease-ritual), letter-spacing 0.32s var(--ease-ritual);
+}
+
+.ritual-cta:hover {
+  filter: brightness(1.1);
+  letter-spacing: 0.09em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ritual-bob {
+    animation: none;
+  }
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, cleanup } from '@testing-library/react'
 import type { User } from '@supabase/supabase-js'
 
 let mockPathname = '/'
@@ -28,7 +28,7 @@ describe('Navbar', () => {
   it('marks the nav link matching the current path as active', () => {
     mockPathname = '/stats'
     render(<Navbar user={null} />)
-    expect(screen.getByRole('link', { name: 'Stats' })).toHaveClass('text-white')
+    expect(screen.getByRole('link', { name: 'Números' })).toHaveClass('text-white')
     expect(screen.getByRole('link', { name: 'Inicio' })).not.toHaveClass('text-white')
   })
 
@@ -39,17 +39,35 @@ describe('Navbar', () => {
     expect(screen.getByRole('link', { name: 'Inicio' })).not.toHaveClass('text-white')
   })
 
-  it('hides Wishlist/Gastos (account-specific, not shared catalog) for an anonymous visitor', () => {
+  it('hides Gastos/Perfil (account-specific, not shared catalog) for an anonymous visitor', () => {
     render(<Navbar user={null} />)
-    expect(screen.queryByRole('link', { name: 'Wishlist' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Gastos' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Perfil' })).not.toBeInTheDocument()
     // El catálogo compartido sigue visible sin sesión.
     expect(screen.getByRole('link', { name: 'Colección' })).toBeInTheDocument()
   })
 
-  it('shows Wishlist/Gastos once there is a logged-in user', () => {
+  it('shows Gastos/Perfil once there is a logged-in user', () => {
     render(<Navbar user={{ email: 'martin@example.com' } as User} />)
-    expect(screen.getByRole('link', { name: 'Wishlist' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Gastos' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Perfil' })).toBeInTheDocument()
+  })
+
+  // Cargar un show es la acción principal de la app: el diseño la pone en la
+  // nav, no escondida detrás de una pantalla.
+  it('ofrece cargar un show desde la nav, solo con sesión', () => {
+    render(<Navbar user={{ email: 'martin@example.com' } as User} />)
+    expect(screen.getByRole('link', { name: '+ Cargar show' })).toHaveAttribute('href', '/events/nuevo')
+
+    cleanup()
+    render(<Navbar user={null} />)
+    expect(screen.queryByRole('link', { name: '+ Cargar show' })).not.toBeInTheDocument()
+  })
+
+  // La wishlist salió de la nav a propósito: el handoff la resuelve como un
+  // estado del artista y Colección ya la muestra en el estante "Los huecos".
+  it('no duplica la wishlist en la nav', () => {
+    render(<Navbar user={{ email: 'martin@example.com' } as User} />)
+    expect(screen.queryByRole('link', { name: 'Wishlist' })).not.toBeInTheDocument()
   })
 })

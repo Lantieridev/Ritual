@@ -88,6 +88,48 @@ describe('HomeHero — el talón', () => {
   })
 })
 
+describe('HomeHero — el resto del hero', () => {
+  it('el contador viene con su kicker: el número solo no dice de qué es', () => {
+    renderNormal(112)
+    expect(screen.getByText('días para el ritual')).toBeInTheDocument()
+  })
+
+  it('no muestra el kicker si el show es hoy — ya no faltan días', () => {
+    render(<HomeHero state={{ kind: 'show-today', event }} backgroundImage={null} />)
+    expect(screen.queryByText('días para el ritual')).not.toBeInTheDocument()
+  })
+
+  // Con scroll snap, sin esta señal el hero se lee como toda la página.
+  it('indica que hay más abajo', () => {
+    renderNormal(12)
+    expect(screen.getByText('seguí bajando')).toBeInTheDocument()
+  })
+
+  it('el secundario dice "Ver función", como el diseño', () => {
+    renderNormal(12)
+    expect(screen.getByRole('link', { name: 'Ver función' })).toBeInTheDocument()
+  })
+
+  it('los botones llevan los hovers del prototipo', () => {
+    renderNormal(12)
+    expect(screen.getByRole('button', { name: 'ABRIR MI ENTRADA' }).className).toContain('ritual-cta')
+    expect(screen.getByRole('link', { name: 'Ver función' }).className).toContain('ritual-btn')
+  })
+
+  it('el hero tiene bloque tonal debajo, para no quedar en negro plano sin foto', () => {
+    const { container } = render(
+      <HomeHero state={{ kind: 'normal', nextShow: event, daysUntil: 12 }} backgroundImage={null} />
+    )
+    expect(container.querySelector('.ritual-photo-fallback')).toBeTruthy()
+  })
+
+  it('cuando hay foto, se le aplica el tratamiento de fondo de la marca', () => {
+    const { container } = renderNormal(12)
+    const foto = container.querySelector('.ritual-photo')
+    expect(foto?.className).toContain('ritual-photo-bg')
+  })
+})
+
 describe('HomeHero — scroll snap', () => {
   it.each([
     ['normal', { kind: 'normal', nextShow: event, daysUntil: 12 }],
