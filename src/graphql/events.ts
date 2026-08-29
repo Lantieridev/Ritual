@@ -12,8 +12,10 @@ import {
     setAttendanceStatus,
     saveMemory,
     deleteEventPhoto,
+    getEventMessages,
+    addEventMessage,
 } from '@/src/domains/events/service'
-import type { EventWithAttendance } from '@/src/domains/events/service'
+import type { EventWithAttendance, EventMessage } from '@/src/domains/events/service'
 import type { EventWithRelations, LineupRow } from '@/src/core/types'
 import type { FutureEvent } from '@/src/core/types'
 import { MutationResultRef, toMutationResult } from './shared'
@@ -358,5 +360,45 @@ builder.mutationField('saveMemory', (t) =>
                     notes: args.notes ?? undefined,
                 })
             ),
+    })
+)
+
+const EventMessageRef = builder.objectRef<EventMessage>('EventMessage')
+EventMessageRef.implement({
+    fields: (t) => ({
+        id: t.exposeID('id'),
+        body: t.exposeString('body'),
+        createdAt: t.exposeString('created_at'),
+        authorUsername: t.exposeString('author_username', { nullable: true }),
+        // Resuelto server-side contra el user_id real (no expuesto al
+        // cliente) en vez de comparar authorUsername en el front: un perfil
+        // sin username cargado nunca podría reconocer sus propios mensajes
+        // si la comparación fuera por nombre.
+        isOwn: t.field({
+            type: 'Boolean',
+            resolve: (msg, _args, context) => context.userId !== null && context.userId === msg.user_id,
+        }),
+    }),
+})
+
+builder.queryField('eventMessages', (t) =>
+    t.field({
+        type: [EventMessageRef],
+        description: 'Thread de coordinación del evento — sólo trae algo si el caller tiene attendance ahí (lo filtra RLS).',
+        args: {
+            eventId: t.arg.id({ required: true }),
+        },
+        resolve: (_root, args) => getEventMessages(String(args.eventId)),
+    })
+)
+
+builder.mutationField('sendEventMessage', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            eventId: t.arg.id({ required: true }),
+            body: t.arg.string({ required: true }),
+        },
+        resolve: async (_root, args) => toMutationResult(await addEventMessage(String(args.eventId), args.body)),
     })
 )

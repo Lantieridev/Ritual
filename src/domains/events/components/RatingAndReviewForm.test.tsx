@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 
 const mockSaveMemory = vi.fn()
 
-vi.mock('@/src/domains/events/service', () => ({
+vi.mock('@/src/domains/events/attendance-actions', () => ({
   saveMemory: (...args: unknown[]) => mockSaveMemory(...args),
 }))
 

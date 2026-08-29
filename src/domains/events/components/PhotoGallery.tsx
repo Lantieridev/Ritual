@@ -2,8 +2,8 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import Image from 'next/image'
-import { uploadEventPhoto, deleteEventPhoto } from '@/src/domains/events/service'
-import type { EventPhoto } from '@/src/domains/events/service'
+import { uploadEventPhoto, deleteEventPhoto } from '@/src/domains/events/photo-actions'
+import type { EventPhoto } from '@/src/domains/events/photo-actions'
 
 interface PhotoGalleryProps {
     eventId: string

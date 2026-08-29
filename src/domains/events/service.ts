@@ -12,8 +12,10 @@ import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from './attend
 import type { AttendanceStatus } from './attendance-actions'
 import { getEventPhotos, getEventPhotosBatch, uploadEventPhoto, deleteEventPhoto } from './photo-actions'
 import type { EventPhoto } from './photo-actions'
+import { getEventMessages, addEventMessage } from './messages-data'
+import type { EventMessage } from './messages-data'
 
-export type { EventWithRelations, EventWithAttendance, EventAttendance, AttendanceStatus, EventPhoto }
+export type { EventWithRelations, EventWithAttendance, EventAttendance, AttendanceStatus, EventPhoto, EventMessage }
 
 /**
  * Attendance y fotos de un evento puntual: mismos casos de uso, repartidos en
@@ -32,6 +34,8 @@ export {
   getEventPhotosBatch,
   uploadEventPhoto,
   deleteEventPhoto,
+  getEventMessages,
+  addEventMessage,
 }
 
 /**

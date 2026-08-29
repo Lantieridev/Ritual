@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { setAttendanceStatus } from '@/src/domains/events/service'
-import type { AttendanceStatus } from '@/src/domains/events/service'
+import { setAttendanceStatus } from '@/src/domains/events/attendance-actions'
+import type { AttendanceStatus } from '@/src/domains/events/attendance-actions'
 
 interface StatusButtonProps {
     eventId: string

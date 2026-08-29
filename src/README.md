@@ -20,3 +20,17 @@ grep -rn "domains/[a-z]*/data'" src app --include="*.ts" --include="*.tsx" | gre
 ```
 
 Sólo deberían aparecer líneas donde el dominio importa su propio `data.ts`.
+
+**Excepción real, no cosmética:** un componente cliente (`'use client'`) que
+llama una Server Action tiene que importarla del archivo donde está el
+`'use server'` (`attendance-actions.ts`, `photo-actions.ts`, `avatar-actions.ts`),
+nunca a través de `service.ts`. `service.ts` no lleva `'use server'` en sí
+mismo — sólo reexporta —, y también expone lecturas server-only (llama a
+`createClient` de `@/src/core/lib/supabase/server`, que usa `next/headers`).
+Cuando un componente cliente importa una Server Action desde ese barrel,
+Next arrastra ese resto server-only al grafo de módulos del cliente y la
+build de Turbopack falla en runtime (no en `tsc` ni en los tests, que usan
+otro bundler) con un error de `next/headers` en el Pages Router — aunque el
+proyecto no tenga Pages Router. Pasó de verdad: `PhotoGallery.tsx`,
+`AttendanceStatusButtons.tsx` y `RatingAndReviewForm.tsx` rompían
+`/events/[id]` entero por esto.

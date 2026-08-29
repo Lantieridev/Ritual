@@ -3,14 +3,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { findEventById, getAttendanceForEvent, getEventPhotos } from '@/src/domains/events/service'
-
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
 import { safeHref } from '@/src/core/lib/validation'
 import { LinkButton } from '@/src/core/components/ui'
-import { DeleteEventAction, EventWeather } from '@/src/domains/events/components'
+import { DeleteEventAction, EventWeather, EventChat } from '@/src/domains/events/components'
 import { EventExpensesPanel } from '@/src/domains/expenses/components'
 import { AttendanceStatusButtons } from '@/src/domains/events/components/AttendanceStatusButtons'
 import { RatingAndReviewForm } from '@/src/domains/events/components/RatingAndReviewForm'
@@ -355,6 +354,19 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               card={memoryCard}
               pendingLabels={showMode.pending.map((item) => item.label)}
             />
+          </section>
+        )}
+
+        {/* Coordinación entre asistentes — issue #59. Sólo con attendance
+            propia en ESTE evento: RLS ya lo exige para leer/escribir, mostrar
+            el thread a quien no puede usarlo sólo llevaría a un error
+            confuso en vez de directamente no aparecer. */}
+        {attendance && (
+          <section className="border-t border-ritual-border-subtle pt-8">
+            <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">
+              Coordiná con quienes van
+            </h2>
+            <EventChat eventId={event.id} />
           </section>
         )}
 

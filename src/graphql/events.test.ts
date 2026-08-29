@@ -17,6 +17,8 @@ vi.mock('@/src/domains/events/service', () => ({
   getOrCreateAttendance: vi.fn(),
   setAttendanceStatus: vi.fn(),
   saveMemory: vi.fn(),
+  getEventMessages: vi.fn(),
+  addEventMessage: vi.fn(),
 }))
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
@@ -44,6 +46,8 @@ import {
   getOrCreateAttendance,
   setAttendanceStatus,
   saveMemory,
+  getEventMessages,
+  addEventMessage,
 } from '@/src/domains/events/service'
 import { POST } from '@/app/api/graphql/route'
 
@@ -352,5 +356,89 @@ describe('events GraphQL mutations', () => {
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ saveMemory: { success: true } })
     expect(saveMemory).toHaveBeenCalledWith('e1', { rating: 5, review: 'Genial', notes: undefined })
+  })
+
+  it('sends an event message', async () => {
+    vi.mocked(addEventMessage).mockResolvedValue({})
+
+    const body = await query('mutation { sendEventMessage(eventId: "e1", body: "Nos vemos a las 20") { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ sendEventMessage: { success: true, error: null } })
+    expect(addEventMessage).toHaveBeenCalledWith('e1', 'Nos vemos a las 20')
+  })
+
+  it('reports sendEventMessage failure through success:false', async () => {
+    vi.mocked(addEventMessage).mockResolvedValue({ error: 'Necesitás marcar tu asistencia a este show para escribir acá.' })
+
+    const body = await query('mutation { sendEventMessage(eventId: "e1", body: "hola") { success error } }')
+
+    expect(body.data).toEqual({
+      sendEventMessage: { success: false, error: 'Necesitás marcar tu asistencia a este show para escribir acá.' },
+    })
+  })
+})
+
+describe('eventMessages query', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('resolves the thread for an event', async () => {
+    vi.mocked(getEventMessages).mockResolvedValue([
+      { id: 'm1', user_id: 'u1', body: 'Nos vemos en la puerta', created_at: '2026-01-01T00:00:00Z', author_username: 'martin' },
+    ])
+
+    const body = await query('{ eventMessages(eventId: "e1") { id body authorUsername createdAt } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({
+      eventMessages: [{ id: 'm1', body: 'Nos vemos en la puerta', authorUsername: 'martin', createdAt: '2026-01-01T00:00:00Z' }],
+    })
+    expect(getEventMessages).toHaveBeenCalledWith('e1')
+  })
+
+  it('authorUsername is null when the profile has none', async () => {
+    vi.mocked(getEventMessages).mockResolvedValue([
+      { id: 'm1', user_id: 'u2', body: 'Dale', created_at: '2026-01-01T00:00:00Z', author_username: null },
+    ])
+
+    const body = await query('{ eventMessages(eventId: "e1") { authorUsername } }')
+
+    expect(body.data).toEqual({ eventMessages: [{ authorUsername: null }] })
+  })
+
+  it(
+    'isOwn se resuelve contra el user_id real del caller, no contra authorUsername ' +
+      '(un perfil sin username nunca podría reconocer sus propios mensajes por nombre)',
+    async () => {
+      // getCurrentUserId mockeado a 'u1' por default en este archivo (línea ~31).
+      vi.mocked(getEventMessages).mockResolvedValue([
+        { id: 'm1', user_id: 'u1', body: 'Mensaje propio', created_at: '2026-01-01T00:00:00Z', author_username: null },
+        { id: 'm2', user_id: 'u2', body: 'Mensaje ajeno', created_at: '2026-01-01T00:00:01Z', author_username: null },
+      ])
+
+      const body = await query('{ eventMessages(eventId: "e1") { id isOwn } }')
+
+      expect(body.errors).toBeUndefined()
+      expect(body.data).toEqual({
+        eventMessages: [
+          { id: 'm1', isOwn: true },
+          { id: 'm2', isOwn: false },
+        ],
+      })
+    }
+  )
+
+  it('isOwn es false para cualquier mensaje si no hay sesión', async () => {
+    const { getCurrentUserId } = await import('@/src/core/auth/session')
+    vi.mocked(getCurrentUserId).mockResolvedValueOnce(null)
+    vi.mocked(getEventMessages).mockResolvedValue([
+      { id: 'm1', user_id: 'u1', body: 'Mensaje', created_at: '2026-01-01T00:00:00Z', author_username: null },
+    ])
+
+    const body = await query('{ eventMessages(eventId: "e1") { isOwn } }')
+
+    expect(body.data).toEqual({ eventMessages: [{ isOwn: false }] })
   })
 })

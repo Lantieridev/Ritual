@@ -6,13 +6,13 @@ import userEvent from '@testing-library/user-event'
 const mockUploadEventPhoto = vi.fn()
 const mockDeleteEventPhoto = vi.fn()
 
-vi.mock('@/src/domains/events/service', () => ({
+vi.mock('@/src/domains/events/photo-actions', () => ({
   uploadEventPhoto: (...args: unknown[]) => mockUploadEventPhoto(...args),
   deleteEventPhoto: (...args: unknown[]) => mockDeleteEventPhoto(...args),
 }))
 
 import { PhotoGallery } from '@/src/domains/events/components/PhotoGallery'
-import type { EventPhoto } from '@/src/domains/events/service'
+import type { EventPhoto } from '@/src/domains/events/photo-actions'
 
 const photo: EventPhoto = {
   id: 'p1',
