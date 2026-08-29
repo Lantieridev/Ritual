@@ -204,12 +204,23 @@ html {
    * fondo negro no se distinguen. En el prototipo esta zona es un gris medio
    * bien visible, que es lo que le da forma al hero.
    */
+  /*
+   * Valores medidos con zoom sobre el canvas del prototipo, no estimados: su
+   * fondo es OSCURO (grises 28–60). Lo que allí se ve plateado es el talón,
+   * no el fondo — un error de lectura que costó varias pasadas.
+   *
+   * El nivel importa por una razón concreta: el talón va en
+   * `mix-blend-mode: screen`, y screen sobre gris ~40 lo aclara a plateado
+   * mientras que sobre negro ~10 no hace nada. Sin este piso el objeto se ve
+   * apagado por más que su render sea correcto.
+   */
   background:
-    radial-gradient(52% 86% at 56% 44%, rgba(120, 118, 126, 0.34) 0%, rgba(74, 74, 82, 0.18) 46%, transparent 78%),
+    radial-gradient(38% 96% at 63% 46%, rgba(96, 98, 104, 0.5) 0%, rgba(58, 60, 66, 0.28) 52%, transparent 82%),
+    radial-gradient(34% 88% at 41% 54%, rgba(62, 64, 70, 0.44) 0%, rgba(40, 42, 48, 0.22) 56%, transparent 84%),
     linear-gradient(
       180deg,
-      var(--color-ritual-panel-2) 0%,
-      var(--color-ritual-panel) 52%,
+      #1c1c20 0%,
+      #141418 54%,
       var(--color-ritual-bg) 100%
     );
 }
