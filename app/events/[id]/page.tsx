@@ -20,13 +20,13 @@ import { generateEventJsonLd } from '@/src/domains/events/jsonld'
 import { getEventWeather } from '@/src/domains/weather/weather-service'
 import { getClient } from '@/src/graphql/client'
 import { gql } from 'urql'
-import { getEventShowModeState } from '@/src/domains/showmode/service'
-import { buildMemoryCard } from '@/src/domains/showmode/memory-card'
 import {
+  getEventShowModeState,
   setChecklistItemChecked,
   addEventChecklistItem,
   removeEventChecklistItem,
-} from '@/src/domains/showmode/actions'
+} from '@/src/domains/showmode/service'
+import { buildMemoryCard } from '@/src/domains/showmode/memory-card'
 import {
   ShowModeBanner,
   PreShowChecklist,

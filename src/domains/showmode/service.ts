@@ -8,9 +8,10 @@
  * pendientes — para que el componente de página solo consuma un objeto ya
  * armado.
  *
- * Las escrituras quedan afuera a propósito, igual que en expenses: ./actions
- * ya cumple ese rol (valida, devuelve `ActionResult<T>` y revalida la ruta),
- * y envolverlo otra vez duplicaría la costura en vez de reforzarla.
+ * Las escrituras (saveShowModePreferences, el CRUD de ítems de checklist) se
+ * definen en ./actions.ts, no acá, porque ya validan y devuelven
+ * `ActionResult<T>` con su propia forma — pero se reexportan abajo para que
+ * `app/` tenga un solo punto de entrada al dominio, igual que en el resto.
  */
 import {
     getShowModePreferences,
@@ -21,10 +22,27 @@ import {
 import { resolveShowModeWindow, describeShowModePhase } from './window'
 import { buildEventChecklist, checklistProgress } from './checklist'
 import { computePendingForShow, isMemoryCardReady } from './pending'
+import {
+    saveShowModePreferences,
+    addChecklistTemplateItem,
+    removeChecklistTemplateItem,
+    addEventChecklistItem,
+    removeEventChecklistItem,
+    setChecklistItemChecked,
+} from './actions'
 import type { ShowModeWindow } from './window'
 import type { ResolvedChecklistItem, ChecklistProgress, ChecklistTemplateItem } from './checklist'
 import type { PendingItem, ShowCompletionInput } from './pending'
 import type { ShowModePreferences } from './preferences'
+
+export {
+    saveShowModePreferences,
+    addChecklistTemplateItem,
+    removeChecklistTemplateItem,
+    addEventChecklistItem,
+    removeEventChecklistItem,
+    setChecklistItemChecked,
+}
 
 export interface EventShowModeState {
     window: ShowModeWindow

@@ -2,12 +2,12 @@ import { redirect } from 'next/navigation'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
 import { PageShell } from '@/src/core/components/layout'
-import { getShowModeSettings } from '@/src/domains/showmode/service'
 import {
+    getShowModeSettings,
     saveShowModePreferences,
     addChecklistTemplateItem,
     removeChecklistTemplateItem,
-} from '@/src/domains/showmode/actions'
+} from '@/src/domains/showmode/service'
 import { ShowModeSettingsForm } from '@/src/domains/showmode/components'
 
 export const metadata = {
