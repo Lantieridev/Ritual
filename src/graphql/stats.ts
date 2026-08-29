@@ -1,6 +1,6 @@
 import { builder } from './builder'
-import { getPersonalStats } from '@/src/domains/stats/data'
-import type { StatsData } from '@/src/domains/stats/data'
+import { getStats } from '@/src/domains/stats/service'
+import type { StatsData } from '@/src/domains/stats/service'
 
 type TopArtist = StatsData['topArtists'][number]
 type TopVenue = StatsData['topVenues'][number]
@@ -69,6 +69,6 @@ builder.queryField('myStats', (t) =>
     t.field({
         type: StatsRef,
         description: 'Estadísticas personales del usuario autenticado. Vacías si no hay sesión.',
-        resolve: () => getPersonalStats(),
+        resolve: () => getStats(),
     })
 )

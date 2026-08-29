@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { SignOutButton } from '@/src/domains/auth/components'
-import { getProfile } from '@/src/domains/auth/data'
+import { findProfile } from '@/src/domains/auth/service'
 import { listEventsWithAttendance } from '@/src/domains/events/service'
 import { safeHref } from '@/src/core/lib/validation'
 import { formatDate } from '@/src/core/lib/utils'
@@ -30,7 +30,7 @@ export default async function ProfilePage() {
     }
 
     const [profile, allEvents] = await Promise.all([
-        getProfile(user.id),
+        findProfile(user.id),
         listEventsWithAttendance(),
     ])
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getPersonalStats } from '@/src/domains/stats/data'
+import { getStats } from '@/src/domains/stats/service'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { StarRating } from '@/src/core/components/ui'
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 }
 
 export default async function StatsPage() {
-    const stats = await getPersonalStats()
+    const stats = await getStats()
 
     const years = Object.keys(stats.showsByYear).sort((a, b) => Number(b) - Number(a))
     const maxShowsInYear = Math.max(...Object.values(stats.showsByYear), 1)

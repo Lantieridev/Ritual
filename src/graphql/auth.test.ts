@@ -1,10 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@/src/domains/auth/data', () => ({
-  getProfile: vi.fn(),
-}))
-
 vi.mock('@/src/domains/auth/service', () => ({
+  findProfile: vi.fn(),
   modifyProfile: vi.fn(),
   assignUserRole: vi.fn(),
 }))
@@ -24,8 +21,7 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn().mockResolvedValue(null),
 }))
 
-import { getProfile } from '@/src/domains/auth/data'
-import { modifyProfile, assignUserRole } from '@/src/domains/auth/service'
+import { findProfile, modifyProfile, assignUserRole } from '@/src/domains/auth/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { POST } from '@/app/api/graphql/route'
 
@@ -46,17 +42,17 @@ describe('auth GraphQL schema', () => {
   })
 
   it('resolves "me" for the current session, no id argument needed', async () => {
-    vi.mocked(getProfile).mockResolvedValue({ id: 'u1', username: 'martin', bio: null })
+    vi.mocked(findProfile).mockResolvedValue({ id: 'u1', username: 'martin', bio: null })
 
     const body = await query('{ me { id username } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ me: { id: 'u1', username: 'martin' } })
-    expect(getProfile).toHaveBeenCalledWith()
+    expect(findProfile).toHaveBeenCalledWith()
   })
 
   it('resolves "me" as null when there is no session', async () => {
-    vi.mocked(getProfile).mockResolvedValue(null)
+    vi.mocked(findProfile).mockResolvedValue(null)
 
     const body = await query('{ me { id } }')
 
@@ -64,19 +60,19 @@ describe('auth GraphQL schema', () => {
   })
 
   it('resolves another user\'s profile by id', async () => {
-    vi.mocked(getProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'usuario' })
+    vi.mocked(findProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'usuario' })
 
     const body = await query('{ profile(id: "u2") { username } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ profile: { username: 'otra' } })
-    expect(getProfile).toHaveBeenCalledWith('u2')
+    expect(findProfile).toHaveBeenCalledWith('u2')
   })
 
   it('resolves role on me query (viewer is the profile owner)', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue('u1')
     mockRpc.mockResolvedValue({ data: 'moderador', error: null })
-    vi.mocked(getProfile).mockResolvedValue({ id: 'u1', username: 'martin', bio: null, role: 'moderador' })
+    vi.mocked(findProfile).mockResolvedValue({ id: 'u1', username: 'martin', bio: null, role: 'moderador' })
 
     const body = await query('{ me { role } }')
 
@@ -87,7 +83,7 @@ describe('auth GraphQL schema', () => {
   it('hides another user\'s role from a non-admin viewer, to prevent privileged-account enumeration', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue('u1')
     mockRpc.mockResolvedValue({ data: 'usuario', error: null })
-    vi.mocked(getProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'admin' })
+    vi.mocked(findProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'admin' })
 
     const body = await query('{ profile(id: "u2") { username role } }')
 
@@ -98,7 +94,7 @@ describe('auth GraphQL schema', () => {
   it('reveals another user\'s role to an admin viewer', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue('u1')
     mockRpc.mockResolvedValue({ data: 'admin', error: null })
-    vi.mocked(getProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'moderador' })
+    vi.mocked(findProfile).mockResolvedValue({ id: 'u2', username: 'otra', bio: null, role: 'moderador' })
 
     const body = await query('{ profile(id: "u2") { username role } }')
 

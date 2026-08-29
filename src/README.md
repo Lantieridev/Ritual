@@ -13,4 +13,15 @@ Para agregar un nuevo dominio: crear `domains/nuevo-dominio/` con data, service 
 
 **Historia:** la capa `actions.ts` que describía este documento se eliminó en el issue #23 y su contenido vive hoy en `service.ts`.
 
-La regla de que todo pase por `service.ts` — declarada en los comentarios de cada dominio desde el issue #25 — se cerró del todo el 2026-08-26: `src/graphql/`, las páginas de `app/` y los demás dominios ya no importan `data.ts` directo en ningún lado (commit `ced3ddb`), y `moderation` (el único dominio que hablaba contra Supabase directo desde `service.ts`, sin `data.ts` propio) quedó separado en la misma línea (commit `4bae471`). Sin deuda conocida en esta capa por ahora.
+La regla de que todo pase por `service.ts` — declarada en los comentarios de cada dominio desde el issue #25 — se cerró en dos tandas:
+
+- **2026-08-26**: `events`, `artists`, `venues` y `expenses` (commit `ced3ddb`), y `moderation`, que era el único dominio sin `data.ts` propio (commit `4bae471`).
+- **2026-08-29**: `auth` y `stats`, que habían quedado afuera de la primera pasada. `stats` no tenía `service.ts` y se creó; `auth` lo tenía pero nadie lo usaba para leer el perfil.
+
+Hoy **ningún archivo de `app/` o `src/graphql/` importa un `data.ts`**, y ningún dominio importa el `data.ts` de otro. Verificable con:
+
+```bash
+grep -rn "domains/[a-z]*/data'" src app --include="*.ts" --include="*.tsx" | grep -v "\.test\."
+```
+
+Sólo deberían aparecer líneas donde el dominio importa su propio `data.ts`.

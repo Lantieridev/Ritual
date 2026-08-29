@@ -1,5 +1,5 @@
 import { builder } from './builder'
-import { getProfile } from '@/src/domains/auth/data'
+import { findProfile } from '@/src/domains/auth/service'
 import { modifyProfile, assignUserRole } from '@/src/domains/auth/service'
 import type { Profile } from '@/src/core/types'
 import { MutationResultRef, toMutationResult } from './shared'
@@ -34,7 +34,7 @@ builder.queryField('me', (t) =>
         type: ProfileRef,
         nullable: true,
         description: 'El perfil del usuario autenticado, o null si no hay sesión.',
-        resolve: () => getProfile(),
+        resolve: () => findProfile(),
     })
 )
 
@@ -45,7 +45,7 @@ builder.queryField('profile', (t) =>
         args: {
             id: t.arg.id({ required: true }),
         },
-        resolve: (_root, args) => getProfile(String(args.id)),
+        resolve: (_root, args) => findProfile(String(args.id)),
     })
 )
 

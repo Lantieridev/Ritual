@@ -53,3 +53,6 @@ mcp/dist/
 # Scripts de refactor de un solo uso y scratch de exploración.
 /refactor.js
 /refactor-waterfall.js
+/scratch/
+/test-adapters.ts
+/msg.txt

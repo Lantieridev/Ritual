@@ -450,22 +450,27 @@ efectivamente cambia. Un UPDATE de nombre o fecha paga cero queries.
 
 ## P6 — Estructura y limpieza
 
-Todos **[reportado]**.
+**Cerrado el 2026-08-29.** Se detalla abajo qué se hizo con cada punto.
 
-- `app/buscar/page.tsx:28` tiene `createClient` y lógica de negocio en la ruta, con
-  `ilike` sin escapar comodines. Es la única violación real de la convención.
-- `moderation` es el único dominio sin `data.ts`.
-- El seam `service.ts` ya estaba erosionado: `src/graphql/` importa `data.ts`
-  directo en 7 archivos y `app/` en 16.
-- Imports cruzados entre dominios: `expenses` → `events`, `showmode` → `expenses`
-  y `weather`.
-- Tres documentos de convención desactualizados: `src/README.md` describe
-  `actions.ts` (borrado), `docs/estructura-del-proyecto.md` no lista tres
-  dominios, y `docs/access-control.md` afirma que no hay roles ni panel admin.
-- Versionado y no debería: `msg.txt`, `test-adapters.ts`, `scratch/`.
-- Sin trackear, para borrar: `refactor.js`, `refactor-waterfall.js`.
-- `.gitignore` no cubre `mcp/node_modules/` ni `mcp/dist/`. Un `git add mcp/`
-  metería 4355 archivos.
+- ✅ `app/buscar/page.tsx` tenía `createClient` y lógica de negocio en la ruta,
+  con `ilike` sin escapar comodines. Extraído a `domains/search/service.ts`.
+- ✅ `moderation` era el único dominio sin `data.ts`. Separado en `4bae471`.
+- ✅ El seam `service.ts` estaba erosionado: `src/graphql/` importaba `data.ts`
+  directo en 7 archivos y `app/` en 16. Cerrado en `ced3ddb`; hoy no queda
+  ningún import directo a `data.ts` fuera de su propio dominio.
+- ✅ Documentos de convención desactualizados: los tres corregidos.
+- ✅ Versionado y no debería: `msg.txt`, `test-adapters.ts`, `scratch/`.
+  Borrados y sumados al `.gitignore` para que no vuelvan.
+- ✅ Sin trackear, para borrar: `refactor.js`, `refactor-waterfall.js`. Borrados.
+- ✅ `.gitignore` no cubría `mcp/node_modules/` ni `mcp/dist/`. Ya los cubre.
+- ⚠️ **Revisado y aceptado**, no corregido: los imports cruzados entre dominios.
+  Medidos hoy son `artists→stats`, `events→expenses`, `expenses→events`,
+  `showmode→expenses/weather` y `stats→events`. El aparente ciclo
+  `events ↔ expenses` no es tal en el grafo de módulos: una dirección es la
+  constante compartida `EXPENSE_CATEGORIES` y la otra es
+  `expenses/service.ts → events/service.ts`, archivos distintos. Todas las
+  lecturas cruzadas pasan hoy por `service.ts`, que es el seam previsto para
+  eso, así que se dejan como están.
 
 ---
 

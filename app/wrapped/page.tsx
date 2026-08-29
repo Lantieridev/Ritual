@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getPersonalStats } from '@/src/domains/stats/data'
+import { getStats } from '@/src/domains/stats/service'
 import { buildWrappedSummary } from '@/src/domains/stats/wrapped-view'
 import { listMyEvents } from '@/src/domains/events/service'
 import { summarizeExpenses } from '@/src/domains/expenses/service'
-import { getProfile } from '@/src/domains/auth/data'
+import { findProfile } from '@/src/domains/auth/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
 import { parseYearParam } from '@/src/core/lib/validation'
@@ -31,10 +31,10 @@ export default async function WrappedPage({ searchParams }: PageProps) {
 
     const userId = await getCurrentUserId()
     const [stats, allEvents, expensesSummary, profile] = await Promise.all([
-        getPersonalStats(),
+        getStats(),
         listMyEvents(),
         summarizeExpenses(userId),
-        getProfile(userId ?? undefined),
+        findProfile(userId ?? undefined),
     ])
 
     const {

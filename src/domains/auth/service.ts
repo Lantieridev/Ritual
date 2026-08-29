@@ -2,6 +2,17 @@ import { createClient } from '@/src/core/lib/supabase/server'
 import { ActionResult } from '@/src/core/types'
 import { revalidatePath } from 'next/cache'
 import { sanitizeText, sanitizeError } from '@/src/core/lib/validation'
+import { getProfile } from './data'
+import type { Profile } from '@/src/core/types'
+
+/**
+ * Perfil del usuario. Wrapper fino sobre `data.ts` para que las páginas y los
+ * resolvers no importen la capa de datos directo — el mismo seam que ya
+ * cumplen events, artists, venues, expenses y festivals.
+ */
+export async function findProfile(userId?: string): Promise<Profile | null> {
+    return getProfile(userId)
+}
 
 /**
  * Capa de casos de uso del dominio de auth.

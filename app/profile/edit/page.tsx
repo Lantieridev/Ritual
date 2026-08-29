@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/src/core/lib/supabase/server'
-import { getProfile } from '@/src/domains/auth/data'
+import { findProfile } from '@/src/domains/auth/service'
 import { ProfileForm } from '@/src/domains/auth/components'
 import { PageShell } from '@/src/core/components/layout'
 import { routes } from '@/src/core/lib/routes'
@@ -17,7 +17,7 @@ export default async function EditProfilePage() {
         redirect('/login')
     }
 
-    const profile = await getProfile(user.id)
+    const profile = await findProfile(user.id)
 
     return (
         <PageShell
