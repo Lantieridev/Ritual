@@ -1,7 +1,8 @@
 import { builder } from './builder'
-import { listVenues, findVenueById, insertVenue, findOrCreateVenue } from '@/src/domains/venues/service'
-import type { VenueEvent, VenueWithEvents } from '@/src/domains/venues/service'
+import { listVenues, findVenueById, insertVenue, findOrCreateVenue, addVenueTip, removeVenueTip } from '@/src/domains/venues/service'
+import type { VenueEvent, VenueWithEvents, VenueTip, VenueTipCategory } from '@/src/domains/venues/service'
 import type { Venue } from '@/src/core/types'
+import { MutationResultRef, toMutationResult } from './shared'
 
 const VenueEventLineupArtistRef = builder.objectRef<VenueEvent['lineups'][number]['artists']>(
     'VenueEventLineupArtist'
@@ -37,6 +38,16 @@ VenueEventRef.implement({
     }),
 })
 
+const VenueTipRef = builder.objectRef<VenueTip>('VenueTip')
+VenueTipRef.implement({
+    fields: (t) => ({
+        id: t.exposeID('id'),
+        category: t.exposeString('category'),
+        body: t.exposeString('body'),
+        createdAt: t.exposeString('created_at'),
+    }),
+})
+
 export const VenueRef = builder.objectRef<Venue | VenueWithEvents>('Venue')
 
 VenueRef.implement({
@@ -57,6 +68,12 @@ VenueRef.implement({
             type: [VenueEventRef],
             resolve: (venue, _args, context) =>
                 'events' in venue ? venue.events : context.venueEventsLoader.load(venue.id),
+        }),
+        // Issue #60 — siempre vía DataLoader, a diferencia de `events`: no hay
+        // ningún query de venues que los traiga embebidos de entrada.
+        tips: t.field({
+            type: [VenueTipRef],
+            resolve: (venue, _args, context) => context.venueTipsLoader.load(venue.id),
         }),
     }),
 })
@@ -136,5 +153,30 @@ builder.mutationField('findOrCreateVenue', (t) =>
             country: t.arg.string(),
         },
         resolve: (_root, args) => findOrCreateVenue(args.name, args.city ?? undefined, args.country ?? undefined),
+    })
+)
+
+builder.mutationField('addVenueTip', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            venueId: t.arg.id({ required: true }),
+            body: t.arg.string({ required: true }),
+            category: t.arg.string({ required: true }),
+        },
+        resolve: async (_root, args) =>
+            toMutationResult(
+                await addVenueTip(String(args.venueId), args.body, args.category as VenueTipCategory)
+            ),
+    })
+)
+
+builder.mutationField('removeVenueTip', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            id: t.arg.id({ required: true }),
+        },
+        resolve: async (_root, args) => toMutationResult(await removeVenueTip(String(args.id))),
     })
 )

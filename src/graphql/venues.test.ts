@@ -6,6 +6,9 @@ vi.mock('@/src/domains/venues/service', () => ({
   insertVenue: vi.fn(),
   findOrCreateVenue: vi.fn(),
   listVenueEventsBatch: vi.fn(),
+  listVenueTipsBatch: vi.fn(),
+  addVenueTip: vi.fn(),
+  removeVenueTip: vi.fn(),
 }))
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
@@ -22,6 +25,9 @@ import {
   insertVenue,
   findOrCreateVenue,
   listVenueEventsBatch,
+  listVenueTipsBatch,
+  addVenueTip,
+  removeVenueTip,
 } from '@/src/domains/venues/service'
 import { POST } from '@/app/api/graphql/route'
 
@@ -166,5 +172,61 @@ describe('venues GraphQL mutations', () => {
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ findOrCreateVenue: { id: 'v-1', error: null } })
     expect(findOrCreateVenue).toHaveBeenCalledWith('Niceto Club', 'CABA', undefined)
+  })
+
+  it('adds a venue tip', async () => {
+    vi.mocked(addVenueTip).mockResolvedValue({})
+
+    const body = await query(`mutation {
+      addVenueTip(venueId: "v1", body: "Llegá temprano", category: "cola") { success error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ addVenueTip: { success: true, error: null } })
+    expect(addVenueTip).toHaveBeenCalledWith('v1', 'Llegá temprano', 'cola')
+  })
+
+  it('reports addVenueTip failure through success:false, not a thrown GraphQL error', async () => {
+    vi.mocked(addVenueTip).mockResolvedValue({ error: 'Categoría inválida.' })
+
+    const body = await query('mutation { addVenueTip(venueId: "v1", body: "x", category: "mala") { success error } }')
+
+    expect(body.data).toEqual({ addVenueTip: { success: false, error: 'Categoría inválida.' } })
+  })
+
+  it('removes a venue tip', async () => {
+    vi.mocked(removeVenueTip).mockResolvedValue({})
+
+    const body = await query('mutation { removeVenueTip(id: "tip-1") { success error } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({ removeVenueTip: { success: true, error: null } })
+    expect(removeVenueTip).toHaveBeenCalledWith('tip-1')
+  })
+})
+
+describe('Venue.tips', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('resolves tips via the DataLoader, batched by venue id', async () => {
+    vi.mocked(findVenueById).mockResolvedValue({
+      id: 'v1', name: 'Niceto', city: null, country: null, address: null, lat: null, lng: null,
+      events: [],
+    })
+    vi.mocked(listVenueTipsBatch).mockResolvedValue([[
+      { id: 't1', venue_id: 'v1', category: 'cola', body: 'Llegá temprano', created_at: '2026-01-01T00:00:00Z' },
+    ]])
+
+    const body = await query('{ venue(id: "v1") { tips { id category body createdAt } } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({
+      venue: {
+        tips: [{ id: 't1', category: 'cola', body: 'Llegá temprano', createdAt: '2026-01-01T00:00:00Z' }],
+      },
+    })
+    expect(listVenueTipsBatch).toHaveBeenCalledWith(['v1'])
   })
 })

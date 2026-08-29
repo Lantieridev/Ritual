@@ -13,6 +13,16 @@ export interface VenueWithEvents extends Venue {
 
 export type VenueEvent = VenueWithEvents['events'][number]
 
+export type VenueTipCategory = 'estacionamiento' | 'cola' | 'que_llevar' | 'otro'
+
+export interface VenueTip {
+  id: string
+  venue_id: string
+  category: VenueTipCategory
+  body: string
+  created_at: string
+}
+
 export async function getVenues(): Promise<Venue[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -91,5 +101,41 @@ export async function getVenueEventsBatch(
     else byVenue.set(row.venue_id, [row])
   }
 
+  return venueIds.map((id) => byVenue.get(id) ?? [])
+}
+
+/** Tips de una sede, más nuevos primero — issue #60. */
+export async function getVenueTips(venueId: string): Promise<VenueTip[]> {
+  const [tips] = await getVenueTipsBatch([venueId])
+  return tips
+}
+
+/**
+ * Versión por lote, para el DataLoader de `Venue.tips` — misma razón que
+ * `getVenueEventsBatch`: sin esto, pedir `tips` sobre una lista de sedes
+ * dispararía una consulta por sede.
+ */
+export async function getVenueTipsBatch(venueIds: readonly string[]): Promise<VenueTip[][]> {
+  if (venueIds.length === 0) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('venue_tips')
+    .select('id, venue_id, category, body, created_at')
+    .in('venue_id', venueIds as string[])
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error cargando tips de sedes:', error)
+    return venueIds.map(() => [])
+  }
+
+  const rows = (data ?? []) as VenueTip[]
+  const byVenue = new Map<string, VenueTip[]>()
+  for (const row of rows) {
+    const list = byVenue.get(row.venue_id)
+    if (list) list.push(row)
+    else byVenue.set(row.venue_id, [row])
+  }
   return venueIds.map((id) => byVenue.get(id) ?? [])
 }

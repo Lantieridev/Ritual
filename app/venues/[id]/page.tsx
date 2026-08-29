@@ -3,10 +3,12 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { gql } from 'urql'
 import { getClient } from '@/src/graphql/client'
-import type { GraphQLVenueEvent, GraphQLVenueWithEvents } from '@/src/core/types'
+import type { GraphQLVenueEvent, GraphQLVenueTip, GraphQLVenueWithEvents } from '@/src/core/types'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
+import { getCurrentUserId } from '@/src/core/auth/session'
+import { AddVenueTipForm } from '@/src/domains/venues/components'
 
 const VenueDetailQuery = gql`
   query VenueDetail($id: ID!) {
@@ -23,9 +25,22 @@ const VenueDetailQuery = gql`
         lineups { artist { name } }
         attendance { status }
       }
+      tips {
+        id
+        category
+        body
+        createdAt
+      }
     }
   }
 `
+
+const TIP_CATEGORY_LABELS: Record<string, string> = {
+    estacionamiento: 'Estacionamiento',
+    cola: 'Cola / entrada',
+    que_llevar: 'Qué llevar',
+    otro: 'Otro',
+}
 
 async function fetchVenue(id: string): Promise<GraphQLVenueWithEvents | null> {
     const { data } = await getClient().query<{ venue: GraphQLVenueWithEvents | null }>(
@@ -51,7 +66,7 @@ export async function generateMetadata({ params }: VenueDetailPageProps): Promis
 
 export default async function VenueDetailPage({ params }: VenueDetailPageProps) {
     const { id } = await params
-    const venue = await fetchVenue(id)
+    const [venue, userId] = await Promise.all([fetchVenue(id), getCurrentUserId()])
 
     if (!venue) notFound()
 
@@ -125,6 +140,38 @@ export default async function VenueDetailPage({ params }: VenueDetailPageProps) 
                         )}
                     </div>
                 )}
+
+                {/* Tips crowdsourced — issue #60. Lectura pública siempre; el
+                    form de alta sólo si hay sesión, la escritura la bloquea RLS igual. */}
+                <section className="mt-16 pt-10 border-t border-ritual-border-subtle">
+                    <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-5">
+                        Tips de quienes ya fueron
+                    </h2>
+                    {venue.tips.length === 0 ? (
+                        <p className="font-body text-sm text-ritual-gray-text mb-6">Todavía no hay tips para esta sede.</p>
+                    ) : (
+                        <ul className="divide-y divide-ritual-border-subtle mb-6">
+                            {venue.tips.map((tip: GraphQLVenueTip) => (
+                                <li key={tip.id} className="py-4">
+                                    <span className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-red-hover">
+                                        {TIP_CATEGORY_LABELS[tip.category] ?? tip.category}
+                                    </span>
+                                    <p className="font-body text-sm text-ritual-bone mt-1">{tip.body}</p>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    {userId ? (
+                        <AddVenueTipForm venueId={venue.id} />
+                    ) : (
+                        <p className="font-body text-sm text-ritual-gray-text">
+                            <Link href={routes.login} className="text-ritual-red-hover underline underline-offset-4">
+                                Ingresá
+                            </Link>{' '}
+                            para dejar un tip.
+                        </p>
+                    )}
+                </section>
             </div>
         </main>
     )

@@ -13,6 +13,8 @@ vi.mock('@/src/core/auth/session', () => ({
 vi.mock('@/src/domains/venues/data', () => ({
   getVenues: vi.fn(),
   getVenueById: vi.fn(),
+  getVenueTips: vi.fn(),
+  getVenueTipsBatch: vi.fn(),
 }))
 
 /**
@@ -24,7 +26,7 @@ vi.mock('@/src/core/lib/nominatim', () => ({
   geocodeVenue: vi.fn().mockResolvedValue({ lat: null, lng: null }),
 }))
 
-import { listVenues, findVenueById, insertVenue, findOrCreateVenue } from '@/src/domains/venues/service'
+import { listVenues, findVenueById, insertVenue, findOrCreateVenue, addVenueTip, removeVenueTip } from '@/src/domains/venues/service'
 import { getVenues, getVenueById } from '@/src/domains/venues/data'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { geocodeVenue } from '@/src/core/lib/nominatim'
@@ -201,4 +203,101 @@ describe('findOrCreateVenue', () => {
     expect(result).toEqual({ error: 'El nombre de la sede es obligatorio.' })
     expect(mockCreateClient).not.toHaveBeenCalled()
   })
+})
+
+describe('addVenueTip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await addVenueTip('v1', 'Tip', 'otro')
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects an empty body without touching the database', async () => {
+    const result = await addVenueTip('v1', '   ', 'otro')
+    expect(result).toEqual({ error: 'El tip no puede estar vacío.' })
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects a category outside the fixed list', async () => {
+    const result = await addVenueTip('v1', 'Tip', 'inventada' as never)
+    expect(result).toEqual({ error: 'Categoría inválida.' })
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('inserts the tip and returns its id on success', async () => {
+    const builder = makeQueryBuilder({ data: { id: 'tip-1' }, error: null })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await addVenueTip('v1', 'Llegá temprano, se llena la cola', 'cola')
+
+    expect(fromMock).toHaveBeenCalledWith('venue_tips')
+    expect(builder.insert).toHaveBeenCalledWith({
+      venue_id: 'v1',
+      body: 'Llegá temprano, se llena la cola',
+      category: 'cola',
+    })
+    expect(result).toEqual({ id: 'tip-1' })
+  })
+
+  it('maps the rate-limit trigger error to a friendly message', async () => {
+    const builder = makeQueryBuilder({ data: null, error: { message: 'rate_limit_exceeded' } })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await addVenueTip('v1', 'Tip', 'otro')
+
+    expect(result).toEqual({ error: 'Ya publicaste varios tips esta hora — probá de nuevo más tarde.' })
+  })
+})
+
+describe('removeVenueTip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  function makeDeleteBuilder(result: { data: unknown; error: unknown }) {
+    const builder: Record<string, unknown> = {}
+    const chain = () => builder
+    builder.delete = vi.fn(chain)
+    builder.eq = vi.fn(chain)
+    builder.select = vi.fn(() => Promise.resolve(result))
+    return builder
+  }
+
+  it('rejects an unauthenticated caller', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    const result = await removeVenueTip('tip-1')
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('succeeds when RLS allows the delete (owner or moderator)', async () => {
+    const builder = makeDeleteBuilder({ data: [{ id: 'tip-1' }], error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await removeVenueTip('tip-1')
+
+    expect(result).toEqual({})
+  })
+
+  it(
+    'reports an error when RLS silently blocks the delete — DELETE without a matching ' +
+      'policy returns zero affected rows and no `error`, same pattern as removeEvent',
+    async () => {
+      const builder = makeDeleteBuilder({ data: [], error: null })
+      mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+      const result = await removeVenueTip('someone-elses-tip')
+
+      expect(result).toEqual({ error: 'No podés borrar este tip.' })
+    }
+  )
 })

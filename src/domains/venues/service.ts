@@ -4,10 +4,13 @@ import { findOrCreateByName } from '@/src/core/lib/find-or-create'
 import { geocodeVenue } from '@/src/core/lib/nominatim'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, Venue, VenueCreateInput } from '@/src/core/types'
-import { getVenues, getVenueById, getVenueEventsBatch } from './data'
-import type { VenueWithEvents, VenueEvent } from './data'
+import { getVenues, getVenueById, getVenueEventsBatch, getVenueTips, getVenueTipsBatch } from './data'
+import type { VenueWithEvents, VenueEvent, VenueTip, VenueTipCategory } from './data'
 
-export type { VenueWithEvents, VenueEvent }
+export type { VenueWithEvents, VenueEvent, VenueTip, VenueTipCategory }
+
+const VENUE_TIP_CATEGORIES: VenueTipCategory[] = ['estacionamiento', 'cola', 'que_llevar', 'otro']
+const MAX_TIP_BODY = 500
 
 /**
  * Use-case / application-service layer for the venues domain.
@@ -43,6 +46,71 @@ export async function findVenueById(id: string): Promise<VenueWithEvents | null>
 /** Versión por lote de `findVenueById(...).events`, para el DataLoader de `Venue.events`. */
 export async function listVenueEventsBatch(venueIds: readonly string[]): Promise<VenueEvent[][]> {
   return getVenueEventsBatch(venueIds)
+}
+
+/** Tips de una sede — issue #60. */
+export async function listVenueTips(venueId: string): Promise<VenueTip[]> {
+  return getVenueTips(venueId)
+}
+
+/** Versión por lote de `listVenueTips`, para el DataLoader de `Venue.tips`. */
+export async function listVenueTipsBatch(venueIds: readonly string[]): Promise<VenueTip[][]> {
+  return getVenueTipsBatch(venueIds)
+}
+
+/**
+ * Publica un tip sobre una sede. La autoría y el rate limit los pone el
+ * trigger check_creation_rate_limit (mismo que artists/venues/events), no
+ * esta función — acá sólo se valida forma.
+ */
+export async function addVenueTip(
+  venueId: string,
+  body: string,
+  category: VenueTipCategory
+): Promise<ActionResult<{ id?: string }>> {
+  const userId = await getCurrentUserId()
+  if (!userId) return { error: 'Usuario no autenticado' }
+
+  const cleanBody = sanitizeText(body, MAX_TIP_BODY)
+  if (!cleanBody) return { error: 'El tip no puede estar vacío.' }
+  if (!VENUE_TIP_CATEGORIES.includes(category)) return { error: 'Categoría inválida.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('venue_tips')
+    .insert({ venue_id: venueId, body: cleanBody, category })
+    .select('id')
+    .single()
+
+  if (error) {
+    console.error('Error publicando tip de sede:', error)
+    if (error.message?.includes('rate_limit_exceeded')) {
+      return { error: 'Ya publicaste varios tips esta hora — probá de nuevo más tarde.' }
+    }
+    return { error: sanitizeError(error) }
+  }
+  return { id: data.id }
+}
+
+/** Borra un tip propio (o cualquiera, si quien llama es moderador — lo decide RLS). */
+export async function removeVenueTip(id: string): Promise<ActionResult> {
+  const userId = await getCurrentUserId()
+  if (!userId) return { error: 'Usuario no autenticado' }
+
+  const supabase = await createClient()
+  // .select() de vuelta para distinguir "no había permiso" (RLS bloqueó el
+  // delete, 0 filas afectadas, sin error) de un borrado real — mismo patrón
+  // que removeEvent/removeFestival.
+  const { data, error } = await supabase.from('venue_tips').delete().eq('id', id).select('id')
+
+  if (error) {
+    console.error('Error borrando tip de sede:', error)
+    return { error: sanitizeError(error) }
+  }
+  if (!data || data.length === 0) {
+    return { error: 'No podés borrar este tip.' }
+  }
+  return {}
 }
 
 /**

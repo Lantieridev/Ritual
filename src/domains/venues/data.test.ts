@@ -6,7 +6,7 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
-import { getVenues, getVenueById } from '@/src/domains/venues/data'
+import { getVenues, getVenueById, getVenueTips, getVenueTipsBatch } from '@/src/domains/venues/data'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -90,5 +90,84 @@ describe('getVenueById', () => {
     const result = await getVenueById('v1')
 
     expect(result).toBeNull()
+  })
+})
+
+describe('getVenueTipsBatch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function makeTipsBuilder(result: { data: unknown; error: unknown }) {
+    const builder: Record<string, unknown> = {}
+    const chain = () => builder
+    builder.select = vi.fn(chain)
+    builder.in = vi.fn(chain)
+    builder.order = vi.fn(chain)
+    builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
+      Promise.resolve(result).then(onFulfilled, onRejected)
+    return builder
+  }
+
+  it('devuelve [] para cada id sin llamar a la base cuando la lista viene vacía', async () => {
+    const fromMock = vi.fn()
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getVenueTipsBatch([])
+
+    expect(result).toEqual([])
+    expect(fromMock).not.toHaveBeenCalled()
+  })
+
+  it('agrupa los tips por venue_id, preservando el orden de los ids pedidos', async () => {
+    const rows = [
+      { id: 't1', venue_id: 'v2', category: 'cola', body: 'Llegá temprano', created_at: '2026-01-01' },
+      { id: 't2', venue_id: 'v1', category: 'estacionamiento', body: 'Hay un estacionamiento a 2 cuadras', created_at: '2026-01-02' },
+    ]
+    const builder = makeTipsBuilder({ data: rows, error: null })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getVenueTipsBatch(['v1', 'v2', 'v3'])
+
+    expect(builder.in).toHaveBeenCalledWith('venue_id', ['v1', 'v2', 'v3'])
+    expect(result).toEqual([
+      [rows[1]], // v1
+      [rows[0]], // v2
+      [],        // v3, sin tips
+    ])
+  })
+
+  it('devuelve listas vacías para cada id si la consulta falla', async () => {
+    const builder = makeTipsBuilder({ data: null, error: { message: 'boom' } })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getVenueTipsBatch(['v1', 'v2'])
+
+    expect(result).toEqual([[], []])
+  })
+})
+
+describe('getVenueTips', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('pide un solo id y devuelve sus tips (no un array de arrays)', async () => {
+    const rows = [{ id: 't1', venue_id: 'v1', category: 'otro', body: 'Tip', created_at: '2026-01-01' }]
+    const builder: Record<string, unknown> = {}
+    const chain = () => builder
+    builder.select = vi.fn(chain)
+    builder.in = vi.fn(chain)
+    builder.order = vi.fn(chain)
+    builder.then = (onFulfilled: (v: unknown) => unknown) => Promise.resolve({ data: rows, error: null }).then(onFulfilled)
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getVenueTips('v1')
+
+    expect(builder.in).toHaveBeenCalledWith('venue_id', ['v1'])
+    expect(result).toEqual(rows)
   })
 })

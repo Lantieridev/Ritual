@@ -176,9 +176,18 @@ export interface GraphQLVenueEvent {
   attendance: Array<{ status: string }>
 }
 
+/** Tip práctico crowdsourced sobre una sede (issue #60), tal como lo devuelve `Venue.tips`. */
+export interface GraphQLVenueTip {
+  id: string
+  category: string
+  body: string
+  createdAt: string
+}
+
 /** Respuesta GraphQL para el detalle de una sede, con su historial de shows. */
 export interface GraphQLVenueWithEvents extends GraphQLVenue {
   events: GraphQLVenueEvent[]
+  tips: GraphQLVenueTip[]
 }
 
 /** Respuesta GraphQL para un artista. */
