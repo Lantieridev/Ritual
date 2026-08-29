@@ -130,6 +130,32 @@ describe('HomeHero — el resto del hero', () => {
   })
 })
 
+describe('HomeHero — sin show agendado', () => {
+  const emptyState = { kind: 'normal', nextShow: undefined, daysUntil: null } as const
+
+  it('sin archivo: invita a cargar el primer show, no a "buscar el próximo"', () => {
+    render(<HomeHero state={emptyState} backgroundImage={null} archiveCount={0} />)
+    expect(screen.getByText(/todavía no hay/i)).toBeInTheDocument()
+    expect(screen.getByText(/ningún talón/i)).toBeInTheDocument()
+    expect(screen.getByText('BUSCAR SHOWS')).toBeInTheDocument()
+    expect(screen.queryByText(/sin nada agendado/i)).not.toBeInTheDocument()
+  })
+
+  it('con archivo: no repite "todavía no hay ningún talón" a quien ya tiene shows', () => {
+    render(<HomeHero state={emptyState} backgroundImage={null} archiveCount={14} />)
+    expect(screen.getByText(/sin nada agendado/i)).toBeInTheDocument()
+    expect(screen.getByText('14')).toBeInTheDocument()
+    expect(screen.getByText(/talones en el archivo/i)).toBeInTheDocument()
+    expect(screen.getByText('BUSCAR TU PRÓXIMO SHOW')).toBeInTheDocument()
+    expect(screen.queryByText(/todavía no hay/i)).not.toBeInTheDocument()
+  })
+
+  it('con exactamente un talón, el kicker va en singular', () => {
+    render(<HomeHero state={emptyState} backgroundImage={null} archiveCount={1} />)
+    expect(screen.getByText(/talón en el archivo/i)).toBeInTheDocument()
+  })
+})
+
 describe('HomeHero — scroll snap', () => {
   it.each([
     ['normal', { kind: 'normal', nextShow: event, daysUntil: 12 }],

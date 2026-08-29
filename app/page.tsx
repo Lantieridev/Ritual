@@ -197,11 +197,12 @@ export default async function HomePage() {
     .slice(0, 4)
 
   const hasArchive = byYear && years.length > 0
+  const archiveCount = allEvents.filter((e) => e.attendance?.[0]?.status === 'went').length
 
   return (
     <>
-      <React.Suspense fallback={<HomeHero state={heroState} backgroundImage={null} />}>
-        <HomeHero state={heroState} backgroundImage={heroImagePromise} />
+      <React.Suspense fallback={<HomeHero state={heroState} backgroundImage={null} archiveCount={archiveCount} />}>
+        <HomeHero state={heroState} backgroundImage={heroImagePromise} archiveCount={archiveCount} />
       </React.Suspense>
 
       <React.Suspense fallback={<div className="min-h-screen bg-ritual-bg animate-pulse flex items-center justify-center"><p className="text-ritual-gray-text font-label uppercase">Buscando shows cerca tuyo...</p></div>}>
@@ -250,7 +251,7 @@ export default async function HomePage() {
           <div>
             <p className="font-label text-[10px] tracking-[0.32em] text-ritual-red-hover uppercase">Tu archivo</p>
             <h2 className="font-display text-5xl uppercase text-ritual-bone mt-2">
-              {allEvents.filter((e) => e.attendance?.[0]?.status === 'went').length} talones
+              {archiveCount} talones
             </h2>
           </div>
           <p className="font-body italic text-ritual-gray-text max-w-xs text-right">
