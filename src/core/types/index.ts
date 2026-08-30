@@ -55,6 +55,8 @@ export interface LineupRow {
   stage?: string | null
   start_time?: string | null
   is_headliner?: boolean
+  /** Filas con el mismo b2b_group (no nulo) son un único set B2B — ver issue #56. */
+  b2b_group?: string | null
 }
 
 /**
@@ -94,6 +96,8 @@ export interface EventCreateInput {
   date: string
   venue_id: string
   artist_ids?: string[]
+  /** Sub-listas de artist_ids que tocan en B2B entre sí — ver issue #56. */
+  b2b_groups?: string[][]
   ticket_url?: string
 }
 
@@ -103,6 +107,8 @@ export interface EventUpdateInput {
   date?: string
   venue_id?: string
   artist_ids?: string[]
+  /** Sub-listas de artist_ids que tocan en B2B entre sí — ver issue #56. */
+  b2b_groups?: string[][]
   ticket_url?: string
 }
 

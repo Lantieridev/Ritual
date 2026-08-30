@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { findEventById, getAttendanceForEvent, getEventPhotos } from '@/src/domains/events/service'
+import { groupLineupForDisplay } from '@/src/domains/events/lineup-b2b'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { routes } from '@/src/core/lib/routes'
 import { isPastEvent } from '@/src/core/lib/dates'
@@ -281,11 +282,21 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <section className="border-t border-ritual-border-subtle pt-8">
             <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-4">Quién tocó</h2>
             <ul className="flex flex-wrap gap-2">
-              {event.lineups.map((row) => (
-                <li key={row.artists.id}>
-                  <span className="inline-flex items-center gap-2 bg-ritual-surface border border-ritual-border text-ritual-gray-light-3 font-dense font-extrabold px-4 py-2 text-sm">
-                    {row.artists.name}
-                    {row.artists.genre && <span className="font-label text-ritual-gray-text font-normal text-xs">{row.artists.genre}</span>}
+              {groupLineupForDisplay(event.lineups).map((group) => (
+                <li key={group.artists.map((a) => a.id).join('-')}>
+                  <span
+                    className={`inline-flex items-center gap-2 border font-dense font-extrabold px-4 py-2 text-sm ${
+                      group.artists.length > 1
+                        ? 'bg-ritual-red-hover/10 border-ritual-red-hover/50 text-ritual-bone'
+                        : 'bg-ritual-surface border-ritual-border text-ritual-gray-light-3'
+                    }`}
+                  >
+                    {group.artists.length > 1
+                      ? group.artists.map((a) => a.name).join(' B2B ')
+                      : group.artists[0].name}
+                    {group.artists.length === 1 && group.artists[0].genre && (
+                      <span className="font-label text-ritual-gray-text font-normal text-xs">{group.artists[0].genre}</span>
+                    )}
                   </span>
                 </li>
               ))}

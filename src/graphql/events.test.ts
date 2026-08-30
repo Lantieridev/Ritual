@@ -102,6 +102,37 @@ describe('events GraphQL schema', () => {
     expect(getAttendanceForEvent).not.toHaveBeenCalled()
   })
 
+  // Issue #56: sets B2B — filas con el mismo b2bGroup son un único set.
+  it('exposes b2bGroup on a lineup row', async () => {
+    vi.mocked(listEvents).mockResolvedValue([
+      {
+        ...event,
+        lineups: [
+          { artists: { id: 'a1', name: 'Sasha', genre: null }, b2b_group: 'g1' },
+          { artists: { id: 'a2', name: 'John Digweed', genre: null }, b2b_group: 'g1' },
+        ],
+      },
+    ])
+
+    const body = await query('{ events { edges { node { lineups { artist { name } b2bGroup } } } } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({
+      events: {
+        edges: [
+          {
+            node: {
+              lineups: [
+                { artist: { name: 'Sasha' }, b2bGroup: 'g1' },
+                { artist: { name: 'John Digweed' }, b2bGroup: 'g1' },
+              ],
+            },
+          },
+        ],
+      },
+    })
+  })
+
   // El link de entradas se carga a mano por evento (issue #19) y la ficha
   // dibuja el botón "Comprar entradas" con él — sin este campo un cliente
   // que no sea la web no tiene con qué dibujarlo.
@@ -228,8 +259,26 @@ describe('events GraphQL mutations', () => {
       date: '2026-03-01',
       venue_id: 'v1',
       artist_ids: ['a1', 'a2'],
+      b2b_groups: undefined,
       ticket_url: undefined,
     })
+  })
+
+  // Issue #56: sets B2B.
+  it('maps b2bGroups (list of {artistIds}) to the flat b2b_groups array the domain layer expects', async () => {
+    vi.mocked(insertEvent).mockResolvedValue({ id: 'e-new' })
+
+    await query(`mutation {
+      createEvent(input: {
+        name: "B2B Night", date: "2026-03-01", venueId: "v1",
+        artistIds: ["a1", "a2", "a3"],
+        b2bGroups: [{ artistIds: ["a1", "a2"] }]
+      }) { id error }
+    }`)
+
+    expect(insertEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ b2b_groups: [['a1', 'a2']] })
+    )
   })
 
   it('carries the ticket link through createEvent', async () => {
@@ -256,6 +305,7 @@ describe('events GraphQL mutations', () => {
       date: undefined,
       venue_id: undefined,
       artist_ids: undefined,
+      b2b_groups: undefined,
       ticket_url: undefined,
     })
   })

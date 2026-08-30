@@ -93,6 +93,7 @@ describe('EventForm — create mode', () => {
           date: '2024-05-01T20:00:00-03:00',
           venueId: 'v1',
           artistIds: ['a1'],
+          b2bGroups: [],
           ticketUrl: '',
         },
       })
@@ -142,6 +143,61 @@ describe('EventForm — create mode', () => {
     await waitFor(() => {
       expect(createEventMock).toHaveBeenCalledWith({
         input: expect.objectContaining({ artistIds: [] }),
+      })
+    })
+  })
+
+  // Issue #56: sets B2B.
+  it('links two selected artists into a B2B group and submits them as one b2bGroups entry', async () => {
+    render(<EventForm venues={venues} artists={artists} />)
+
+    await userEvent.type(screen.getByLabelText(/Nombre del recital/), 'B2B Night')
+    await userEvent.type(screen.getByLabelText(/Fecha/), '2024-05-01')
+    await pickVenue('Niceto')
+    await pickArtist('Bandalos Chinos')
+    await pickArtist('Usted Señalemelo')
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Marcar a Bandalos Chinos/ }))
+    await userEvent.click(screen.getByRole('checkbox', { name: /Marcar a Usted Señalemelo/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Vincular como B2B/ }))
+
+    // Se muestran como un único slot fusionado, no dos chips sueltos.
+    expect(screen.getByText('Bandalos Chinos B2B Usted Señalemelo')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar y generar el talón' }))
+
+    await waitFor(() => {
+      expect(createEventMock).toHaveBeenCalledWith({
+        input: expect.objectContaining({
+          artistIds: ['a1', 'a2'],
+          b2bGroups: [{ artistIds: ['a1', 'a2'] }],
+        }),
+      })
+    })
+  })
+
+  it('dissolves a B2B group back into two solo chips when "×" on the group is clicked', async () => {
+    render(<EventForm venues={venues} artists={artists} />)
+
+    await userEvent.type(screen.getByLabelText(/Nombre del recital/), 'Show')
+    await userEvent.type(screen.getByLabelText(/Fecha/), '2024-05-01')
+    await pickVenue('Niceto')
+    await pickArtist('Bandalos Chinos')
+    await pickArtist('Usted Señalemelo')
+    await userEvent.click(screen.getByRole('checkbox', { name: /Marcar a Bandalos Chinos/ }))
+    await userEvent.click(screen.getByRole('checkbox', { name: /Marcar a Usted Señalemelo/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Vincular como B2B/ }))
+
+    await userEvent.click(screen.getByRole('button', { name: /Separar el B2B/ }))
+    expect(screen.queryByText('Bandalos Chinos B2B Usted Señalemelo')).not.toBeInTheDocument()
+    expect(screen.getByText('Bandalos Chinos')).toBeInTheDocument()
+    expect(screen.getByText('Usted Señalemelo')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar y generar el talón' }))
+
+    await waitFor(() => {
+      expect(createEventMock).toHaveBeenCalledWith({
+        input: expect.objectContaining({ artistIds: ['a1', 'a2'], b2bGroups: [] }),
       })
     })
   })

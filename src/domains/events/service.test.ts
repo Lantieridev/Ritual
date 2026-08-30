@@ -106,9 +106,34 @@ describe('insertEvent', () => {
     } as never)
 
     expect(lineupsBuilder.insert).toHaveBeenCalledWith([
-      { event_id: VALID_EVENT_ID, artist_id: VALID_ARTIST_ID },
+      { event_id: VALID_EVENT_ID, artist_id: VALID_ARTIST_ID, b2b_group: null },
     ])
     expect(result).toEqual({ id: VALID_EVENT_ID })
+  })
+
+  // Issue #56: dos artistas en el mismo b2bGroup comparten un b2b_group
+  // fresco al insertarse.
+  it('assigns a shared b2b_group to a real B2B pair', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    const lineupsBuilder = makeQueryBuilder({ data: null, error: null })
+    const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock, rpc: moderatorRpc }))
+
+    const OTHER_ARTIST_ID = '11111111-1111-1111-1111-111111111111'
+    await insertEvent({
+      name: 'Show',
+      date: '2024-01-01',
+      venue_id: VALID_VENUE_ID,
+      artist_ids: [VALID_ARTIST_ID, OTHER_ARTIST_ID],
+      b2b_groups: [[VALID_ARTIST_ID, OTHER_ARTIST_ID]],
+    } as never)
+
+    const insertMock = lineupsBuilder.insert as {
+      mock: { calls: Array<[Array<{ event_id: string; artist_id: string; b2b_group: string | null }>]> }
+    }
+    const [rows] = insertMock.mock.calls[0]
+    expect(rows[0].b2b_group).not.toBeNull()
+    expect(rows[0].b2b_group).toBe(rows[1].b2b_group)
   })
 
   // The event used to redirect as if everything succeeded even when the
@@ -349,7 +374,7 @@ describe('modifyEvent', () => {
 
     expect(lineupsBuilder.delete).toHaveBeenCalled()
     expect(lineupsBuilder.insert).toHaveBeenCalledWith([
-      { event_id: VALID_EVENT_ID, artist_id: VALID_ARTIST_ID },
+      { event_id: VALID_EVENT_ID, artist_id: VALID_ARTIST_ID, b2b_group: null },
     ])
   })
 

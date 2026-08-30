@@ -71,4 +71,27 @@ describe('aggregateEventStats', () => {
     expect(result.rainyShows).toBe(0)
     expect(result.totalWithWeather).toBe(0)
   })
+
+  // Issue #56: un B2B ya viaja como dos filas de lineup independientes
+  // (misma fila de events, dos artist_id distintos) — esta función itera por
+  // fila, así que ya contaba ambos artistas del B2B sin ningún cambio de
+  // código. Este test fija esa garantía como regresión explícita, tal como
+  // pide el criterio de aceptación del issue.
+  it('counts every artist in a B2B set for uniqueArtists/topArtists, not just one', () => {
+    const result = aggregateEventStats([
+      {
+        lineups: [{ artists: { name: 'Sasha' } }, { artists: { name: 'John Digweed' } }],
+        venues: { name: 'Crobar', city: 'CABA', country: 'AR' },
+        rating: 5,
+      },
+    ])
+
+    expect(result.uniqueArtists).toBe(2)
+    expect(result.topArtists).toEqual(
+      expect.arrayContaining([
+        { name: 'Sasha', count: 1 },
+        { name: 'John Digweed', count: 1 },
+      ])
+    )
+  })
 })

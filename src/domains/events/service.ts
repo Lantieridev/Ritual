@@ -14,6 +14,7 @@ import { getEventPhotos, getEventPhotosBatch, uploadEventPhoto, deleteEventPhoto
 import type { EventPhoto } from './photo-actions'
 import { getEventMessages, addEventMessage } from './messages-data'
 import type { EventMessage } from './messages-data'
+import { buildLineupRows } from './lineup-b2b'
 
 export type { EventWithRelations, EventWithAttendance, EventAttendance, AttendanceStatus, EventPhoto, EventMessage }
 
@@ -136,8 +137,9 @@ export async function insertEvent(formData: EventCreateInput): Promise<ActionRes
     const invalidId = formData.artist_ids.find((id) => validateUUID(id) !== null)
     if (invalidId) return { error: 'ID de artista inválido.' }
 
+    const lineupRows = buildLineupRows(formData.artist_ids, formData.b2b_groups)
     const { error: lineupsError } = await supabase.from('lineups').insert(
-      formData.artist_ids.map((artist_id) => ({ event_id: newEvent.id, artist_id }))
+      lineupRows.map((row) => ({ event_id: newEvent.id, ...row }))
     )
     if (lineupsError) {
       console.error('Error creando lineups:', lineupsError)
@@ -305,8 +307,9 @@ export async function modifyEvent(id: string, formData: EventUpdateInput): Promi
       const invalidId = formData.artist_ids.find((aid) => validateUUID(aid) !== null)
       if (invalidId) return { error: 'ID de artista inválido.' }
 
+      const lineupRows = buildLineupRows(formData.artist_ids, formData.b2b_groups)
       const { error: insErr } = await supabase.from('lineups').insert(
-        formData.artist_ids.map((artist_id) => ({ event_id: id, artist_id }))
+        lineupRows.map((row) => ({ event_id: id, ...row }))
       )
       if (insErr) {
         console.error('Error insertando lineups:', insErr)

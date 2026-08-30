@@ -86,6 +86,22 @@ export function EventForm({ venues, artists, event }: EventFormProps) {
     if (!event?.lineups?.length) return []
     return event.lineups.map((row) => ({ id: row.artists.id, label: row.artists.name, sublabel: row.artists.genre ?? undefined }))
   })
+  // Issue #56 (sets B2B): cada grupo es una lista de 2+ artist_id que tocan
+  // juntos en el mismo slot. `pendingLinkIds` es la selección en curso antes
+  // de confirmar "Vincular como B2B" -separada de b2bLinks porque no todo
+  // clic en el checkbox debe crear un grupo, sólo al confirmar.
+  const [b2bLinks, setB2bLinks] = useState<string[][]>(() => {
+    if (!event?.lineups?.length) return []
+    const byGroup = new Map<string, string[]>()
+    for (const row of event.lineups) {
+      if (!row.b2b_group) continue
+      const list = byGroup.get(row.b2b_group) ?? []
+      list.push(row.artists.id)
+      byGroup.set(row.b2b_group, list)
+    }
+    return Array.from(byGroup.values()).filter((g) => g.length >= 2)
+  })
+  const [pendingLinkIds, setPendingLinkIds] = useState<Set<string>>(() => new Set())
 
   const isEdit = Boolean(event?.id)
 
@@ -101,6 +117,47 @@ export function EventForm({ venues, artists, event }: EventFormProps) {
 
   function removeArtist(id: string) {
     setSelectedArtists((prev) => prev.filter((a) => a.id !== id))
+    // Sacarlo también de cualquier grupo B2B -un grupo que se queda con
+    // menos de 2 miembros deja de ser un B2B.
+    setB2bLinks((prev) => prev.map((g) => g.filter((x) => x !== id)).filter((g) => g.length >= 2))
+    setPendingLinkIds((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }
+
+  function togglePendingLink(id: string) {
+    setPendingLinkIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function confirmB2bLink() {
+    if (pendingLinkIds.size < 2) return
+    const ids = Array.from(pendingLinkIds)
+    setB2bLinks((prev) => [
+      // Un artista no puede estar en dos B2B a la vez -si ya estaba en otro
+      // grupo, sale de ahí; si eso deja a ese grupo viejo con 1 solo
+      // miembro, deja de contar como B2B.
+      ...prev.map((g) => g.filter((id) => !ids.includes(id))).filter((g) => g.length >= 2),
+      ids,
+    ])
+    setPendingLinkIds(new Set())
+  }
+
+  function unlinkGroup(ids: string[]) {
+    setB2bLinks((prev) => prev.filter((g) => g !== ids))
+  }
+
+  const groupedArtistIds = new Set(b2bLinks.flat())
+  const soloArtists = selectedArtists.filter((a) => !groupedArtistIds.has(a.id))
+  function artistLabel(id: string): string {
+    return selectedArtists.find((a) => a.id === id)?.label ?? '?'
   }
 
   async function handleCreateVenue(name: string) {
@@ -149,11 +206,13 @@ export function EventForm({ venues, artists, event }: EventFormProps) {
     // imposible pedirle a Open-Meteo el clima de la hora real del show.
     const date = combineDateAndTime(dateValue, timeValue)
 
+    const b2bGroups = b2bLinks.map((ids) => ({ artistIds: ids }))
+
     if (isEdit && event) {
       const updated = unwrapMutation(
         await updateEvent({
           id: event.id,
-          input: { name, date, venueId: venue_id, artistIds: artist_ids, ticketUrl: ticket_url },
+          input: { name, date, venueId: venue_id, artistIds: artist_ids, b2bGroups, ticketUrl: ticket_url },
         }),
         'updateEvent',
         'No se pudo guardar el recital.'
@@ -169,7 +228,7 @@ export function EventForm({ venues, artists, event }: EventFormProps) {
 
     const created = unwrapMutation<{ id?: string; error?: string }>(
       await createEvent({
-        input: { name, date, venueId: venue_id, artistIds: artist_ids, ticketUrl: ticket_url },
+        input: { name, date, venueId: venue_id, artistIds: artist_ids, b2bGroups, ticketUrl: ticket_url },
       }),
       'createEvent',
       'No se pudo crear el recital.'
@@ -282,15 +341,52 @@ export function EventForm({ venues, artists, event }: EventFormProps) {
           />
         )}
       </FormField>
-      <FormField label="Artistas en el lineup" id="artist-combobox">
+      <FormField
+        label="Artistas en el lineup"
+        id="artist-combobox"
+        hint={
+          selectedArtists.length >= 2
+            ? 'Tocan dos o más a la vez (B2B)? Marcá sus casilleros y apretá "Vincular como B2B".'
+            : undefined
+        }
+      >
         <div className="space-y-2">
-          {selectedArtists.length > 0 && (
+          {b2bLinks.length > 0 && (
             <ul className="flex flex-wrap gap-2">
-              {selectedArtists.map((a) => (
+              {b2bLinks.map((ids) => (
+                <li
+                  key={ids.join('-')}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-ritual-red-hover/50 bg-ritual-red-hover/10 pl-3 pr-2 py-1 font-body text-sm text-ritual-bone"
+                >
+                  {ids.map(artistLabel).join(' B2B ')}
+                  <button
+                    type="button"
+                    onClick={() => unlinkGroup(ids)}
+                    aria-label={`Separar el B2B de ${ids.map(artistLabel).join(' y ')}`}
+                    className="text-ritual-gray-text hover:text-ritual-bone transition-colors"
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {soloArtists.length > 0 && (
+            <ul className="flex flex-wrap gap-2">
+              {soloArtists.map((a) => (
                 <li
                   key={a.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-ritual-border bg-ritual-surface pl-3 pr-2 py-1 font-body text-sm text-ritual-bone"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-ritual-border bg-ritual-surface pl-2 pr-2 py-1 font-body text-sm text-ritual-bone"
                 >
+                  {selectedArtists.length >= 2 && (
+                    <input
+                      type="checkbox"
+                      checked={pendingLinkIds.has(a.id)}
+                      onChange={() => togglePendingLink(a.id)}
+                      aria-label={`Marcar a ${a.label} para un B2B`}
+                      className="accent-ritual-red-hover"
+                    />
+                  )}
                   {a.label}
                   <button
                     type="button"
@@ -303,6 +399,15 @@ export function EventForm({ venues, artists, event }: EventFormProps) {
                 </li>
               ))}
             </ul>
+          )}
+          {pendingLinkIds.size >= 2 && (
+            <button
+              type="button"
+              onClick={confirmB2bLink}
+              className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-red-hover hover:text-ritual-bone transition-colors"
+            >
+              Vincular como B2B ({pendingLinkIds.size})
+            </button>
           )}
           <Combobox
             id="artist-combobox"

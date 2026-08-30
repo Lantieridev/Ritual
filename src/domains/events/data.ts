@@ -6,7 +6,8 @@ const EVENTS_SELECT = `
   *,
   venues ( name, city, country ),
   lineups (
-    artists ( id, name, genre )
+    artists ( id, name, genre ),
+    b2b_group
   )
 `
 
@@ -16,7 +17,8 @@ const EVENT_DETAIL_SELECT = `
   *,
   venues ( name, city, country, lat, lng ),
   lineups (
-    artists ( id, name, genre )
+    artists ( id, name, genre ),
+    b2b_group
   )
 `
 
@@ -24,7 +26,8 @@ const EVENTS_WITH_ATTENDANCE_SELECT = `
   *,
   venues ( name, city, country ),
   lineups (
-    artists ( id, name, genre )
+    artists ( id, name, genre ),
+    b2b_group
   ),
   attendance!left (
     id,

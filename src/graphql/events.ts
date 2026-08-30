@@ -48,6 +48,8 @@ LineupRowRef.implement({
         artist: t.field({ type: LineupArtistRef, resolve: (l) => l.artists }),
         stage: t.exposeString('stage', { nullable: true }),
         isHeadliner: t.exposeBoolean('is_headliner', { nullable: true }),
+        // Filas con el mismo b2bGroup (no null) son un único set B2B — issue #56.
+        b2bGroup: t.exposeString('b2b_group', { nullable: true }),
     }),
 })
 
@@ -165,12 +167,23 @@ builder.queryField('event', (t) =>
     })
 )
 
+// Un grupo B2B es una sub-lista de artistIds ("estos tocan juntos, a la
+// vez") — issue #56. Se representa como un input aparte, no un [[ID!]!]
+// anidado, porque es más simple de declarar/leer y GraphQL no tiene un
+// shorthand cómodo para listas de listas.
+const B2BGroupInput = builder.inputType('B2BGroupInput', {
+    fields: (t) => ({
+        artistIds: t.idList({ required: true }),
+    }),
+})
+
 const EventCreateInput = builder.inputType('EventCreateInput', {
     fields: (t) => ({
         name: t.string({ required: true }),
         date: t.string({ required: true }),
         venueId: t.id({ required: true }),
         artistIds: t.idList(),
+        b2bGroups: t.field({ type: [B2BGroupInput] }),
         ticketUrl: t.string(),
     }),
 })
@@ -181,6 +194,7 @@ const EventUpdateInput = builder.inputType('EventUpdateInput', {
         date: t.string(),
         venueId: t.id(),
         artistIds: t.idList(),
+        b2bGroups: t.field({ type: [B2BGroupInput] }),
         ticketUrl: t.string(),
     }),
 })
@@ -205,6 +219,7 @@ builder.mutationField('createEvent', (t) =>
                 date: args.input.date,
                 venue_id: String(args.input.venueId),
                 artist_ids: args.input.artistIds?.map(String),
+                b2b_groups: args.input.b2bGroups?.map((g) => g.artistIds.map(String)),
                 ticket_url: args.input.ticketUrl ?? undefined,
             }),
     })
@@ -224,6 +239,7 @@ builder.mutationField('updateEvent', (t) =>
                     date: args.input.date ?? undefined,
                     venue_id: args.input.venueId ? String(args.input.venueId) : undefined,
                     artist_ids: args.input.artistIds?.map(String),
+                    b2b_groups: args.input.b2bGroups?.map((g) => g.artistIds.map(String)),
                     // `?? undefined` y no truthiness: mandar '' es cómo se
                     // borra el link de entradas, y `|| undefined` lo leería
                     // como "no lo toques", dejando el link viejo pegado.
