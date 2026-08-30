@@ -143,14 +143,25 @@ export async function getEventById(
  * `*` más los embeds de venues y lineups→artists, y el sitemap descartaba
  * todo eso salvo el id — pagando el join completo en cada visita de un
  * crawler.
+ *
+ * Issue #63: MAX_EVENTS (1000) es una cota defensiva pensada para páginas
+ * normales -no tiene nada que ver acá. Un sitemap.xml admite hasta 50.000
+ * URLs por archivo (límite real de Google/sitemaps.org); capar esta query
+ * en 1000 hacía que shows viejos desaparecieran del sitemap en silencio ni
+ * bien el catálogo creciera pasado ese punto, sin ningún error visible. Si
+ * el catálogo alguna vez se acerca a 50.000 eventos, ahí sí hace falta
+ * partir esto en múltiples sitemaps con `generateSitemaps()` de Next.js —
+ * hoy está lejísimos de esa escala.
  */
+const SITEMAP_MAX_URLS = 50_000
+
 export async function getEventIdsForSitemap(): Promise<Array<{ id: string; date: string }>> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('events')
     .select('id, date')
     .order('date', { ascending: false })
-    .limit(MAX_EVENTS)
+    .limit(SITEMAP_MAX_URLS)
 
   if (error) {
     console.error('Error cargando ids de eventos para el sitemap:', error)

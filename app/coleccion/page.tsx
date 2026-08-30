@@ -5,7 +5,7 @@ import { gql } from 'urql'
 import { getClient } from '@/src/graphql/client'
 import type { GraphQLArtist, GraphQLFestival, GraphQLVenue } from '@/src/core/types'
 import type { Artist } from '@/src/core/types'
-import { listEventsWithAttendance } from '@/src/domains/events/service'
+import { listMyEvents } from '@/src/domains/events/service'
 import { aggregateEventStats } from '@/src/domains/stats/aggregate'
 import { buildArtistShelves, buildCollectionTerritory, type CollectionArtist } from '@/src/domains/artists/collection-view'
 import { routes } from '@/src/core/lib/routes'
@@ -80,12 +80,18 @@ function toDomainArtist(artist: GraphQLArtist): Artist {
 }
 
 async function ArtistsShelvesView() {
+    // Issue #63: listEventsWithAttendance() barría el catálogo COMPARTIDO
+    // completo (hasta MAX_EVENTS, sin paginar) para después descartar todo lo
+    // que no fuera 'went' del usuario -el mismo corte silencioso que ya se
+    // había arreglado en getPersonalStats/getMyEvents. listMyEvents() parte
+    // de `attendance` filtrada por user_id, así que el tamaño de esta query
+    // depende del historial propio, no del catálogo entero.
     const [{ data }, wentEvents] = await Promise.all([
         getClient().query<{ artists: GraphQLArtist[]; wishlistArtistIds: string[] }>(
             ArtistsTabQuery,
             {}
         ).toPromise(),
-        listEventsWithAttendance().then((events) => events.filter((e) => e.attendance?.[0]?.status === 'went')),
+        listMyEvents().then((events) => events.filter((e) => e.attendance?.[0]?.status === 'went')),
     ])
     const artists = (data?.artists ?? []).map(toDomainArtist)
     const wishlistIds = data?.wishlistArtistIds ?? []

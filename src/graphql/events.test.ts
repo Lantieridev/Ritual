@@ -102,6 +102,39 @@ describe('events GraphQL schema', () => {
     expect(getAttendanceForEvent).not.toHaveBeenCalled()
   })
 
+  // Issue #63: paginación real, no un corte silencioso — pedir la página
+  // siguiente (after: cursor de la primera) tiene que traer eventos
+  // distintos, con un offset mayor, no repetir la misma tanda.
+  it('paginates events: after the first page\'s cursor requests the next offset and returns different events', async () => {
+    const eventPage1 = { ...event, id: 'e1', name: 'Show página 1' }
+    const eventPage2 = { ...event, id: 'e2', name: 'Show página 2' }
+
+    vi.mocked(listEvents).mockResolvedValueOnce([eventPage1])
+
+    const firstPage = await query('{ events(first: 1) { edges { node { id name } cursor } pageInfo { endCursor hasNextPage } } }')
+
+    expect(firstPage.errors).toBeUndefined()
+    // El plugin de relay sobre-pide (limit = first + 1) para saber
+    // hasNextPage sin una segunda consulta -detalle del helper, no algo
+    // que este test deba fijar; lo que importa es que offset arranca en 0.
+    expect(listEvents).toHaveBeenCalledWith(expect.objectContaining({ offset: 0 }))
+    expect(firstPage.data.events.edges).toEqual([{ node: { id: 'e1', name: 'Show página 1' }, cursor: expect.any(String) }])
+
+    const cursor = firstPage.data.events.edges[0].cursor
+
+    vi.mocked(listEvents).mockResolvedValueOnce([eventPage2])
+
+    const secondPage = await query(
+      `{ events(first: 1, after: "${cursor}") { edges { node { id name } } } }`
+    )
+
+    expect(secondPage.errors).toBeUndefined()
+    // El corazón de este test: offset avanzó a 1, no se repitió la página 1.
+    expect(listEvents).toHaveBeenCalledWith(expect.objectContaining({ offset: 1 }))
+    expect(secondPage.data.events.edges).toEqual([{ node: { id: 'e2', name: 'Show página 2' } }])
+    expect(secondPage.data.events.edges).not.toEqual(firstPage.data.events.edges)
+  })
+
   // Issue #56: sets B2B — filas con el mismo b2bGroup son un único set.
   it('exposes b2bGroup on a lineup row', async () => {
     vi.mocked(listEvents).mockResolvedValue([

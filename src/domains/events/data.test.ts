@@ -10,7 +10,7 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn(),
 }))
 
-import { getEventsWithAttendance, getUpcomingEventsInCity, MAX_EVENTS } from '@/src/domains/events/data'
+import { getEvents, getEventsWithAttendance, getEventIdsForSitemap, getUpcomingEventsInCity, MAX_EVENTS } from '@/src/domains/events/data'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
@@ -20,11 +20,51 @@ function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   builder.eq = vi.fn(chain)
   builder.order = vi.fn(chain)
   builder.limit = vi.fn(chain)
+  builder.range = vi.fn(chain)
   builder.single = vi.fn(() => Promise.resolve(result))
   builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
     Promise.resolve(result).then(onFulfilled, onRejected)
   return builder
 }
+
+// Issue #63: getEvents/getEventsWithAttendance ya soportan paginación real
+// (offset/limit → .range(), no un .limit() fijo), pero no había ningún test
+// que lo probara — exactamente el tipo de corte silencioso que el propio
+// issue pide evitar: sin este test, un bug en .range() (offset ignorado,
+// devolver siempre la misma página) pasaría desapercibido.
+describe('getEvents (paginación)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('uses .range(offset, offset+limit-1) instead of a fixed .limit() when paginating', async () => {
+    const builder = makeQueryBuilder({ data: [], error: null })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    await getEvents({ limit: 20, offset: 40 })
+
+    expect(builder.range).toHaveBeenCalledWith(40, 59)
+    expect(builder.limit).not.toHaveBeenCalled()
+  })
+
+  it('requesting the next page returns different events, not a repeated/silent cutoff', async () => {
+    const page1 = [{ id: 'e1' }, { id: 'e2' }]
+    const page2 = [{ id: 'e3' }, { id: 'e4' }]
+
+    const fromMock = vi.fn()
+      .mockReturnValueOnce(makeQueryBuilder({ data: page1, error: null }))
+      .mockReturnValueOnce(makeQueryBuilder({ data: page2, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const first = await getEvents({ limit: 2, offset: 0 })
+    const second = await getEvents({ limit: 2, offset: 2 })
+
+    expect(first.map((e) => e.id)).toEqual(['e1', 'e2'])
+    expect(second.map((e) => e.id)).toEqual(['e3', 'e4'])
+    expect(first).not.toEqual(second)
+  })
+})
 
 describe('getEventsWithAttendance', () => {
   beforeEach(() => {
@@ -85,6 +125,18 @@ describe('getEventsWithAttendance', () => {
     expect(builder.limit).toHaveBeenCalledWith(MAX_EVENTS)
   })
 
+  it('uses .range() instead of the fixed limit when a caller paginates explicitly', async () => {
+    const builder = makeQueryBuilder({ data: [], error: null })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+
+    await getEventsWithAttendance({ limit: 10, offset: 30 })
+
+    expect(builder.range).toHaveBeenCalledWith(30, 39)
+    expect(builder.limit).not.toHaveBeenCalled()
+  })
+
   it('returns an empty list when the query errors out', async () => {
     const fromMock = vi.fn(() =>
       makeQueryBuilder({ data: null, error: { message: 'boom' } })
@@ -95,6 +147,26 @@ describe('getEventsWithAttendance', () => {
     const result = await getEventsWithAttendance()
 
     expect(result).toEqual([])
+  })
+})
+
+describe('getEventIdsForSitemap', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  // Issue #63: MAX_EVENTS (1000, pensado para páginas normales) hacía que
+  // shows viejos desaparecieran del sitemap.xml en silencio ni bien el
+  // catálogo lo superara. El límite real de un sitemap es 50.000 URLs.
+  it('caps at the real sitemap URL limit (50,000), not the page-sized MAX_EVENTS', async () => {
+    const builder = makeQueryBuilder({ data: [], error: null })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    await getEventIdsForSitemap()
+
+    expect(builder.limit).toHaveBeenCalledWith(50_000)
+    expect(builder.limit).not.toHaveBeenCalledWith(MAX_EVENTS)
   })
 })
 
