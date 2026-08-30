@@ -177,6 +177,7 @@ describe('events GraphQL schema', () => {
       review: 'Buenísimo',
       notes: null,
       used_ear_protection: null,
+      zone: null,
     }])
     vi.mocked(getEventPhotosBatch).mockResolvedValue([[
       { id: 'ph1', event_id: 'e1', storage_path: 'x.jpg', caption: 'Foto 1', created_at: '2026-03-02', url: 'https://x/x.jpg' },

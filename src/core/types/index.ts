@@ -179,7 +179,8 @@ export interface GraphQLVenueEvent {
   name: string | null
   date: string
   lineups: Array<{ artist: { name: string } }>
-  attendance: Array<{ status: string }>
+  /** zone: texto libre ("Campo General") — issue #28, "el plano" de la ficha de Sede. */
+  attendance: Array<{ status: string; zone: string | null }>
 }
 
 /** Tip práctico crowdsourced sobre una sede (issue #60), tal como lo devuelve `Venue.tips`. */

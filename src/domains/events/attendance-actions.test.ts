@@ -230,6 +230,43 @@ describe('saveMemory', () => {
     expect(updateMock).toHaveBeenCalledWith({ used_ear_protection: true })
   })
 
+  // Issue #28: zona/sector.
+  it('sanitizes and includes zone in the update payload when passed', async () => {
+    const attendanceSelectBuilder = makeQueryBuilder(
+      { data: { id: 'att-1', status: 'went' }, error: null }
+    )
+    const updateEq = vi.fn(() => Promise.resolve({ error: null }))
+    const updateMock = vi.fn(() => ({ eq: updateEq }))
+    let callCount = 0
+    const fromMock = vi.fn(() => {
+      callCount++
+      return callCount === 1 ? attendanceSelectBuilder : { update: updateMock }
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    await saveMemory(VALID_EVENT_ID, { zone: '  Campo General  ' })
+
+    expect(updateMock).toHaveBeenCalledWith({ zone: 'Campo General' })
+  })
+
+  it('clears the zone with an empty string, same as the ticket link convention', async () => {
+    const attendanceSelectBuilder = makeQueryBuilder(
+      { data: { id: 'att-1', status: 'went' }, error: null }
+    )
+    const updateEq = vi.fn(() => Promise.resolve({ error: null }))
+    const updateMock = vi.fn(() => ({ eq: updateEq }))
+    let callCount = 0
+    const fromMock = vi.fn(() => {
+      callCount++
+      return callCount === 1 ? attendanceSelectBuilder : { update: updateMock }
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    await saveMemory(VALID_EVENT_ID, { zone: '' })
+
+    expect(updateMock).toHaveBeenCalledWith({ zone: null })
+  })
+
   it('returns a sanitized error when the attendance update fails', async () => {
     const attendanceSelectBuilder = makeQueryBuilder(
       { data: { id: 'att-1', status: 'went' }, error: null }

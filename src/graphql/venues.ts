@@ -24,6 +24,8 @@ const VenueEventAttendanceRef = builder.objectRef<VenueEvent['attendance'][numbe
 VenueEventAttendanceRef.implement({
     fields: (t) => ({
         status: t.exposeString('status'),
+        // Texto libre ("Campo General") — issue #28, usado en "el plano" de la ficha de Sede.
+        zone: t.exposeString('zone', { nullable: true }),
     }),
 })
 

@@ -85,13 +85,13 @@ describe('venues GraphQL schema', () => {
           name: 'Show',
           date: '2026-01-01',
           lineups: [{ artists: { name: 'Coldplay' } }],
-          attendance: [{ status: 'went' }],
+          attendance: [{ status: 'went', zone: 'Campo General' }],
         },
       ],
     })
 
     const body = await query(
-      '{ venue(id: "v1") { events { id date lineups { artist { name } } attendance { status } } } }'
+      '{ venue(id: "v1") { events { id date lineups { artist { name } } attendance { status zone } } } }'
     )
 
     expect(body.errors).toBeUndefined()
@@ -100,7 +100,7 @@ describe('venues GraphQL schema', () => {
         id: 'e1',
         date: '2026-01-01',
         lineups: [{ artist: { name: 'Coldplay' } }],
-        attendance: [{ status: 'went' }],
+        attendance: [{ status: 'went', zone: 'Campo General' }],
       },
     ])
     expect(listVenueEventsBatch).not.toHaveBeenCalled()

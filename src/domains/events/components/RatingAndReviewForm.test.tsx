@@ -136,4 +136,27 @@ describe('RatingAndReviewForm', () => {
     expect(screen.getByRole('button', { name: 'Sí' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'No' })).toHaveAttribute('aria-pressed', 'false')
   })
+
+  // Issue #28: zona/sector.
+  it('pre-fills and sends the zone', async () => {
+    render(<RatingAndReviewForm eventId="e1" initialZone="Campo General" />)
+
+    expect(screen.getByLabelText('Zona / sector')).toHaveValue('Campo General')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar memoria' }))
+
+    await waitFor(() => {
+      expect(mockSaveMemory).toHaveBeenCalledWith('e1', expect.objectContaining({ zone: 'Campo General' }))
+    })
+  })
+
+  it('omits zone entirely when left blank', async () => {
+    render(<RatingAndReviewForm eventId="e1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar memoria' }))
+
+    await waitFor(() => {
+      expect(mockSaveMemory).toHaveBeenCalledWith('e1', expect.not.objectContaining({ zone: expect.anything() }))
+    })
+  })
 })

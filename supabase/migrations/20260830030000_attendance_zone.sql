@@ -1,0 +1,12 @@
+-- Issue #28: modelar zona/sector de asistencia.
+--
+-- Dos pantallas del rediseño visual necesitan esto y hoy salen con
+-- placeholder: la ficha de Sede ("el plano", un punto por visita en la
+-- zona donde estuvo el usuario) y el ticket 3D (TicketEmbed's seat/seatS).
+--
+-- Texto libre, no un catálogo de zonas por venue -el issue lo deja como
+-- "opcional" y hoy Ritual no tiene ningún dato de geometría real por sede
+-- para que un catálogo estructurado aporte algo por sobre texto libre; se
+-- puede migrar a un catálogo estructurado más adelante sin romper nada
+-- (el texto ya cargado sigue siendo válido).
+alter table public.attendance add column if not exists zone text;

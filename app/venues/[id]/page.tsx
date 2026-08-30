@@ -9,6 +9,7 @@ import { isPastEvent } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { AddVenueTipForm } from '@/src/domains/venues/components'
+import { tallyZonesVisited } from '@/src/domains/venues/zones'
 
 const VenueDetailQuery = gql`
   query VenueDetail($id: ID!) {
@@ -23,7 +24,7 @@ const VenueDetailQuery = gql`
         name
         date
         lineups { artist { name } }
-        attendance { status }
+        attendance { status zone }
       }
       tips {
         id
@@ -73,6 +74,8 @@ export default async function VenueDetailPage({ params }: VenueDetailPageProps) 
     const pastEvents = venue.events.filter((e) => isPastEvent(e.date))
     const upcomingEvents = venue.events.filter((e) => !isPastEvent(e.date))
     const nightsHere = venue.events.filter((e) => e.attendance?.[0]?.status === 'went').length
+    const zoneTally = tallyZonesVisited(venue.events)
+    const maxZoneCount = Math.max(...zoneTally.map((z) => z.count), 1)
 
     return (
         <main className="min-h-screen bg-ritual-bg text-ritual-bone">
@@ -112,13 +115,34 @@ export default async function VenueDetailPage({ params }: VenueDetailPageProps) 
                     ))}
                 </div>
 
-                {/* El plano — depende de una columna de zona/sector que no existe todavía en attendance */}
-                <div className="border border-dashed border-ritual-border p-5 mb-12">
-                    <p className="font-label text-[10px] tracking-[0.14em] uppercase text-ritual-gray-text">
-                        El plano del lugar, con un punto por visita, todavía no está — necesita guardar en qué zona
-                        estuviste cada noche, y esa columna no existe todavía en el modelo de datos.
-                    </p>
-                </div>
+                {/* Zonas donde estuviste — issue #28. Un plano a escala del lugar
+                    necesitaría geometría real por sede que Ritual no tiene
+                    (el issue lo deja como catálogo "opcional"); esto muestra lo
+                    que sí hay: en qué zona estuviste cada noche, tal cual la
+                    cargaste. */}
+                {zoneTally.length > 0 && (
+                    <section className="mb-12">
+                        <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-5">
+                            Zonas donde estuviste
+                        </h2>
+                        <div className="space-y-3">
+                            {zoneTally.map(({ zone, count }) => {
+                                const pct = (count / maxZoneCount) * 100
+                                return (
+                                    <div key={zone} className="flex items-center gap-4">
+                                        <span className="w-32 shrink-0 font-label text-xs text-ritual-gray-text truncate" title={zone}>
+                                            {zone}
+                                        </span>
+                                        <div className="flex-1 h-6 bg-ritual-surface overflow-hidden">
+                                            <div className="h-full bg-ritual-red transition-all" style={{ width: `${pct}%` }} />
+                                        </div>
+                                        <span className="w-8 font-figure text-lg text-ritual-bone tabular-nums shrink-0">{count}</span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </section>
+                )}
 
                 {venue.events.length === 0 ? (
                     <div className="py-16 text-center">

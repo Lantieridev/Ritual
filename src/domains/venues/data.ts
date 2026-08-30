@@ -7,7 +7,8 @@ export interface VenueWithEvents extends Venue {
     name: string | null
     date: string
     lineups: Array<{ artists: { name: string } }>
-    attendance: Array<{ status: string }>
+    /** zone: texto libre ("Campo General") — issue #28, "el plano" de la ficha de Sede. */
+    attendance: Array<{ status: string; zone: string | null }>
   }>
 }
 
@@ -45,7 +46,7 @@ export async function getVenueById(id: string): Promise<VenueWithEvents | null> 
       events (
         id, name, date,
         lineups ( artists ( name ) ),
-        attendance!left ( status )
+        attendance!left ( status, zone )
       )
     `)
     .eq('id', id)
@@ -82,7 +83,7 @@ export async function getVenueEventsBatch(
     .select(`
       id, name, date, venue_id,
       lineups ( artists ( name ) ),
-      attendance!left ( status )
+      attendance!left ( status, zone )
     `)
     .in('venue_id', venueIds as string[])
     .order('date', { ascending: false })

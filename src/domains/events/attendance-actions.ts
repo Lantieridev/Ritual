@@ -10,6 +10,7 @@ export type AttendanceStatus = 'interested' | 'going' | 'went'
 const VALID_STATUSES: AttendanceStatus[] = ['interested', 'going', 'went']
 const MAX_REVIEW_LENGTH = 2000
 const MAX_NOTES_LENGTH = 5000
+const MAX_ZONE_LENGTH = 100
 
 function isValidStatus(s: unknown): s is AttendanceStatus {
     return typeof s === 'string' && VALID_STATUSES.includes(s as AttendanceStatus)
@@ -84,13 +85,13 @@ export async function setAttendanceStatus(
 
 /**
  * Guarda o actualiza la memoria (rating + reseña + notas + protectores
- * auditivos, issue #62) de un evento. `usedEarProtection` es opcional como
- * el resto — omitirlo no lo toca, no lo pone en false.
+ * auditivos, issue #62 + zona/sector, issue #28) de un evento. Todos los
+ * campos son opcionales e independientes — omitir uno no lo toca.
  * No redirige — devuelve {} en éxito para que el cliente muestre "Guardado".
  */
 export async function saveMemory(
     eventId: string,
-    data: { rating?: number; review?: string; notes?: string; usedEarProtection?: boolean }
+    data: { rating?: number; review?: string; notes?: string; usedEarProtection?: boolean; zone?: string }
 ): Promise<ActionResult> {
     const idErr = validateUUID(eventId, 'Evento')
     if (idErr) return { error: idErr }
@@ -108,16 +109,30 @@ export async function saveMemory(
         ? sanitizeText(data.notes, MAX_NOTES_LENGTH)
         : undefined
 
+    // '' es cómo se borra la zona (mismo criterio que ticket_url en
+    // modifyEvent) -sanitizeText('') da null, que es exactamente lo que hay
+    // que guardar para "borrado", no dejar la fila sin tocar.
+    const zone = data.zone !== undefined
+        ? sanitizeText(data.zone, MAX_ZONE_LENGTH)
+        : undefined
+
     const attendance = await getOrCreateAttendance(eventId)
     if (!attendance) return { error: 'No se pudo obtener el registro de asistencia.' }
 
     const supabase = await createClient()
 
-    const payload: { rating?: number; review?: string | null; notes?: string | null; used_ear_protection?: boolean } = {}
+    const payload: {
+        rating?: number
+        review?: string | null
+        notes?: string | null
+        used_ear_protection?: boolean
+        zone?: string | null
+    } = {}
     if (data.rating !== undefined) payload.rating = data.rating
     if (review !== undefined) payload.review = review
     if (notes !== undefined) payload.notes = notes
     if (data.usedEarProtection !== undefined) payload.used_ear_protection = data.usedEarProtection
+    if (zone !== undefined) payload.zone = zone
 
     const { error } = await supabase
         .from('attendance')

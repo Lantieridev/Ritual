@@ -11,7 +11,11 @@ interface RatingAndReviewFormProps {
     initialNotes?: string | null
     /** null = todavía no contestó — issue #62. */
     initialUsedEarProtection?: boolean | null
+    /** Texto libre ("Campo General", "Platea Alta") — issue #28. */
+    initialZone?: string | null
 }
+
+const MAX_ZONE = 100
 
 const MAX_REVIEW = 2000
 const MAX_NOTES = 5000
@@ -22,11 +26,13 @@ export function RatingAndReviewForm({
     initialReview,
     initialNotes,
     initialUsedEarProtection,
+    initialZone,
 }: RatingAndReviewFormProps) {
     const [rating, setRating] = useState<number>(initialRating ?? 0)
     const [review, setReview] = useState(initialReview ?? '')
     const [notes, setNotes] = useState(initialNotes ?? '')
     const [usedEarProtection, setUsedEarProtection] = useState<boolean | null>(initialUsedEarProtection ?? null)
+    const [zone, setZone] = useState(initialZone ?? '')
     const [saved, setSaved] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
@@ -41,6 +47,7 @@ export function RatingAndReviewForm({
                 review: review.trim() || undefined,
                 notes: notes.trim() || undefined,
                 usedEarProtection: usedEarProtection ?? undefined,
+                zone: zone.trim() || undefined,
             })
             if (result?.error) {
                 setError(result.error)
@@ -117,6 +124,24 @@ export function RatingAndReviewForm({
                         No
                     </button>
                 </div>
+            </div>
+
+            {/* Zona/sector — issue #28. Texto libre a propósito: no hay
+                catálogo de zonas por sede, y forzar un enum sin esa
+                geometría real por venue sería inventar estructura que no
+                aporta nada sobre texto libre hoy. */}
+            <div>
+                <label htmlFor="zone" className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text block mb-2">
+                    Zona / sector
+                </label>
+                <input
+                    id="zone"
+                    type="text"
+                    value={zone}
+                    onChange={(e) => setZone(e.target.value.slice(0, MAX_ZONE))}
+                    placeholder="Campo General, Platea Alta, Palco..."
+                    className="w-full border border-ritual-border bg-ritual-surface px-4 py-2.5 font-body text-sm text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none focus:ring-1 focus:ring-ritual-red/40"
+                />
             </div>
 
             {/* Notas / Setlist */}

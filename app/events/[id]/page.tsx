@@ -381,6 +381,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               initialReview={attendance?.review}
               initialNotes={attendance?.notes}
               initialUsedEarProtection={attendance?.used_ear_protection}
+              initialZone={attendance?.zone}
             />
           </section>
         )}
