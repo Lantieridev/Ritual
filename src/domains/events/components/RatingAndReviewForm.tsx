@@ -9,6 +9,8 @@ interface RatingAndReviewFormProps {
     initialRating?: number | null
     initialReview?: string | null
     initialNotes?: string | null
+    /** null = todavía no contestó — issue #62. */
+    initialUsedEarProtection?: boolean | null
 }
 
 const MAX_REVIEW = 2000
@@ -19,10 +21,12 @@ export function RatingAndReviewForm({
     initialRating,
     initialReview,
     initialNotes,
+    initialUsedEarProtection,
 }: RatingAndReviewFormProps) {
     const [rating, setRating] = useState<number>(initialRating ?? 0)
     const [review, setReview] = useState(initialReview ?? '')
     const [notes, setNotes] = useState(initialNotes ?? '')
+    const [usedEarProtection, setUsedEarProtection] = useState<boolean | null>(initialUsedEarProtection ?? null)
     const [saved, setSaved] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
@@ -36,6 +40,7 @@ export function RatingAndReviewForm({
                 rating: rating > 0 ? rating : undefined,
                 review: review.trim() || undefined,
                 notes: notes.trim() || undefined,
+                usedEarProtection: usedEarProtection ?? undefined,
             })
             if (result?.error) {
                 setError(result.error)
@@ -78,6 +83,40 @@ export function RatingAndReviewForm({
                     className="w-full border border-ritual-border bg-ritual-surface px-4 py-3 font-body italic text-sm text-ritual-bone placeholder-ritual-gray-mid focus:border-ritual-red focus:outline-none focus:ring-1 focus:ring-ritual-red/40 resize-none"
                 />
                 <p className="text-right font-label text-[10px] text-ritual-gray-text mt-1">{review.length}/{MAX_REVIEW}</p>
+            </div>
+
+            {/* Reducción de daños — issue #62. Opcional, no bloquea nada del
+                flujo: no contestar deja usedEarProtection en null para siempre. */}
+            <div>
+                <p className="font-label text-[10px] tracking-[0.1em] uppercase text-ritual-gray-text mb-2">
+                    ¿Usaste protectores auditivos?
+                </p>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setUsedEarProtection(usedEarProtection === true ? null : true)}
+                        aria-pressed={usedEarProtection === true}
+                        className={`px-4 py-1.5 font-label text-xs uppercase border transition-colors ${
+                            usedEarProtection === true
+                                ? 'bg-ritual-red border-ritual-red text-ritual-bone'
+                                : 'border-ritual-border text-ritual-gray-text hover:text-ritual-bone hover:border-ritual-border-2'
+                        }`}
+                    >
+                        Sí
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setUsedEarProtection(usedEarProtection === false ? null : false)}
+                        aria-pressed={usedEarProtection === false}
+                        className={`px-4 py-1.5 font-label text-xs uppercase border transition-colors ${
+                            usedEarProtection === false
+                                ? 'bg-ritual-surface border-ritual-border-2 text-ritual-bone'
+                                : 'border-ritual-border text-ritual-gray-text hover:text-ritual-bone hover:border-ritual-border-2'
+                        }`}
+                    >
+                        No
+                    </button>
+                </div>
             </div>
 
             {/* Notas / Setlist */}

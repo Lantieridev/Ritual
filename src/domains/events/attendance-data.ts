@@ -8,6 +8,8 @@ export interface EventAttendance {
     rating: number | null
     review: string | null
     notes: string | null
+    /** null = todavía no contestó — issue #62, distinto de "no usó". */
+    used_ear_protection: boolean | null
 }
 
 /**
@@ -25,7 +27,7 @@ export async function getAttendanceForEvent(
     const supabase = await createClient()
     const { data, error } = await supabase
         .from('attendance')
-        .select('id, status, rating, review, notes')
+        .select('id, status, rating, review, notes, used_ear_protection')
         .eq('event_id', eventId)
         .eq('user_id', userId)
         .single()
@@ -38,6 +40,7 @@ export async function getAttendanceForEvent(
         rating: data.rating,
         review: data.review,
         notes: data.notes,
+        used_ear_protection: data.used_ear_protection,
     }
 }
 
@@ -50,7 +53,7 @@ export async function getAttendanceForEventsBatch(
     const supabase = await createClient()
     const { data, error } = await supabase
         .from('attendance')
-        .select('id, event_id, status, rating, review, notes')
+        .select('id, event_id, status, rating, review, notes, used_ear_protection')
         .in('event_id', eventIds)
         .eq('user_id', userId)
 
@@ -65,6 +68,7 @@ export async function getAttendanceForEventsBatch(
                 rating: row.rating,
                 review: row.review,
                 notes: row.notes,
+                used_ear_protection: row.used_ear_protection,
             }
         ])
     )

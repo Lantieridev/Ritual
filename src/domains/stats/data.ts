@@ -32,6 +32,9 @@ export interface StatsData {
      */
     rainyShows: number
     totalWithWeather: number
+    /** % de shows con respuesta a protectores auditivos que la usó — issue #62. */
+    earProtectionShows: number
+    totalWithEarProtectionAnswer: number
     recentActivity: Array<{
         id: string
         name: string | null
@@ -47,6 +50,7 @@ type RawAttendance = {
     status: string | null
     user_id: string
     rating: number | null
+    used_ear_protection: boolean | null
 }
 
 type RawEvent = {
@@ -65,6 +69,7 @@ function toAggregatable(ev: EventWithMyAttendance): AggregatableEvent {
         lineups: ev.lineups,
         venues: ev.venues,
         rating: ev.myAttendance?.rating ?? null,
+        usedEarProtection: ev.myAttendance?.used_ear_protection ?? null,
     }
 }
 
@@ -91,7 +96,7 @@ export async function getPersonalStats(): Promise<StatsData> {
     const { data: rows, error } = await supabase
         .from('attendance')
         .select(`
-      status, user_id, rating,
+      status, user_id, rating, used_ear_protection,
       events (
         id, name, date,
         venues ( name, city, country ),
@@ -114,8 +119,8 @@ export async function getPersonalStats(): Promise<StatsData> {
         .filter((row): row is AttendanceRow & { events: Omit<RawEvent, 'attendance'> } => row.events !== null)
         .map((row) => ({
             ...row.events,
-            attendance: [{ status: row.status, user_id: row.user_id, rating: row.rating }],
-            myAttendance: { status: row.status, user_id: row.user_id, rating: row.rating },
+            attendance: [{ status: row.status, user_id: row.user_id, rating: row.rating, used_ear_protection: row.used_ear_protection }],
+            myAttendance: { status: row.status, user_id: row.user_id, rating: row.rating, used_ear_protection: row.used_ear_protection },
         }))
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
@@ -165,6 +170,8 @@ export async function getPersonalStats(): Promise<StatsData> {
         totalRated: agg.totalRated,
         rainyShows: agg.rainyShows,
         totalWithWeather: agg.totalWithWeather,
+        earProtectionShows: agg.earProtectionShows,
+        totalWithEarProtectionAnswer: agg.totalWithEarProtectionAnswer,
         recentActivity,
     }
 }
@@ -186,6 +193,8 @@ function emptyStats(): StatsData {
         totalRated: 0,
         rainyShows: 0,
         totalWithWeather: 0,
+        earProtectionShows: 0,
+        totalWithEarProtectionAnswer: 0,
         recentActivity: [],
     }
 }

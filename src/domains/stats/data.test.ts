@@ -30,7 +30,7 @@ type FixtureEvent = {
   date: string
   venues: unknown
   lineups: unknown
-  attendance: Array<{ status: string; user_id: string; rating: number | null }>
+  attendance: Array<{ status: string; user_id: string; rating: number | null; used_ear_protection?: boolean | null }>
 }
 
 /**
@@ -48,6 +48,7 @@ function mockEvents(events: unknown[]) {
       status: att.status,
       user_id: att.user_id,
       rating: att.rating,
+      used_ear_protection: att.used_ear_protection ?? null,
       events: { id: ev.id, name: ev.name, date: ev.date, venues: ev.venues, lineups: ev.lineups },
     }))
   )
@@ -268,5 +269,40 @@ describe('getPersonalStats', () => {
     expect(stats.totalShows).toBe(0)
     expect(stats.showsAttended).toBe(0)
     expect(stats.averageRating).toBeNull()
+  })
+
+  // Issue #62: reducción de daños.
+  it('flows used_ear_protection through into earProtectionShows/totalWithEarProtectionAnswer', async () => {
+    mockEvents([
+      {
+        id: 'evt-1',
+        name: 'Show 1',
+        date: '2024-05-01',
+        venues: { name: 'Niceto', city: 'CABA', country: 'AR' },
+        lineups: [{ artists: { name: 'Artista' } }],
+        attendance: [{ status: 'went', user_id: 'user-1', rating: 4, used_ear_protection: true }],
+      },
+      {
+        id: 'evt-2',
+        name: 'Show 2',
+        date: '2024-06-01',
+        venues: { name: 'Groove', city: 'CABA', country: 'AR' },
+        lineups: [{ artists: { name: 'Otro' } }],
+        attendance: [{ status: 'went', user_id: 'user-1', rating: 3, used_ear_protection: false }],
+      },
+      {
+        id: 'evt-3',
+        name: 'Show 3, sin contestar',
+        date: '2024-07-01',
+        venues: { name: 'Crobar', city: 'CABA', country: 'AR' },
+        lineups: [{ artists: { name: 'Otro Más' } }],
+        attendance: [{ status: 'went', user_id: 'user-1', rating: 5 }],
+      },
+    ])
+
+    const stats = await getPersonalStats()
+
+    expect(stats.earProtectionShows).toBe(1)
+    expect(stats.totalWithEarProtectionAnswer).toBe(2)
   })
 })

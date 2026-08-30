@@ -19,6 +19,8 @@ function makeStats(overrides: Partial<StatsData> = {}): StatsData {
         totalRated: 0,
         rainyShows: 0,
         totalWithWeather: 0,
+        earProtectionShows: 0,
+        totalWithEarProtectionAnswer: 0,
         recentActivity: [],
         ...overrides,
     }

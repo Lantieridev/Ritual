@@ -23,6 +23,12 @@ export interface AggregatableEvent {
     venues?: { name: string; city?: string | null; country?: string | null } | null
     rating?: number | null
     weather?: { isRain: boolean } | null
+    /**
+     * null/undefined = todavía no contestó la pregunta post-show — issue
+     * #62. Mismo criterio que `weather`: sólo cuenta sobre el subconjunto
+     * que sí respondió, para no mentir con un % sobre datos que no existen.
+     */
+    usedEarProtection?: boolean | null
 }
 
 export interface AggregatedEventStats {
@@ -39,6 +45,10 @@ export interface AggregatedEventStats {
     rainyShows: number
     /** Cuántos de los eventos de entrada trajeron dato de clima (rainyShows es sobre este subconjunto, no sobre el total). */
     totalWithWeather: number
+    /** Shows donde el usuario contestó que sí usó protectores auditivos — issue #62. */
+    earProtectionShows: number
+    /** Cuántos shows tienen respuesta (sí o no) a la pregunta de protectores — earProtectionShows es sobre este subconjunto. */
+    totalWithEarProtectionAnswer: number
 }
 
 /**
@@ -91,6 +101,9 @@ export function aggregateEventStats(events: AggregatableEvent[]): AggregatedEven
     const eventsWithWeather = events.filter((ev) => ev.weather != null)
     const rainyShows = eventsWithWeather.filter((ev) => ev.weather!.isRain).length
 
+    const eventsWithEarProtectionAnswer = events.filter((ev) => ev.usedEarProtection != null)
+    const earProtectionShows = eventsWithEarProtectionAnswer.filter((ev) => ev.usedEarProtection === true).length
+
     return {
         uniqueArtists: artistSet.size,
         uniqueVenues: Object.keys(venueMap).length,
@@ -102,5 +115,7 @@ export function aggregateEventStats(events: AggregatableEvent[]): AggregatedEven
         totalRated: ratings.length,
         rainyShows,
         totalWithWeather: eventsWithWeather.length,
+        earProtectionShows,
+        totalWithEarProtectionAnswer: eventsWithEarProtectionAnswer.length,
     }
 }

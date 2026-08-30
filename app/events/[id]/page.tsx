@@ -380,6 +380,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               initialRating={attendance?.rating}
               initialReview={attendance?.review}
               initialNotes={attendance?.notes}
+              initialUsedEarProtection={attendance?.used_ear_protection}
             />
           </section>
         )}

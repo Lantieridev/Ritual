@@ -23,6 +23,12 @@ export default async function StatsPage() {
     const achievements = computeAchievements(stats)
     const unlockedCount = achievements.filter((a) => a.unlocked).length
 
+    // Issue #62: reducción de daños. Sólo se muestra con datos reales —
+    // nadie contestó nunca es indistinguible de "cero" si no se lo separa.
+    const earProtectionPct = stats.totalWithEarProtectionAnswer > 0
+        ? Math.round((stats.earProtectionShows / stats.totalWithEarProtectionAnswer) * 100)
+        : null
+
     return (
         <main className="min-h-screen bg-ritual-bg text-ritual-bone">
             <div className="max-w-4xl mx-auto px-6 md:px-8 py-16">
@@ -69,6 +75,18 @@ export default async function StatsPage() {
                                     <StarRating value={Math.round(stats.averageRating)} size="lg" />
                                     <p className="font-label text-[10px] text-ritual-gray-text mt-1 uppercase tracking-[0.1em]">
                                         Promedio sobre {stats.totalRated} show{stats.totalRated !== 1 ? 's' : ''} calificado{stats.totalRated !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {earProtectionPct !== null && (
+                            <div className="flex items-center gap-6">
+                                <p className="font-display text-6xl text-ritual-bone tabular-nums">{earProtectionPct}%</p>
+                                <div>
+                                    <p className="font-dense font-extrabold uppercase text-ritual-bone">🎧 Protegiste tus oídos</p>
+                                    <p className="font-label text-[10px] text-ritual-gray-text mt-1 uppercase tracking-[0.1em]">
+                                        de {stats.totalWithEarProtectionAnswer} show{stats.totalWithEarProtectionAnswer !== 1 ? 's' : ''} respondido{stats.totalWithEarProtectionAnswer !== 1 ? 's' : ''}
                                     </p>
                                 </div>
                             </div>

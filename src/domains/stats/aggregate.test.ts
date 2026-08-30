@@ -77,6 +77,27 @@ describe('aggregateEventStats', () => {
   // fila, así que ya contaba ambos artistas del B2B sin ningún cambio de
   // código. Este test fija esa garantía como regresión explícita, tal como
   // pide el criterio de aceptación del issue.
+  // Issue #62: reducción de daños.
+  it('counts ear protection only among shows that answered the question', () => {
+    const result = aggregateEventStats([
+      { rating: 5, usedEarProtection: true },
+      { rating: 4, usedEarProtection: true },
+      { rating: 3, usedEarProtection: false },
+      { rating: 2, usedEarProtection: null },
+      { rating: 1 }, // nunca contestó
+    ])
+
+    expect(result.earProtectionShows).toBe(2)
+    expect(result.totalWithEarProtectionAnswer).toBe(3)
+  })
+
+  it('defaults earProtectionShows/totalWithEarProtectionAnswer to 0 when nobody answered', () => {
+    const result = aggregateEventStats([{ rating: 5 }, { rating: 4 }])
+
+    expect(result.earProtectionShows).toBe(0)
+    expect(result.totalWithEarProtectionAnswer).toBe(0)
+  })
+
   it('counts every artist in a B2B set for uniqueArtists/topArtists, not just one', () => {
     const result = aggregateEventStats([
       {

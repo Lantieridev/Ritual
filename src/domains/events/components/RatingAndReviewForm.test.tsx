@@ -85,4 +85,55 @@ describe('RatingAndReviewForm', () => {
       expect(screen.getByText('No se pudo guardar')).toBeInTheDocument()
     })
   })
+
+  // Issue #62: reducción de daños.
+  it('sends usedEarProtection true when "Sí" is picked', async () => {
+    render(<RatingAndReviewForm eventId="e1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sí' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar memoria' }))
+
+    await waitFor(() => {
+      expect(mockSaveMemory).toHaveBeenCalledWith('e1', expect.objectContaining({ usedEarProtection: true }))
+    })
+  })
+
+  it('sends usedEarProtection false when "No" is picked', async () => {
+    render(<RatingAndReviewForm eventId="e1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'No' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar memoria' }))
+
+    await waitFor(() => {
+      expect(mockSaveMemory).toHaveBeenCalledWith('e1', expect.objectContaining({ usedEarProtection: false }))
+    })
+  })
+
+  it('omits usedEarProtection entirely when the question was never answered — optional, does not block anything', async () => {
+    render(<RatingAndReviewForm eventId="e1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar memoria' }))
+
+    await waitFor(() => {
+      expect(mockSaveMemory).toHaveBeenCalledWith('e1', expect.not.objectContaining({ usedEarProtection: expect.anything() }))
+    })
+  })
+
+  it('clicking "Sí" again toggles the answer back to unanswered', async () => {
+    render(<RatingAndReviewForm eventId="e1" />)
+
+    const yesButton = screen.getByRole('button', { name: 'Sí' })
+    await userEvent.click(yesButton)
+    expect(yesButton).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(yesButton)
+    expect(yesButton).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('pre-fills the answer from initialUsedEarProtection', () => {
+    render(<RatingAndReviewForm eventId="e1" initialUsedEarProtection={true} />)
+
+    expect(screen.getByRole('button', { name: 'Sí' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'No' })).toHaveAttribute('aria-pressed', 'false')
+  })
 })

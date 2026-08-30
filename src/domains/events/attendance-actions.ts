@@ -83,12 +83,14 @@ export async function setAttendanceStatus(
 }
 
 /**
- * Guarda o actualiza la memoria (rating + reseña + notas) de un evento.
+ * Guarda o actualiza la memoria (rating + reseña + notas + protectores
+ * auditivos, issue #62) de un evento. `usedEarProtection` es opcional como
+ * el resto — omitirlo no lo toca, no lo pone en false.
  * No redirige — devuelve {} en éxito para que el cliente muestre "Guardado".
  */
 export async function saveMemory(
     eventId: string,
-    data: { rating?: number; review?: string; notes?: string }
+    data: { rating?: number; review?: string; notes?: string; usedEarProtection?: boolean }
 ): Promise<ActionResult> {
     const idErr = validateUUID(eventId, 'Evento')
     if (idErr) return { error: idErr }
@@ -111,10 +113,11 @@ export async function saveMemory(
 
     const supabase = await createClient()
 
-    const payload: { rating?: number; review?: string | null; notes?: string | null } = {}
+    const payload: { rating?: number; review?: string | null; notes?: string | null; used_ear_protection?: boolean } = {}
     if (data.rating !== undefined) payload.rating = data.rating
     if (review !== undefined) payload.review = review
     if (notes !== undefined) payload.notes = notes
+    if (data.usedEarProtection !== undefined) payload.used_ear_protection = data.usedEarProtection
 
     const { error } = await supabase
         .from('attendance')

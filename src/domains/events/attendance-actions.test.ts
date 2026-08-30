@@ -211,6 +211,25 @@ describe('saveMemory', () => {
     expect(result).toEqual({})
   })
 
+  // Issue #62: reducción de daños.
+  it('includes used_ear_protection in the update payload when passed', async () => {
+    const attendanceSelectBuilder = makeQueryBuilder(
+      { data: { id: 'att-1', status: 'went' }, error: null }
+    )
+    const updateEq = vi.fn(() => Promise.resolve({ error: null }))
+    const updateMock = vi.fn(() => ({ eq: updateEq }))
+    let callCount = 0
+    const fromMock = vi.fn(() => {
+      callCount++
+      return callCount === 1 ? attendanceSelectBuilder : { update: updateMock }
+    })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    await saveMemory(VALID_EVENT_ID, { usedEarProtection: true })
+
+    expect(updateMock).toHaveBeenCalledWith({ used_ear_protection: true })
+  })
+
   it('returns a sanitized error when the attendance update fails', async () => {
     const attendanceSelectBuilder = makeQueryBuilder(
       { data: { id: 'att-1', status: 'went' }, error: null }

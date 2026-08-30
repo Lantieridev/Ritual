@@ -43,6 +43,8 @@ const stats: StatsData = {
   totalRated: 3,
   rainyShows: 0,
   totalWithWeather: 0,
+  earProtectionShows: 0,
+  totalWithEarProtectionAnswer: 0,
   recentActivity: [
     {
       id: 'e1',
