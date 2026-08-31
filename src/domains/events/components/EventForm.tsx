@@ -7,7 +7,7 @@ import { useMutation, gql } from 'urql'
 import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { Button, FormField, inputClass, Combobox, StarRating, type ComboboxOption } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
-import { combineDateAndTime, eventTimeOfDay } from '@/src/core/lib/dates'
+import { combineDateAndTime, eventTimeOfDay, toDateOnly } from '@/src/core/lib/dates'
 import { EXPENSE_CATEGORIES } from '@/src/domains/expenses/categories'
 import type { Venue, EventWithRelations, Artist } from '@/src/core/types'
 
@@ -298,7 +298,7 @@ export function EventForm({ venues, artists, event }: EventFormProps) {
       </FormField>
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Fecha" id="date" required>
-          <input id="date" name="date" type="date" required defaultValue={event?.date ? event.date.slice(0, 10) : ''} className={inputClass} />
+          <input id="date" name="date" type="date" required defaultValue={event?.date ? toDateOnly(event.date) : ''} className={inputClass} />
         </FormField>
         <FormField
           label="Hora"

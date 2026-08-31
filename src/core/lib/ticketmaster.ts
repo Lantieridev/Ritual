@@ -106,9 +106,16 @@ export async function searchTicketmasterEvents(
         const events: FutureEvent[] = rawEvents.map((ev) => {
             const venue = ev._embedded?.venues?.[0]
             const priceRange = ev.priceRanges?.[0]
+            // `dateTime` (cuando Ticketmaster lo manda) ya es un instante UTC
+            // real con 'Z' -sin ambigüedad. El fallback a localDate/localTime
+            // no tiene marca de timezone en absoluto: sin el "-03:00" acá,
+            // quien lo parsee (parseExternalDateTime) lo interpreta como hora
+            // LOCAL del proceso -en Vercel (UTC) un show a las 21:00 en
+            // Argentina se guardaba como 21:00 UTC, es decir 18:00 ART. Bug
+            // real, confirmado forzando TZ=UTC localmente.
             const dateTime = ev.dates.start.dateTime
                 ?? (ev.dates.start.localDate
-                    ? `${ev.dates.start.localDate}T${ev.dates.start.localTime ?? '00:00:00'}`
+                    ? `${ev.dates.start.localDate}T${ev.dates.start.localTime ?? '00:00:00'}-03:00`
                     : '')
 
             return {

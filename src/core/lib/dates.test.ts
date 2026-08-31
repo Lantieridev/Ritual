@@ -10,7 +10,27 @@ import {
   combineDateAndTime,
   eventTimeOfDay,
   parseExternalDateTime,
+  APP_TIMEZONE,
 } from './dates'
+
+/**
+ * Extrae año/mes(0-indexado)/día/hora/minuto de un Date, anclado a la hora
+ * de Argentina — no a la del proceso que corre el test. Usar getters locales
+ * (d.getMonth(), d.getHours()...) acá sería exactamente el mismo bug de
+ * timezone que estos tests existen para prevenir: pasarían igual en una
+ * máquina cuya hora local coincide con Argentina (como suele ser la del
+ * desarrollador) y fallarían -o peor, pasarían con el valor equivocado- en
+ * CI/producción corriendo en UTC.
+ */
+function argParts(d: Date) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIMEZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d)
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value)
+  return { year: get('year'), month: get('month') - 1, day: get('day'), hours: get('hour'), minutes: get('minute') }
+}
 
 // Regression tests for a timezone bug: a date-only string like "2026-07-21"
 // parses as UTC midnight, which is 2026-07-20T21:00 in Argentina (UTC-3).
@@ -196,7 +216,11 @@ describe('eventTimeOfDay', () => {
 // las emite en su propio formato, y antes de parsearlas terminaban como el
 // texto "Invalid Date" en la cartelera y rechazadas por Postgres al importar.
 describe('parseExternalDateTime', () => {
-  const reference = new Date(2026, 7, 25) // 25 de agosto de 2026
+  // Mediodía y con offset explícito -03:00, no `new Date(2026, 7, 25)`: esa
+  // construcción usa la hora LOCAL del proceso que corre el test, así que en
+  // TZ=UTC "25 de agosto" termina siendo en realidad el 24 a las 21:00
+  // Argentina, corriendo el punto de referencia mismo de estos tests.
+  const reference = new Date('2026-08-25T12:00:00-03:00')
 
   it('acepta el ISO que mandan enigma y quehacemos', () => {
     expect(parseExternalDateTime('2026-08-26T20:00:00')?.getTime())
@@ -210,27 +234,31 @@ describe('parseExternalDateTime', () => {
 
   it('lee la prosa de entradaweb con año', () => {
     const d = parseExternalDateTime('Domingo 30 de Agosto, 2026', reference)
-    expect([d?.getFullYear(), d?.getMonth(), d?.getDate()]).toEqual([2026, 7, 30])
+    const p = argParts(d!)
+    expect([p.year, p.month, p.day]).toEqual([2026, 7, 30])
   })
 
   it('toma la hora cuando la prosa la incluye', () => {
     const d = parseExternalDateTime('Viernes 11 de Septiembre, 2026 - 21:00hs.', reference)
-    expect([d?.getMonth(), d?.getDate(), d?.getHours(), d?.getMinutes()]).toEqual([8, 11, 21, 0])
+    const p = argParts(d!)
+    expect([p.month, p.day, p.hours, p.minutes]).toEqual([8, 11, 21, 0])
   })
 
   it('lee el "13 SEP" de livepass, sin año', () => {
     const d = parseExternalDateTime('13 SEP', reference)
-    expect([d?.getFullYear(), d?.getMonth(), d?.getDate()]).toEqual([2026, 8, 13])
+    const p = argParts(d!)
+    expect([p.year, p.month, p.day]).toEqual([2026, 8, 13])
   })
 
   it('asume el año siguiente cuando el día y mes ya pasaron', () => {
     // En diciembre, un "13 SEP" es del año que viene, no de tres meses atrás.
-    const d = parseExternalDateTime('13 SEP', new Date(2026, 11, 1))
-    expect(d?.getFullYear()).toBe(2027)
+    const d = parseExternalDateTime('13 SEP', new Date('2026-12-01T12:00:00-03:00'))
+    expect(argParts(d!).year).toBe(2027)
   })
 
   it('tolera el mes con tilde y en mayúsculas', () => {
-    expect(parseExternalDateTime('5 de Diciembre, 2026', reference)?.getMonth()).toBe(11)
+    const d = parseExternalDateTime('5 de Diciembre, 2026', reference)
+    expect(argParts(d!).month).toBe(11)
   })
 
   it('devuelve null cuando el texto no es una fecha, en vez de un Date inválido', () => {

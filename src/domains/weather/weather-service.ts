@@ -10,8 +10,10 @@
  *     rompe la página del evento.
  *   - Show pasado → Historical Weather API (archive-api). Show futuro/hoy →
  *     Forecast API. Mismo split que pide el issue.
- *   - Pronóstico: Open-Meteo solo cubre 16 días para adelante. Un show más
- *     lejano que eso simplemente no tiene clima todavía (no es un error).
+ *   - Pronóstico: Open-Meteo cubre 16 días de datos ARRANCANDO HOY (offset
+ *     0..15) — el show más lejano con clima disponible es el de dentro de
+ *     15 días, no 16 (ver MAX_FORECAST_DAYS). Un show más lejano que eso
+ *     simplemente no tiene clima todavía (no es un error).
  *   - "Lluvia" se decide por precipitación horaria > 0mm, no por el
  *     weather_code — es una señal más directa y evita mantener una lista
  *     hardcodeada de códigos WMO "que cuentan como lluvia".
@@ -31,7 +33,14 @@ import 'server-only'
 import { APP_TIMEZONE, isPastEvent, daysUntil } from '@/src/core/lib/dates'
 import { fetchHistoricalHourly, fetchForecastHourly, type HourlyWeatherPoint } from './open-meteo'
 
-const MAX_FORECAST_DAYS = 16
+// Bug real, encontrado por revisión externa y confirmado contra la API real
+// de Open-Meteo: `forecast_days=N` devuelve N días arrancando HOY (offset
+// 0..N-1), y el máximo válido de N es 16 -así que el offset más lejano
+// alcanzable es 15 días, no 16. Con el 16 viejo acá, un show a exactamente
+// 16 días pasaba el guard de abajo y después pedía forecast_days=17, que
+// Open-Meteo rechaza con "Forecast days is invalid" -clima nunca mostrado
+// para ese show, sin ningún error visible para el usuario.
+const MAX_FORECAST_DAYS = 15
 
 export interface EventWeather {
     temperatureC: number

@@ -73,8 +73,35 @@ describe('getEventWeather', () => {
         })
     })
 
-    it('returns null for a future show beyond the 16-day forecast horizon, without calling the API', async () => {
+    it('returns null for a future show beyond the forecast horizon, without calling the API', async () => {
         const result = await getEventWeather({ date: '2026-12-25T23:00:00Z' }, { lat: -34.5447, lng: -58.4497 }, NOW)
+
+        expect(result).toBeNull()
+        expect(fetchForecastHourly).not.toHaveBeenCalled()
+    })
+
+    // Bug real, confirmado contra la API real de Open-Meteo: forecast_days=N
+    // cubre offsets 0..N-1 arrancando hoy, y el máximo N válido es 16 -así
+    // que el offset más lejano alcanzable es 15 días, no 16. Antes de este
+    // fix, un show a exactamente 16 días pasaba el guard y pedía
+    // forecast_days=17, que la API real rechaza -clima nunca mostrado, sin
+    // ningún error visible. Ninguno de los dos tests de arriba (3 días y
+    // "meses de distancia") pasaba nunca por este límite exacto.
+    it('fetches the forecast for a show exactly 15 days out (the real reachable limit)', async () => {
+        // NOW = 2026-08-22T15:00:00Z (2026-08-22 12:00 ART). +15 días = 2026-09-06.
+        vi.mocked(fetchForecastHourly).mockResolvedValue([
+            { time: '2026-09-06T20:00', temperatureC: 12.0, precipitationMm: 0, weatherCode: 1 },
+        ])
+
+        const result = await getEventWeather({ date: '2026-09-06T23:00:00Z' }, { lat: -34.5447, lng: -58.4497 }, NOW)
+
+        expect(fetchForecastHourly).toHaveBeenCalledWith(-34.5447, -58.4497, 'America/Argentina/Buenos_Aires', 16)
+        expect(result).not.toBeNull()
+    })
+
+    it('returns null (not forecast_days=17) for a show exactly 16 days out — one day past the real reachable limit', async () => {
+        // +16 días = 2026-09-07.
+        const result = await getEventWeather({ date: '2026-09-07T23:00:00Z' }, { lat: -34.5447, lng: -58.4497 }, NOW)
 
         expect(result).toBeNull()
         expect(fetchForecastHourly).not.toHaveBeenCalled()

@@ -46,6 +46,7 @@
  *   financial tool, so a month-by-month IPC series wasn't worth the extra
  *   upkeep burden.
  */
+import { eventYear } from '@/src/core/lib/dates'
 
 /** Reference price for one choripán, in ARS. See file header for sourcing. */
 export const CHORIPAN_REFERENCE_PRICE_ARS = 5000
@@ -117,8 +118,16 @@ export function adjustForInflation(
 ): InflationAdjustment | null {
   if (!Number.isFinite(amountArs) || amountArs <= 0) return null
 
+  // expenseDateIso viene de expenses.date, una columna `date` de Postgres
+  // sin hora ni timezone -sus dígitos SON la fecha, el slice es seguro acá.
+  // referenceDate sí es un Date real (server/browser), y
+  // referenceDate.getFullYear() leía la hora LOCAL del proceso -en Vercel
+  // (UTC) el 31 de diciembre a la noche en Argentina ya es 1° de enero en
+  // UTC, así que un gasto de este año se leía como "del año pasado" y
+  // buscaba INDEC_ANNUAL_INFLATION_PCT[año+1], que no existe. Bug real,
+  // confirmado forzando TZ=UTC localmente.
   const expenseYear = Number(expenseDateIso.slice(0, 4))
-  const currentYear = referenceDate.getFullYear()
+  const currentYear = eventYear(referenceDate.toISOString())
   if (!Number.isFinite(expenseYear) || expenseYear >= currentYear) return null
 
   let multiplier = 1

@@ -8,6 +8,7 @@ import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
+import { todayDateOnly } from '@/src/core/lib/dates'
 import { EXPENSE_CATEGORIES } from '@/src/domains/expenses/categories'
 import type { Expense, GraphQLExpense } from '@/src/core/types'
 import type { EventWithRelations } from '@/src/core/types'
@@ -26,11 +27,6 @@ const UpdateExpenseMutation = gql`
 interface ExpenseFormProps {
   events: EventWithRelations[]
   expense?: Expense | GraphQLExpense
-}
-
-function todayISO() {
-  const d = new Date()
-  return d.toISOString().slice(0, 10)
 }
 
 export function ExpenseForm({ events, expense }: ExpenseFormProps) {
@@ -77,7 +73,11 @@ export function ExpenseForm({ events, expense }: ExpenseFormProps) {
   }
 
   const cancelHref = isEdit && expense ? routes.expenses.detail(expense.id) : routes.expenses.list
-  const defaultDate = expense?.date ? String(expense.date).slice(0, 10) : todayISO()
+  // expense.date es una columna `date` de Postgres (sin hora ni timezone) —
+  // el .slice(0,10) es seguro ahí, son los mismos dígitos tal cual. Para
+  // "hoy" sí hace falta todayDateOnly(): `new Date().toISOString()` lee la
+  // hora UTC del navegador/servidor, no la de Argentina.
+  const defaultDate = expense?.date ? String(expense.date).slice(0, 10) : todayDateOnly()
 
   return (
     <form onSubmit={handleSubmit} className="max-w-xl space-y-6">

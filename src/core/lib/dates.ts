@@ -35,8 +35,16 @@ const BARE_DATE = /^\d{4}-\d{2}-\d{2}$/
  * cause this whole module exists to fix). A full datetime string carries a
  * real instant, so for that case we DO need to convert it to the app's
  * timezone to find which calendar day it actually falls on there.
+ *
+ * Exported (not just internal) because pre-filling a date input from a
+ * stored `timestamptz` (e.g. EventForm's edit mode) has this exact same
+ * problem — `event.date.slice(0, 10)` reads the UTC calendar date, not
+ * Argentina's, and shows the wrong day for any show whose local time falls
+ * before 21:00 UTC. Bare `date` columns (no time component, like
+ * `expenses.date`) don't need this at all — see ExpenseForm, which slices
+ * directly.
  */
-function toDateOnly(isoString: string): string {
+export function toDateOnly(isoString: string): string {
     if (!isoString) return ''
     if (BARE_DATE.test(isoString)) return isoString
     try {
@@ -210,7 +218,7 @@ export function parseExternalDateTime(raw: string | null | undefined, reference:
         if (month !== null) {
             const day = Number(withYear[1])
             const year = withYear[3] ? Number(withYear[3]) : inferYear(month, day, reference)
-            return new Date(year, month, day, hours, minutes)
+            return buildArgDate(year, month, day, hours, minutes)
         }
     }
 
@@ -220,17 +228,41 @@ export function parseExternalDateTime(raw: string | null | undefined, reference:
         const month = monthFromSpanish(dayMonth[2])
         if (month !== null) {
             const day = Number(dayMonth[1])
-            return new Date(inferYear(month, day, reference), month, day, hours, minutes)
+            return buildArgDate(inferYear(month, day, reference), month, day, hours, minutes)
         }
     }
 
     return null
 }
 
-/** Año de la próxima ocurrencia de ese día y mes respecto de la referencia. */
+function pad2(n: number): string {
+    return String(n).padStart(2, '0')
+}
+
+/**
+ * Arma un Date a partir de componentes de calendario ANCLADOS a Argentina
+ * (offset fijo -03:00, ver combineDateAndTime), no a la timezone del
+ * servidor. `new Date(year, month, day, hours, minutes)` interpreta esos
+ * componentes como hora LOCAL del proceso que corre el código — en Vercel
+ * eso es UTC, no Buenos Aires, así que un show sin año explícito (o
+ * cualquier fecha externa sin offset) terminaba corriéndose de fecha en
+ * producción. Bug real: verificado forzando TZ=UTC localmente.
+ */
+function buildArgDate(year: number, month: number, day: number, hours: number, minutes: number): Date {
+    const dateOnly = `${year}-${pad2(month + 1)}-${pad2(day)}`
+    const timeOnly = `${pad2(hours)}:${pad2(minutes)}`
+    return new Date(combineDateAndTime(dateOnly, timeOnly))
+}
+
+/**
+ * Año de la próxima ocurrencia de ese día y mes, respecto de "hoy" en
+ * Argentina (no en la timezone del servidor -mismo motivo que el resto de
+ * este archivo). Compara strings de calendario ("YYYY-MM-DD"), no objetos
+ * Date construidos con getters locales.
+ */
 function inferYear(month: number, day: number, reference: Date): number {
-    const year = reference.getFullYear()
-    const candidate = new Date(year, month, day)
-    const sameDay = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate())
-    return candidate < sameDay ? year + 1 : year
+    const todayStr = todayDateOnly(reference)
+    const year = Number(todayStr.slice(0, 4))
+    const candidateStr = `${year}-${pad2(month + 1)}-${pad2(day)}`
+    return candidateStr < todayStr ? year + 1 : year
 }

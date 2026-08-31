@@ -122,7 +122,10 @@ describe('searchTicketmasterEvents', () => {
     expect(result).toEqual({ events: [], total: 0 })
   })
 
-  it('falls back to a local-date/time datetime when dateTime is absent', async () => {
+  // Bug real: sin el offset, quien parsea esto (parseExternalDateTime)
+  // leía "21:30" como hora del proceso que corre el código, no de
+  // Argentina -en Vercel (UTC) eso mostraba el show 3 horas más tarde.
+  it('anchors the local-date/time fallback to Argentina (-03:00), not the server\'s own timezone, when dateTime is absent', async () => {
     vi.mocked(global.fetch).mockResolvedValue({
       ok: true,
       status: 200,
@@ -144,7 +147,7 @@ describe('searchTicketmasterEvents', () => {
 
     const result = await searchTicketmasterEvents({ keyword: 'x' })
 
-    expect(result.events[0].datetime).toBe('2024-06-15T21:30:00')
+    expect(result.events[0].datetime).toBe('2024-06-15T21:30:00-03:00')
   })
 
   it('falls back to venue/lineup defaults when the venue or attractions are missing', async () => {

@@ -4,6 +4,7 @@ import { FutureEvent } from '@/src/core/types'
 import Link from 'next/link'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
+import { eventYear } from '@/src/core/lib/dates'
 import { StarRating } from '@/src/core/components/ui'
 
 interface ArtistProfileProps {
@@ -108,7 +109,7 @@ export function ArtistProfile({
                             return (
                                 <li key={ev.id}>
                                     <Link href={routes.events.detail(ev.id)} className="flex items-center gap-4 py-3">
-                                        <span className="font-figure text-2xl text-ritual-gray-text w-16 shrink-0">{new Date(ev.date).getFullYear()}</span>
+                                        <span className="font-figure text-2xl text-ritual-gray-text w-16 shrink-0">{eventYear(ev.date)}</span>
                                         <div className="flex-1 min-w-0">
                                             <p className={`font-subtitle font-black uppercase truncate ${isBest ? 'text-ritual-bone' : 'text-ritual-gray-light-3'}`}>
                                                 {ev.venues?.name ?? 'Recital'}
