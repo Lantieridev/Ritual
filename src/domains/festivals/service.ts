@@ -139,10 +139,13 @@ export async function removeFestival(id: string): Promise<ActionResult> {
         return { error: 'Solo un moderador puede eliminar un festival.' }
     }
 
-    const { error } = await supabase.from('festivals').delete().eq('id', id)
+    const { data: deleted, error } = await supabase.from('festivals').delete().eq('id', id).select('id')
     if (error) {
         console.error('Error eliminando festival:', error)
         return { error: sanitizeError(error) }
+    }
+    if (!deleted || deleted.length === 0) {
+        return { error: 'No se pudo eliminar el festival.' }
     }
 
     revalidatePath(routes.festivals.list)

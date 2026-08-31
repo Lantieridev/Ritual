@@ -198,12 +198,23 @@ describe('removeChecklistTemplateItem', () => {
     })
 
     it('acota el delete al dueño, además de la política RLS', async () => {
-        const { spies } = setupClient()
+        const { spies } = setupClient({ data: [{ id: VALID_ITEM_ID }], error: null })
 
         expect(await removeChecklistTemplateItem(VALID_ITEM_ID)).toEqual({})
 
         expect(spies.delete).toHaveBeenCalled()
         expect(spies.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    })
+
+    // Un DELETE que RLS bloquea (id ajeno) no es un error para PostgREST:
+    // afecta 0 filas y devuelve error: null. Sin este chequeo se reportaba
+    // éxito aunque el ítem siguiera ahí.
+    it('reporta un error en vez de un falso éxito cuando el delete afecta 0 filas', async () => {
+        setupClient({ data: [], error: null })
+
+        expect(await removeChecklistTemplateItem(VALID_ITEM_ID)).toEqual({
+            error: 'No se pudo eliminar el ítem.',
+        })
     })
 })
 
@@ -252,12 +263,20 @@ describe('removeEventChecklistItem', () => {
     })
 
     it('borra el ítem del show acotando al dueño', async () => {
-        const { fromMock, spies } = setupClient()
+        const { fromMock, spies } = setupClient({ data: [{ id: VALID_ITEM_ID }], error: null })
 
         expect(await removeEventChecklistItem(VALID_EVENT_ID, VALID_ITEM_ID)).toEqual({})
 
         expect(fromMock).toHaveBeenCalledWith('event_checklist_items')
         expect(spies.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    })
+
+    it('reporta un error en vez de un falso éxito cuando el delete afecta 0 filas', async () => {
+        setupClient({ data: [], error: null })
+
+        expect(await removeEventChecklistItem(VALID_EVENT_ID, VALID_ITEM_ID)).toEqual({
+            error: 'No se pudo eliminar el ítem.',
+        })
     })
 })
 

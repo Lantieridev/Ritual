@@ -161,12 +161,25 @@ describe('insertFestival / removeFestival payloads', () => {
   })
 
   it('removeFestival resolves to an empty payload on success', async () => {
-    const builder = makeQueryBuilder({ data: null, error: null })
+    const builder = makeQueryBuilder({ data: [{ id: VALID_FESTIVAL_ID }], error: null })
     mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: moderatorRpc }))
 
     const result = await removeFestival(VALID_FESTIVAL_ID)
 
     expect(result).toEqual({})
+  })
+
+  // Un DELETE que RLS bloquea (o un id que ya no existe) no es un error para
+  // PostgREST: afecta 0 filas y devuelve error: null. Sin este chequeo se
+  // reportaba éxito aunque el festival siguiera ahí -mismo patrón que
+  // removeEvent.
+  it('reports an error instead of a false success when the delete affects 0 rows', async () => {
+    const builder = makeQueryBuilder({ data: [], error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder), rpc: moderatorRpc }))
+
+    const result = await removeFestival(VALID_FESTIVAL_ID)
+
+    expect(result.error).toBeTruthy()
   })
 })
 

@@ -112,12 +112,16 @@ export async function removeChecklistTemplateItem(id: string): Promise<ActionRes
     if (!userId) return { error: 'Usuario no autenticado' }
 
     const supabase = await createClient()
-    const { error } = await supabase
+    const { data: deleted, error } = await supabase
         .from('checklist_template_items')
         .delete()
         .eq('id', id)
         .eq('user_id', userId)
+        .select('id')
     if (error) return { error: sanitizeError(error) }
+    // Un DELETE que RLS bloquea (id ajeno) no es un error para PostgREST,
+    // afecta 0 filas y devuelve error: null -mismo patrón que removeEvent.
+    if (!deleted || deleted.length === 0) return { error: 'No se pudo eliminar el ítem.' }
 
     revalidatePath(routes.showMode)
     return {}
@@ -179,12 +183,14 @@ export async function removeEventChecklistItem(
     if (!userId) return { error: 'Usuario no autenticado' }
 
     const supabase = await createClient()
-    const { error } = await supabase
+    const { data: deleted, error } = await supabase
         .from('event_checklist_items')
         .delete()
         .eq('id', id)
         .eq('user_id', userId)
+        .select('id')
     if (error) return { error: sanitizeError(error) }
+    if (!deleted || deleted.length === 0) return { error: 'No se pudo eliminar el ítem.' }
 
     revalidatePath(routes.events.detail(eventId))
     return {}
