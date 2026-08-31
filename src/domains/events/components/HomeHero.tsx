@@ -122,7 +122,7 @@ export function HomeHero({ state, backgroundImage, archiveCount = 0 }: HomeHeroP
             <h1 className="relative font-display text-[9vh] leading-[0.82] uppercase text-ritual-bone mt-2">
               Tu próximo ritual,<br />todavía sin fecha
             </h1>
-            <div className="relative flex gap-3 mt-8">
+            <div className="relative flex flex-wrap gap-3 mt-8">
               <Link href={routes.events.search} className="font-figure text-lg tracking-wider bg-ritual-red text-ritual-bone px-6 py-3">
                 BUSCAR TU PRÓXIMO SHOW
               </Link>
@@ -137,7 +137,7 @@ export function HomeHero({ state, backgroundImage, archiveCount = 0 }: HomeHeroP
             <h1 className="relative font-display text-[9vh] leading-[0.82] uppercase text-ritual-bone mt-2">
               Todavía no hay<br />ningún talón
             </h1>
-            <div className="relative flex gap-3 mt-8">
+            <div className="relative flex flex-wrap gap-3 mt-8">
               <Link href={routes.events.search} className="font-figure text-lg tracking-wider bg-ritual-red text-ritual-bone px-6 py-3">
                 BUSCAR SHOWS
               </Link>

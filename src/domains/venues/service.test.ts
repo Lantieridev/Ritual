@@ -13,7 +13,6 @@ vi.mock('@/src/core/auth/session', () => ({
 vi.mock('@/src/domains/venues/data', () => ({
   getVenues: vi.fn(),
   getVenueById: vi.fn(),
-  getVenueTips: vi.fn(),
   getVenueTipsBatch: vi.fn(),
 }))
 

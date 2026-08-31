@@ -105,12 +105,6 @@ export async function getVenueEventsBatch(
   return venueIds.map((id) => byVenue.get(id) ?? [])
 }
 
-/** Tips de una sede, más nuevos primero — issue #60. */
-export async function getVenueTips(venueId: string): Promise<VenueTip[]> {
-  const [tips] = await getVenueTipsBatch([venueId])
-  return tips
-}
-
 /**
  * Versión por lote, para el DataLoader de `Venue.tips` — misma razón que
  * `getVenueEventsBatch`: sin esto, pedir `tips` sobre una lista de sedes

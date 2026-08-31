@@ -338,15 +338,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <PhotoGallery eventId={event.id} initialPhotos={photos} />
         </section>
 
-        {/* Quiénes fueron — depende de la capa social, todavía sin backend */}
+        {/* Quiénes fueron — depende de la capa social, todavía sin backend (ver issue #5) */}
         <section className="border-t border-ritual-border-subtle pt-8">
           <h2 className="font-label text-[10px] tracking-[0.2em] uppercase text-ritual-gray-text mb-3">Quiénes fueron</h2>
           <p className="font-body text-sm text-ritual-gray-text">
-            Próximamente — depende de la capa social (
-            <a href="https://github.com/Lantieridev/Ritual/issues/5" target="_blank" rel="noopener noreferrer" className="text-ritual-red-hover underline underline-offset-4">
-              issue #5
-            </a>
-            ), todavía sin implementar.
+            Próximamente vas a poder ver quién más fue a este show.
           </p>
         </section>
 

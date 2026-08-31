@@ -6,7 +6,7 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
-import { getVenues, getVenueById, getVenueTips, getVenueTipsBatch } from '@/src/domains/venues/data'
+import { getVenues, getVenueById, getVenueTipsBatch } from '@/src/domains/venues/data'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -149,25 +149,3 @@ describe('getVenueTipsBatch', () => {
   })
 })
 
-describe('getVenueTips', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('pide un solo id y devuelve sus tips (no un array de arrays)', async () => {
-    const rows = [{ id: 't1', venue_id: 'v1', category: 'otro', body: 'Tip', created_at: '2026-01-01' }]
-    const builder: Record<string, unknown> = {}
-    const chain = () => builder
-    builder.select = vi.fn(chain)
-    builder.in = vi.fn(chain)
-    builder.order = vi.fn(chain)
-    builder.then = (onFulfilled: (v: unknown) => unknown) => Promise.resolve({ data: rows, error: null }).then(onFulfilled)
-    const fromMock = vi.fn(() => builder)
-    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
-
-    const result = await getVenueTips('v1')
-
-    expect(builder.in).toHaveBeenCalledWith('venue_id', ['v1'])
-    expect(result).toEqual(rows)
-  })
-})

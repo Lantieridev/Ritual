@@ -57,7 +57,7 @@ export default async function ModerationEventsPage() {
           <p className="font-dense text-ritual-gray-light-2 uppercase">Todo limpio por acá.</p>
         </div>
       ) : (
-        <div className="bg-ritual-surface border border-ritual-border overflow-hidden">
+        <div className="bg-ritual-surface border border-ritual-border overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-ritual-panel border-b border-ritual-border-subtle">
               <tr>

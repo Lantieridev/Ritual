@@ -4,7 +4,7 @@ import { findOrCreateByName } from '@/src/core/lib/find-or-create'
 import { geocodeVenue } from '@/src/core/lib/nominatim'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, Venue, VenueCreateInput } from '@/src/core/types'
-import { getVenues, getVenueById, getVenueEventsBatch, getVenueTips, getVenueTipsBatch } from './data'
+import { getVenues, getVenueById, getVenueEventsBatch, getVenueTipsBatch } from './data'
 import type { VenueWithEvents, VenueEvent, VenueTip, VenueTipCategory } from './data'
 
 export type { VenueWithEvents, VenueEvent, VenueTip, VenueTipCategory }
@@ -48,12 +48,7 @@ export async function listVenueEventsBatch(venueIds: readonly string[]): Promise
   return getVenueEventsBatch(venueIds)
 }
 
-/** Tips de una sede — issue #60. */
-export async function listVenueTips(venueId: string): Promise<VenueTip[]> {
-  return getVenueTips(venueId)
-}
-
-/** Versión por lote de `listVenueTips`, para el DataLoader de `Venue.tips`. */
+/** Versión por lote de los tips de una sede (issue #60), para el DataLoader de `Venue.tips`. */
 export async function listVenueTipsBatch(venueIds: readonly string[]): Promise<VenueTip[][]> {
   return getVenueTipsBatch(venueIds)
 }
