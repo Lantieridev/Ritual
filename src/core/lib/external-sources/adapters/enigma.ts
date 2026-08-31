@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { FutureEvent } from '@/src/core/types'
 import { ExternalSearchRequest, ExternalSearchResponse, ExternalSourceAdapter } from '../types'
 import { fetchWithRetry } from '@/src/core/lib/http'
@@ -61,8 +62,9 @@ export function parseEnigmaHTML(html: string, query: ExternalSearchRequest): Fut
       dateStr = new Date(ev.eventDates[0] * 1000).toISOString()
     }
 
+    const stableId = ev.uid || crypto.createHash('md5').update(`${ev.title}-${dateStr}`).digest('hex').substring(0, 8)
     events.push({
-      id: `enigma-${ev.uid || Math.random().toString(36).substring(7)}`,
+      id: `enigma-${stableId}`,
       title: ev.title,
       datetime: dateStr,
       venue: {

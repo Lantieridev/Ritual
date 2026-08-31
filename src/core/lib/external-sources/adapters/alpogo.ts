@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { FutureEvent } from '@/src/core/types'
 import { ExternalSearchRequest, ExternalSearchResponse, ExternalSourceAdapter } from '../types'
 import { fetchWithRetry } from '@/src/core/lib/http'
@@ -31,18 +32,23 @@ export const alpogoAdapter: ExternalSourceAdapter = {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const events: FutureEvent[] = data.map((ev: any) => ({
-        id: `alpogo-${ev.id || Math.random()}`,
-        title: ev.name || ev.title || 'Unknown Event',
-        datetime: ev.date || ev.datetime || '',
-        venue: {
-          name: ev.venue || 'Unknown Venue',
-          city: ev.city || query.city || null,
-        },
-        lineup: [],
-        url: ev.url || ev.link || `https://alpogo.com/evento/${ev.id}`,
-        image: ev.image || ev.image_url,
-      }))
+      const events: FutureEvent[] = data.map((ev: any) => {
+        const title = ev.name || ev.title || 'Unknown Event'
+        const datetime = ev.date || ev.datetime || ''
+        const stableId = ev.id || crypto.createHash('md5').update(`${title}-${datetime}`).digest('hex').substring(0, 8)
+        return {
+          id: `alpogo-${stableId}`,
+          title,
+          datetime,
+          venue: {
+            name: ev.venue || 'Unknown Venue',
+            city: ev.city || query.city || null,
+          },
+          lineup: [],
+          url: ev.url || ev.link || `https://alpogo.com/evento/${ev.id}`,
+          image: ev.image || ev.image_url,
+        }
+      })
 
       // If there's a city filter, apply it if API didn't
       let filteredEvents = events

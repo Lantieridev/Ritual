@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import * as cheerio from 'cheerio'
 import { FutureEvent } from '@/src/core/types'
 import { ExternalSearchRequest, ExternalSearchResponse, ExternalSourceAdapter } from '../types'
@@ -61,7 +62,7 @@ export function parseLivepassHTML(html: string, query: ExternalSearchRequest): F
         }
 
         events.push({
-          id: `livepass-${Math.random().toString(36).substring(7)}`,
+          id: `livepass-${crypto.createHash('md5').update(href).digest('hex').substring(0, 8)}`,
           title,
           datetime: text.split(' ').slice(0, 3).join(' '), // Best effort, or leave blank if we can't parse safely
           venue: {

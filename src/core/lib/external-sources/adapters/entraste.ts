@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import * as cheerio from 'cheerio'
 import { FutureEvent } from '@/src/core/types'
 import { ExternalSearchRequest, ExternalSearchResponse, ExternalSourceAdapter } from '../types'
@@ -58,8 +59,9 @@ export function parseEntrasteHTML(html: string, query: ExternalSearchRequest): F
       return
     }
 
+    const hash = crypto.createHash('md5').update(href).digest('hex').substring(0, 8)
     events.push({
-      id: `entraste-${Math.random().toString(36).substring(7)}`,
+      id: `entraste-${hash}`,
       title,
       datetime: date,
       venue: {

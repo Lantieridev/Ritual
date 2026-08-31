@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { FutureEvent } from '@/src/core/types'
 import { ExternalSearchRequest, ExternalSearchResponse, ExternalSourceAdapter } from '../types'
 import { fetchWithRetry } from '@/src/core/lib/http'
@@ -76,8 +77,9 @@ export function parseAllAccessHTML(html: string, query: ExternalSearchRequest): 
       continue
     }
 
+    const hash = crypto.createHash('md5').update(url || title).digest('hex').substring(0, 8)
     events.push({
-      id: `allaccess-${Math.random().toString(36).substring(7)}`,
+      id: `allaccess-${hash}`,
       title,
       datetime: card.line1 || card.description || '',
       venue: {

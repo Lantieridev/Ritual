@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { FutureEvent } from '@/src/core/types'
 import { ExternalSearchRequest, ExternalSearchResponse, ExternalSourceAdapter } from '../types'
 import { fetchWithRetry } from '@/src/core/lib/http'
@@ -30,19 +31,24 @@ export const quehacemosAdapter: ExternalSourceAdapter = {
       const rawEvents = Array.isArray(data) ? data : (data.events || data.data || [])
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const events: FutureEvent[] = rawEvents.map((ev: any) => ({
-        id: `quehacemos-${ev.id || Math.random()}`,
-        title: ev.title || 'Unknown Event',
-        datetime: ev.date || '',
-        venue: {
-          name: ev.venue || 'Unknown Venue',
-          city: ev.city || null,
-        },
-        lineup: [],
-        url: ev.link || ev.url,
-        image: ev.image_url || ev.image,
-        priceRange: ev.price ? { min: ev.price, max: ev.max_price || ev.price, currency: 'ARS' } : undefined,
-      }))
+      const events: FutureEvent[] = rawEvents.map((ev: any) => {
+        const title = ev.title || 'Unknown Event'
+        const link = ev.link || ev.url || ''
+        const stableId = ev.id || crypto.createHash('md5').update(`${title}-${link}`).digest('hex').substring(0, 8)
+        return {
+          id: `quehacemos-${stableId}`,
+          title,
+          datetime: ev.date || '',
+          venue: {
+            name: ev.venue || 'Unknown Venue',
+            city: ev.city || null,
+          },
+          lineup: [],
+          url: ev.link || ev.url,
+          image: ev.image_url || ev.image,
+          priceRange: ev.price ? { min: ev.price, max: ev.max_price || ev.price, currency: 'ARS' } : undefined,
+        }
+      })
 
       let filteredEvents = events
       // Fallback filtering if API ignores params
