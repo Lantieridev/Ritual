@@ -17,7 +17,11 @@ const STATES = [
   // personalizar) y personal sin coordenadas resueltas todavía.
   'strip-personal',
   'strip-general',
-  'strip-sin-distancia'
+  'strip-sin-distancia',
+  // First-time seed ladder (#81) — un estado por escalón de pickSeeds.
+  'first-time-semillas-generos',
+  'first-time-semillas-pais',
+  'first-time-semillas-arranque'
 ];
 
 const DESKTOP_VIEWPORTS = [
@@ -184,6 +188,34 @@ test.describe('Home Ranking Strip', () => {
 
       const reasonText = await page.evaluate(() => document.querySelector('.text-ritual-red.italic')?.textContent);
       expect(reasonText).toBeTruthy();
+    });
+  }
+});
+
+/**
+ * First-time seed ladder (#81) — one harness state per `pickSeeds` tier: the
+ * chips resolve (Promise + `use()`, own Suspense) and the ladder's note is
+ * exactly the one that tier produces, never a hardcoded placeholder.
+ */
+test.describe('First-time seed ladder', () => {
+  const SEED_STATES: Array<{ state: string; note: string; firstChip: string }> = [
+    { state: 'first-time-semillas-generos', note: 'De los géneros que elegiste', firstChip: 'Bandalos Chinos' },
+    { state: 'first-time-semillas-pais', note: 'completá el registro para afinarlo', firstChip: 'Divididos' },
+    { state: 'first-time-semillas-arranque', note: 'Para arrancar', firstChip: 'Divididos' },
+  ];
+
+  for (const { state, note, firstChip } of SEED_STATES) {
+    test(`resolved seed chips and honest note for ${state}`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      const response = await page.goto(`/dev/hoy/${state}`);
+      expect(response?.status()).toBe(200);
+      await page.waitForLoadState('load');
+
+      const chip = page.getByRole('link', { name: firstChip });
+      await expect(chip).toBeVisible();
+      await expect(chip).toHaveAttribute('href', `/buscar?artist=${encodeURIComponent(firstChip)}`);
+
+      await expect(page.getByText(note, { exact: false })).toBeVisible();
     });
   }
 });

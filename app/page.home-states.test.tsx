@@ -5,6 +5,7 @@ import HomePage from '@/app/page'
 import { listMyEvents, listUpcomingEvents } from '@/src/domains/events/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { findProfile } from '@/src/domains/auth/service'
+import { getFirstTimeSeeds } from '@/src/domains/recommendations/service'
 import type { HomeHeroState } from '@/src/domains/events/home-view'
 import type { ReactNode } from 'react'
 
@@ -15,14 +16,28 @@ import type { ReactNode } from 'react'
  * mirar el resto de la página (la sección "Tu archivo").
  */
 const mockHomeHero = vi.fn(
-  (props: { state: HomeHeroState; recentSeen?: unknown[]; initialOpen?: boolean; suggestions?: ReactNode }) => (
-    <div data-testid="mock-home-hero">{props.state.kind}</div>
-  )
+  (props: {
+    state: HomeHeroState
+    recentSeen?: unknown[]
+    initialOpen?: boolean
+    suggestions?: ReactNode
+    seeds?: Promise<{ names: string[]; note: string }>
+  }) => <div data-testid="mock-home-hero">{props.state.kind}</div>
 )
 
 vi.mock('@/src/domains/events/components/HomeHero', () => ({
-  HomeHero: (props: { state: HomeHeroState; recentSeen?: unknown[]; initialOpen?: boolean; suggestions?: ReactNode }) =>
-    mockHomeHero(props),
+  HomeHero: (props: {
+    state: HomeHeroState
+    recentSeen?: unknown[]
+    initialOpen?: boolean
+    suggestions?: ReactNode
+    seeds?: Promise<{ names: string[]; note: string }>
+  }) => mockHomeHero(props),
+}))
+
+vi.mock('@/src/domains/recommendations/service', () => ({
+  getHomeSuggestions: vi.fn(async () => ({ heading: { basis: 'none', hasCoords: false, sources: [], declaredGenreLabels: [] }, candidates: [] })),
+  getFirstTimeSeeds: vi.fn(async () => ({ names: [], note: 'Para arrancar' })),
 }))
 
 vi.mock('@/src/domains/events/service', () => ({
@@ -280,5 +295,37 @@ describe('HomePage integration — home states', () => {
     const [props] = guestCall!
     expect(props.suggestions).toBeTruthy()
     expect(props.suggestions instanceof Promise).toBe(false)
+  })
+
+  it('(l) primera vez: getFirstTimeSeeds arranca para el usuario y HomeHero recibe `seeds` como Promise, nunca ya resuelta (issue #81)', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-123')
+    vi.mocked(listMyEvents).mockResolvedValue([])
+
+    const element = await HomePage()
+    render(element)
+
+    expect(getFirstTimeSeeds).toHaveBeenCalledWith('user-123')
+    const [props] = mockHomeHero.mock.calls[0]
+    expect(props.seeds).toBeTruthy()
+    expect(props.seeds instanceof Promise).toBe(true)
+  })
+
+  it('(m) fuera de primera vez, getFirstTimeSeeds nunca se llama', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-123')
+    const wentShow = {
+      id: 'went-1',
+      name: 'Show Visto',
+      date: '2026-09-01T21:00:00-03:00',
+      venue_id: 'v1',
+      venues: { name: 'Niceto', city: 'CABA', country: 'AR' },
+      lineups: [{ artists: { id: 'a1', name: 'Divididos', genre: 'Rock' }, is_headliner: true }],
+      attendance: [{ id: 'att-1', status: 'went', user_id: 'user-123', rating: 5, review: null }],
+    }
+    vi.mocked(listMyEvents).mockResolvedValue([wentShow] as never)
+
+    const element = await HomePage()
+    render(element)
+
+    expect(getFirstTimeSeeds).not.toHaveBeenCalled()
   })
 })

@@ -15,7 +15,7 @@ import { StarRating } from '@/src/core/components/ui'
 import { getArtistImage } from '@/src/core/lib/artist-image'
 import { findProfile } from '@/src/domains/auth/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
-import { getHomeSuggestions } from '@/src/domains/recommendations/service'
+import { getHomeSuggestions, getFirstTimeSeeds } from '@/src/domains/recommendations/service'
 import { formatReason } from '@/src/domains/recommendations/reasons'
 import { SuggestionsStrip, SuggestionsStripSkeleton } from '@/src/domains/recommendations/components/SuggestionsStrip'
 
@@ -196,11 +196,23 @@ export default async function HomePage({ searchParams }: HomePageProps = {}) {
     )
   const isGuest = heroState.kind === 'guest'
 
+  // Sólo primera vez lleva la escalera de semillas (issue #81) — el resto de
+  // los estados ya tiene un show propio del cual partir. `userId` siempre es
+  // no-nulo acá (primera vez implica sesión iniciada), el chequeo es sólo
+  // para que TypeScript lo sepa. Nunca se espera: HomeHero la resuelve en su
+  // propio Suspense, igual que `seeds`/`details` (R1-008).
+  const seedsPromise = heroState.kind === 'first-time' && userId ? getFirstTimeSeeds(userId) : undefined
+
   return (
     <>
       <React.Suspense
         fallback={
-          <HomeHero state={heroState} backgroundImage={null} suggestions={isGuest ? suggestionsElement : undefined} />
+          <HomeHero
+            state={heroState}
+            backgroundImage={null}
+            suggestions={isGuest ? suggestionsElement : undefined}
+            seeds={seedsPromise}
+          />
         }
       >
         <HomeHero
@@ -210,6 +222,7 @@ export default async function HomePage({ searchParams }: HomePageProps = {}) {
           recentSeen={recentSeen}
           initialOpen={initialOpen}
           suggestions={isGuest ? suggestionsElement : undefined}
+          seeds={seedsPromise}
         />
       </React.Suspense>
 

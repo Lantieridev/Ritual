@@ -17,6 +17,8 @@ import {
   getArtistImportance,
   getArtistGenres,
   findRankingContext,
+  findArtistsByGenres,
+  findTopImportanceArtists,
   getTasteProfileRow,
   writeTasteProfile,
   setLastfmUsername,
@@ -252,6 +254,109 @@ describe('findRankingContext', () => {
     const result = await findRankingContext('u1')
 
     expect(result).toBeNull()
+  })
+})
+
+describe('findArtistsByGenres', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('resuelve artistas por artist_genres y después trae nombre + peso desde artists', async () => {
+    const genresBuilder: Record<string, unknown> = {}
+    genresBuilder.select = vi.fn(() => genresBuilder)
+    genresBuilder.in = vi.fn(() =>
+      Promise.resolve({ data: [{ artist_id: 'a1' }, { artist_id: 'a2' }, { artist_id: 'a1' }], error: null })
+    )
+
+    const artistsBuilder: Record<string, unknown> = {}
+    artistsBuilder.select = vi.fn(() => artistsBuilder)
+    artistsBuilder.in = vi.fn(() =>
+      Promise.resolve({
+        data: [
+          { id: 'a1', name: 'Bandalos Chinos', artist_importance: { peso: 0.6 } },
+          { id: 'a2', name: 'El Mató', artist_importance: null },
+        ],
+        error: null,
+      })
+    )
+
+    const fromMock = vi.fn((table: string) => (table === 'artist_genres' ? genresBuilder : artistsBuilder))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await findArtistsByGenres(['indie'])
+
+    expect(genresBuilder.in).toHaveBeenCalledWith('genre_key', ['indie'])
+    expect(artistsBuilder.in).toHaveBeenCalledWith('id', ['a1', 'a2'])
+    expect(result).toEqual([
+      { artistId: 'a1', name: 'Bandalos Chinos', peso: 0.6 },
+      { artistId: 'a2', name: 'El Mató', peso: null },
+    ])
+  })
+
+  it('short-circuits without a query when no genre keys are requested', async () => {
+    const result = await findArtistsByGenres([])
+
+    expect(mockCreateClient).not.toHaveBeenCalled()
+    expect(result).toEqual([])
+  })
+
+  it('devuelve lista vacía si ningún artista tiene esos géneros', async () => {
+    const genresBuilder: Record<string, unknown> = {}
+    genresBuilder.select = vi.fn(() => genresBuilder)
+    genresBuilder.in = vi.fn(() => Promise.resolve({ data: [], error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => genresBuilder) }))
+
+    const result = await findArtistsByGenres(['reggaeton-inexistente'])
+
+    expect(result).toEqual([])
+  })
+})
+
+describe('findTopImportanceArtists', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('trae los artistas con más peso, ordenados descendente, con su nombre', async () => {
+    const builder: Record<string, unknown> = {}
+    builder.select = vi.fn(() => builder)
+    builder.not = vi.fn(() => builder)
+    builder.order = vi.fn(() => builder)
+    builder.limit = vi.fn(() =>
+      Promise.resolve({
+        data: [
+          { artist_id: 'a1', peso: 0.9, artists: { name: 'Divididos' } },
+          { artist_id: 'a2', peso: 0.7, artists: { name: 'Babasónicos' } },
+        ],
+        error: null,
+      })
+    )
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await findTopImportanceArtists(10)
+
+    expect(fromMock).toHaveBeenCalledWith('artist_importance')
+    expect(builder.order).toHaveBeenCalledWith('peso', { ascending: false })
+    expect(builder.limit).toHaveBeenCalledWith(10)
+    expect(result).toEqual([
+      { artistId: 'a1', name: 'Divididos', peso: 0.9 },
+      { artistId: 'a2', name: 'Babasónicos', peso: 0.7 },
+    ])
+  })
+
+  it('devuelve lista vacía si falla la consulta', async () => {
+    const builder: Record<string, unknown> = {}
+    builder.select = vi.fn(() => builder)
+    builder.not = vi.fn(() => builder)
+    builder.order = vi.fn(() => builder)
+    builder.limit = vi.fn(() => Promise.resolve({ data: null, error: { message: 'boom' } }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await findTopImportanceArtists(10)
+
+    expect(result).toEqual([])
   })
 })
 

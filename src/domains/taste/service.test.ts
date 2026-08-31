@@ -16,6 +16,8 @@ vi.mock('@/src/domains/taste/data', () => ({
   getArtistImportance: vi.fn(),
   getArtistGenres: vi.fn(),
   findRankingContext: vi.fn(),
+  findArtistsByGenres: vi.fn(),
+  findTopImportanceArtists: vi.fn(),
 }))
 
 vi.mock('@/src/domains/taste/importLastfmForUser', () => ({
@@ -35,6 +37,8 @@ import {
   getArtistImportance,
   getArtistGenres,
   findRankingContext,
+  findArtistsByGenres,
+  findTopImportanceArtists,
   syncCityCoordinates,
 } from '@/src/domains/taste/service'
 import {
@@ -47,6 +51,8 @@ import {
   getArtistImportance as getArtistImportanceData,
   getArtistGenres as getArtistGenresData,
   findRankingContext as findRankingContextData,
+  findArtistsByGenres as findArtistsByGenresData,
+  findTopImportanceArtists as findTopImportanceArtistsData,
 } from '@/src/domains/taste/data'
 import { importLastfmForUser } from '@/src/domains/taste/importLastfmForUser'
 import { syncCityCoordinates as syncCityCoordinatesData } from '@/src/domains/taste/syncCityCoordinates'
@@ -249,6 +255,26 @@ describe('taste/service re-exports for the recommendations domain (issue #81)', 
 
     expect(findRankingContextData).toHaveBeenCalledWith('u1')
     expect(result).toBe(ctx)
+  })
+
+  it('re-exports findArtistsByGenres — first-time seed ladder tier 1 (issue #81)', async () => {
+    const candidates = [{ artistId: 'a1', name: 'Bandalos Chinos', peso: 0.6 }]
+    vi.mocked(findArtistsByGenresData).mockResolvedValue(candidates)
+
+    const result = await findArtistsByGenres(['indie'])
+
+    expect(findArtistsByGenresData).toHaveBeenCalledWith(['indie'])
+    expect(result).toBe(candidates)
+  })
+
+  it('re-exports findTopImportanceArtists — first-time seed ladder tier 2 (issue #81)', async () => {
+    const candidates = [{ artistId: 'a1', name: 'Divididos', peso: 0.9 }]
+    vi.mocked(findTopImportanceArtistsData).mockResolvedValue(candidates)
+
+    const result = await findTopImportanceArtists(10)
+
+    expect(findTopImportanceArtistsData).toHaveBeenCalledWith(10)
+    expect(result).toBe(candidates)
   })
 
   it('re-exports syncCityCoordinates — the seam auth/service.ts now imports through', async () => {

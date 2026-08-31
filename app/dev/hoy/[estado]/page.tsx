@@ -11,6 +11,9 @@ import {
   STRIP_GENERAL_CANDIDATES,
   STRIP_SIN_DISTANCIA_HEADING,
   STRIP_SIN_DISTANCIA_CANDIDATES,
+  SEEDS_GENEROS,
+  SEEDS_PAIS,
+  SEEDS_ARRANQUE,
 } from './fixtures'
 
 /**
@@ -24,10 +27,22 @@ const STRIP_STATE_FIXTURES = {
   'strip-sin-distancia': { heading: STRIP_SIN_DISTANCIA_HEADING, candidates: STRIP_SIN_DISTANCIA_CANDIDATES },
 } as const
 
+/** The first-time seed ladder's three tiers (issue #81), one harness state per `pickSeeds` outcome. */
+const SEED_STATE_FIXTURES = {
+  'first-time-semillas-generos': SEEDS_GENEROS,
+  'first-time-semillas-pais': SEEDS_PAIS,
+  'first-time-semillas-arranque': SEEDS_ARRANQUE,
+} as const
+
 export default async function DevHoyPage({ params }: { params: Promise<{ estado: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound()
 
   const { estado } = await params
+
+  if (estado in SEED_STATE_FIXTURES) {
+    const seeds = SEED_STATE_FIXTURES[estado as keyof typeof SEED_STATE_FIXTURES]
+    return <HomeHero state={{ kind: 'first-time' }} backgroundImage={null} seeds={Promise.resolve(seeds)} />
+  }
 
   if (estado in STRIP_STATE_FIXTURES) {
     const { heading, candidates } = STRIP_STATE_FIXTURES[estado as keyof typeof STRIP_STATE_FIXTURES]

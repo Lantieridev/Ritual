@@ -8,6 +8,17 @@ import type { EventWithAttendance, EventWithRelations } from '@/src/domains/even
 import type { HeroVenueDetails } from '@/src/domains/events/hero-details'
 import { MorningAfterScore } from './MorningAfterScore'
 
+/**
+ * Shape of `getFirstTimeSeeds`'s result (`recommendations/seeds.ts`),
+ * duplicated structurally instead of imported: `recommendations` composes
+ * `events` + `taste` (ADR 0001), so only `app/` is meant to import it —
+ * `events` never imports back from it.
+ */
+interface SeedSet {
+  names: string[]
+  note: string
+}
+
 /*
  * Los cuatro estados de Hoy que no tienen show por delante — portados del
  * prototipo mobile (Ritual Mobile.dc.html: hoyManana, hoyPasado, hoyVacio,
@@ -214,8 +225,6 @@ export function PastOnlyHero({
   )
 }
 
-const SEED_ARTISTS = ['Divididos', 'Babasónicos', 'Wos', 'Trueno', 'Dillom', 'Las Pelotas']
-
 const PROMISES = [
   { n: '01', label: 'El show de esta noche, con la hora y cómo llegar' },
   { n: '02', label: 'Tu entrada, lista para la puerta' },
@@ -248,8 +257,56 @@ function UnissuedTicket() {
   )
 }
 
+/**
+ * Los chips de semilla ya resueltos, más la nota honesta del escalón de la
+ * escalera que los produjo (issue #81's seed ladder) — `pickSeeds` decide
+ * cuál es, nunca se inventa acá.
+ */
+function SeedChips({ seeds }: { seeds: SeedSet }) {
+  return (
+    <>
+      <div className="flex flex-wrap gap-2 mt-3">
+        {seeds.names.map((name) => (
+          <Link
+            key={name}
+            href={`${routes.events.search}?artist=${encodeURIComponent(name)}`}
+            className="min-h-[48px] flex items-center gap-2 px-[14px] border border-ritual-mobile-line font-figure text-[17px] tracking-[0.08em] uppercase text-ritual-gray-light-3"
+          >
+            {name}
+            <span aria-hidden className="font-label text-[12px] text-ritual-red">+</span>
+          </Link>
+        ))}
+      </div>
+      <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-3">{seeds.note}</p>
+    </>
+  )
+}
+
+/** Resuelve la Promise de semillas en su propio Suspense (mismo patrón que `ResolvedTonightMeta`) — nunca bloquea el resto del hero. */
+function ResolvedSeedChips({ seeds }: { seeds: Promise<SeedSet> }) {
+  return <SeedChips seeds={use(seeds)} />
+}
+
+/**
+ * Mientras las semillas resuelven (o si no se pasó `seeds`): dos filas en
+ * hueco y un status accesible — nunca una lista inventada. El status vive
+ * FUERA del bloque `aria-hidden`: un ancestro `aria-hidden` saca del árbol
+ * de accesibilidad a todos sus descendientes, status incluido.
+ */
+function SeedChipsFallback() {
+  return (
+    <div className="mt-3">
+      <div aria-hidden="true" className="flex flex-wrap gap-2">
+        <div className="min-h-[48px] w-28 border border-ritual-mobile-line" />
+        <div className="min-h-[48px] w-28 border border-ritual-mobile-line" />
+      </div>
+      <span role="status" className="sr-only">Buscando tus primeras semillas</span>
+    </div>
+  )
+}
+
 /** Primera vez: no es un vacío, es un talón sin emitir. */
-export function FirstTimeHero() {
+export function FirstTimeHero({ seeds }: { seeds?: Promise<SeedSet> }) {
   return (
     <>
       <section className="relative snap-start bg-ritual-mobile-blank flex flex-col gap-[22px] px-5 pt-3 pb-6 md:min-h-screen md:justify-center md:px-10 md:pt-24">
@@ -283,21 +340,13 @@ export function FirstTimeHero() {
 
       <div className="px-5 pt-6 md:px-10">
         <p className={LIST_KICKER}>¿A cuál de estos fuiste?</p>
-        <div className="flex flex-wrap gap-2 mt-3">
-          {SEED_ARTISTS.map((name) => (
-            <Link
-              key={name}
-              href={`${routes.events.search}?artist=${encodeURIComponent(name)}`}
-              className="min-h-[48px] flex items-center gap-2 px-[14px] border border-ritual-mobile-line font-figure text-[17px] tracking-[0.08em] uppercase text-ritual-gray-light-3"
-            >
-              {name}
-              <span aria-hidden className="font-label text-[12px] text-ritual-red">+</span>
-            </Link>
-          ))}
-        </div>
-        <p className="font-label text-[9px] tracking-[0.14em] uppercase text-ritual-gray-mid mt-3">
-          Para arrancar · con el registro completo salen de tu ciudad y tus géneros
-        </p>
+        {seeds ? (
+          <Suspense fallback={<SeedChipsFallback />}>
+            <ResolvedSeedChips seeds={seeds} />
+          </Suspense>
+        ) : (
+          <SeedChipsFallback />
+        )}
         <p className="font-body italic text-[12.5px] text-ritual-gray-mid mt-[6px]">
           Tocá uno y buscás sus shows para marcar el que viste.
         </p>

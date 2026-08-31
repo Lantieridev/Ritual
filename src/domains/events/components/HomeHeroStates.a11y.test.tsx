@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, act } from '@testing-library/react'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
 import { MorningAfterScore } from '@/src/domains/events/components/MorningAfterScore'
 import type { EventWithAttendance } from '@/src/domains/events/service'
@@ -159,8 +159,18 @@ describe('HomeHeroStates — Accessibility (A11y)', () => {
       expect(ticketContainer).toHaveAttribute('aria-hidden', 'true')
     })
 
-    it('oculta el signo + en las semillas de artistas en primera vez', () => {
-      const { container } = render(<HomeHero state={{ kind: 'first-time' }} backgroundImage={null} />)
+    it('oculta el signo + en las semillas de artistas en primera vez', async () => {
+      let container!: HTMLElement
+      await act(async () => {
+        const result = render(
+          <HomeHero
+            state={{ kind: 'first-time' }}
+            backgroundImage={null}
+            seeds={Promise.resolve({ names: ['Divididos', 'Babasónicos'], note: 'Para arrancar' })}
+          />
+        )
+        container = result.container
+      })
       const plusSigns = Array.from(container.querySelectorAll('span')).filter((s) => s.textContent?.trim() === '+')
       expect(plusSigns.length).toBeGreaterThan(0)
       for (const plus of plusSigns) {

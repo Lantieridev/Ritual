@@ -6,12 +6,23 @@
  */
 import { listSuggestionCandidates } from '@/src/domains/events/service'
 import type { EventWithAttendance, SuggestionCandidateRow } from '@/src/domains/events/service'
-import { getTasteProfile, getArtistImportance, getArtistGenres, findRankingContext, listGenres } from '@/src/domains/taste/service'
-import type { ArtistImportance, TasteBasis, TasteSourceId } from '@/src/domains/taste/service'
+import {
+  getTasteProfile,
+  getArtistImportance,
+  getArtistGenres,
+  findRankingContext,
+  listGenres,
+  findArtistsByGenres,
+  findTopImportanceArtists,
+} from '@/src/domains/taste/service'
+import type { ArtistImportance, TasteBasis, TasteSourceId, SeedArtistCandidate } from '@/src/domains/taste/service'
 import { searchTicketmasterEvents } from '@/src/core/lib/ticketmaster'
 import { getArtistImage } from '@/src/core/lib/artist-image'
+import { parseCoord, type LatLng } from '@/src/core/lib/geo'
+import { computeProximity, IMPORTANCE_FLOOR } from './factors'
 import { toCandidates } from './candidates'
 import { rankSuggestions } from './rank'
+import { pickSeeds, type SeedSet } from './seeds'
 import type { RankedCandidate, StripMode, TicketmasterMatch, WishlistArtist } from './types'
 
 /** Bounds the external Ticketmaster calls: same limit and per-artist slice as the "Cerca tuyo" precedent it replaces. */
@@ -146,4 +157,73 @@ export async function getHomeSuggestions(
     heading: { basis, hasCoords: userCoords !== null, sources: taste?.sources ?? [], declaredGenreLabels },
     candidates: withImages,
   }
+}
+
+/** How many candidates each tier's DB read fetches — `pickSeeds` slices down to 6 once a tier wins. */
+const SEED_CANDIDATE_LIMIT = 20
+
+/**
+ * The nearest upcoming catalog show's venue coordinates for each artist that
+ * has one — `listSuggestionCandidates` is already sorted by date ascending,
+ * so the first row seen per artist is its nearest. Reused as-is (no new
+ * query) for the seed ladder's city-proximity boost.
+ */
+function nearestUpcomingShowCoordsByArtist(rows: readonly SuggestionCandidateRow[]): Map<string, LatLng | null> {
+  const byArtist = new Map<string, LatLng | null>()
+  for (const row of rows) {
+    const lat = parseCoord(row.venues?.lat, 'lat')
+    const lng = parseCoord(row.venues?.lng, 'lng')
+    const coords = lat !== null && lng !== null ? { lat, lng } : null
+    for (const lineupRow of row.lineups) {
+      const artistId = lineupRow.artists?.id
+      if (!artistId || byArtist.has(artistId)) continue
+      byArtist.set(artistId, coords)
+    }
+  }
+  return byArtist
+}
+
+/** Sorts seed candidates by `peso × proximity` (a missing peso floors like the main strip's `computeImportance`) and returns just the names. */
+function rankSeedCandidates(
+  candidates: readonly SeedArtistCandidate[],
+  userCoords: LatLng | null,
+  nearestShowCoords: ReadonlyMap<string, LatLng | null>
+): string[] {
+  return candidates
+    .map((candidate) => ({
+      name: candidate.name,
+      score: (candidate.peso ?? IMPORTANCE_FLOOR) * computeProximity(userCoords, nearestShowCoords.get(candidate.artistId) ?? null).proximity,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => entry.name)
+}
+
+/**
+ * The first-time hero's seed ladder (issue #81's third capability). Every
+ * source goes through `allSettled` — a rejection degrades that tier to an
+ * empty list rather than throwing, so the ladder always resolves to
+ * `pickSeeds`'s tier-3 hardcoded fallback at worst (spec "Seeds MUST NOT
+ * block the hero").
+ */
+export async function getFirstTimeSeeds(userId: string, now: Date = new Date()): Promise<SeedSet> {
+  const rankingContext = await findRankingContext(userId).catch(() => null)
+  const declaredGenreKeys = rankingContext?.declaredGenreKeys ?? []
+  const userCoords = rankingContext?.cityCoords ?? null
+
+  const [genreArtistsResult, topArtistsResult, candidateRowsResult] = await Promise.allSettled([
+    declaredGenreKeys.length > 0 ? findArtistsByGenres(declaredGenreKeys) : Promise.resolve([]),
+    findTopImportanceArtists(SEED_CANDIDATE_LIMIT),
+    listSuggestionCandidates(now),
+  ])
+
+  const genreArtists = genreArtistsResult.status === 'fulfilled' ? genreArtistsResult.value : []
+  const topArtists = topArtistsResult.status === 'fulfilled' ? topArtistsResult.value : []
+  const candidateRows = candidateRowsResult.status === 'fulfilled' ? candidateRowsResult.value : []
+  const nearestShowCoords = nearestUpcomingShowCoordsByArtist(candidateRows)
+
+  return pickSeeds({
+    genreRanked: rankSeedCandidates(genreArtists, userCoords, nearestShowCoords),
+    countryRanked: topArtists.map((artist) => artist.name),
+    hasDeclaredGenres: declaredGenreKeys.length > 0,
+  })
 }

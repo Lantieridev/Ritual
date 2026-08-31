@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within, fireEvent } from '@testing-library/react'
+import { render, screen, within, fireEvent, act } from '@testing-library/react'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
 import { MobileActionProvider } from '@/src/core/components/layout/MobileAction'
 import { MobileTabBar } from '@/src/core/components/layout/MobileTabBar'
@@ -205,8 +205,10 @@ describe('HomeHero — primera vez', () => {
     expect(screen.queryByText(/todavía no hay/i)).not.toBeInTheDocument()
   })
 
-  it('cada semilla busca los shows de ese artista', () => {
-    render(<HomeHero state={{ kind: 'first-time' }} backgroundImage={null} />)
+  it('cada semilla busca los shows de ese artista — issue #81, semillas ya resueltas', async () => {
+    await act(async () => {
+      render(<HomeHero state={{ kind: 'first-time' }} backgroundImage={null} seeds={Promise.resolve({ names: ['Divididos'], note: 'Para arrancar' })} />)
+    })
     expect(screen.getByRole('link', { name: 'Divididos' })).toHaveAttribute('href', '/buscar?artist=Divididos')
   })
 

@@ -94,6 +94,22 @@ export const STRIP_GENERAL_CANDIDATES: SuggestionsStripCandidate[] = [
   },
 ]
 
+/** Issue #81 — first-time seed ladder harness states, one per `pickSeeds` tier. */
+export const SEEDS_GENEROS = {
+  names: ['Bandalos Chinos', 'El Mató a un Policía Motorizado', 'Usted Señálemelo'],
+  note: 'De los géneros que elegiste',
+}
+
+export const SEEDS_PAIS = {
+  names: ['Divididos', 'Babasónicos', 'Wos'],
+  note: 'Los más escuchados y cargados del país · completá el registro para afinarlo',
+}
+
+export const SEEDS_ARRANQUE = {
+  names: ['Divididos', 'Babasónicos', 'Wos', 'Trueno', 'Dillom', 'Las Pelotas'],
+  note: 'Para arrancar',
+}
+
 /** Personal, but city geocoding hasn't resolved yet — no distance anywhere (JD-003). */
 export const STRIP_SIN_DISTANCIA_HEADING: StripHeadingInput = {
   basis: 'declared-genres',

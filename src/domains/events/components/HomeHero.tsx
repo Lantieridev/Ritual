@@ -35,6 +35,8 @@ interface HomeHeroProps {
    * estados la página la renderiza aparte, después del hero.
    */
   suggestions?: ReactNode
+  /** First-time hero's seed ladder (issue #81) — Promise-aware like `details`: `FirstTimeHero` resolves it in its own Suspense, never a hardcoded fallback list. */
+  seeds?: Promise<{ names: string[]; note: string }>
 }
 
 /**
@@ -92,6 +94,7 @@ export function HomeHero({
   initialOpen = false,
   details = null,
   suggestions,
+  seeds,
 }: HomeHeroProps) {
   const resolvedBg = backgroundImage instanceof Promise ? use(backgroundImage) : backgroundImage
   const [open, setOpen] = useState(initialOpen)
@@ -129,7 +132,7 @@ export function HomeHero({
 
   if (state.kind === 'morning-after') return <MorningAfterHero event={state.event} image={resolvedBg} />
   if (state.kind === 'past-only') return <PastOnlyHero event={state.event} yearsAgo={state.yearsAgo} image={resolvedBg} />
-  if (state.kind === 'first-time') return <FirstTimeHero />
+  if (state.kind === 'first-time') return <FirstTimeHero seeds={seeds} />
   if (state.kind === 'guest') return <GuestHero event={state.event} image={resolvedBg} suggestions={suggestions} />
 
   const event = state.kind === 'show-today' ? state.event : state.nextShow

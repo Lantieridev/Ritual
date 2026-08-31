@@ -10,6 +10,8 @@ vi.mock('@/src/domains/taste/service', () => ({
   listGenres: vi.fn(),
   getArtistImportance: vi.fn(),
   getArtistGenres: vi.fn(),
+  findArtistsByGenres: vi.fn(),
+  findTopImportanceArtists: vi.fn(),
 }))
 
 vi.mock('@/src/core/lib/ticketmaster', () => ({
@@ -20,9 +22,17 @@ vi.mock('@/src/core/lib/artist-image', () => ({
   getArtistImage: vi.fn(),
 }))
 
-import { getHomeSuggestions } from '@/src/domains/recommendations/service'
+import { getHomeSuggestions, getFirstTimeSeeds } from '@/src/domains/recommendations/service'
 import { listSuggestionCandidates } from '@/src/domains/events/service'
-import { getTasteProfile, findRankingContext, listGenres, getArtistImportance, getArtistGenres } from '@/src/domains/taste/service'
+import {
+  getTasteProfile,
+  findRankingContext,
+  listGenres,
+  getArtistImportance,
+  getArtistGenres,
+  findArtistsByGenres,
+  findTopImportanceArtists,
+} from '@/src/domains/taste/service'
 import { searchTicketmasterEvents } from '@/src/core/lib/ticketmaster'
 import { getArtistImage } from '@/src/core/lib/artist-image'
 import type { SuggestionCandidateRow, EventWithAttendance } from '@/src/domains/events/service'
@@ -70,6 +80,8 @@ function setupDefaults() {
   vi.mocked(getArtistGenres).mockResolvedValue(new Map())
   vi.mocked(searchTicketmasterEvents).mockResolvedValue({ events: [], total: 0 })
   vi.mocked(getArtistImage).mockResolvedValue({ image: null, source: null })
+  vi.mocked(findArtistsByGenres).mockResolvedValue([])
+  vi.mocked(findTopImportanceArtists).mockResolvedValue([])
 }
 
 describe('getHomeSuggestions — never throws on source rejection', () => {
@@ -234,5 +246,100 @@ describe('getHomeSuggestions — attendance wiring (own-event exclusion + seen r
 
     expect(result.candidates).toHaveLength(1)
     expect(result.candidates[0].reason).toEqual({ kind: 'seen', times: 1 })
+  })
+})
+
+describe('getFirstTimeSeeds — the seed ladder (issue #81)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setupDefaults()
+  })
+
+  it('picks tier 1 (declared genres) when at least 3 genre-matched artists resolve', async () => {
+    vi.mocked(findRankingContext).mockResolvedValue({ declaredGenreKeys: ['indie'], cityCoords: null })
+    vi.mocked(findArtistsByGenres).mockResolvedValue([
+      { artistId: 'a1', name: 'Bandalos Chinos', peso: 0.5 },
+      { artistId: 'a2', name: 'El Mató', peso: 0.4 },
+      { artistId: 'a3', name: 'Usted Señálemelo', peso: 0.3 },
+    ])
+
+    const result = await getFirstTimeSeeds('u1', NOW)
+
+    expect(result.note).toBe('De los géneros que elegiste')
+    expect(result.names).toEqual(['Bandalos Chinos', 'El Mató', 'Usted Señálemelo'])
+  })
+
+  it('ranks tier 1 by peso × proximity to each artist’s nearest upcoming show — the city-proximity boost', async () => {
+    vi.mocked(findRankingContext).mockResolvedValue({ declaredGenreKeys: ['indie'], cityCoords: { lat: -34.6, lng: -58.45 } })
+    // Equal peso: the artist whose nearest show is close to the user's city must outrank the far one.
+    vi.mocked(findArtistsByGenres).mockResolvedValue([
+      { artistId: 'far', name: 'Lejano', peso: 0.5 },
+      { artistId: 'near', name: 'Cercano', peso: 0.5 },
+      { artistId: 'no-show', name: 'SinShow', peso: 0.5 },
+    ])
+    vi.mocked(listSuggestionCandidates).mockResolvedValue([
+      catalogRow({
+        id: 'ev-near',
+        date: '2026-09-20T21:00:00-03:00',
+        venues: { name: 'Niceto', city: 'CABA', lat: -34.6, lng: -58.45 },
+        lineups: [{ artists: { id: 'near', name: 'Cercano' } }],
+      }),
+      catalogRow({
+        id: 'ev-far',
+        date: '2026-09-21T21:00:00-03:00',
+        venues: { name: 'Ushuaia Rock', city: 'Ushuaia', lat: -54.8, lng: -68.3 },
+        lineups: [{ artists: { id: 'far', name: 'Lejano' } }],
+      }),
+    ])
+
+    const result = await getFirstTimeSeeds('u1', NOW)
+
+    expect(result.names.indexOf('Cercano')).toBeLessThan(result.names.indexOf('Lejano'))
+    // SinShow has no upcoming show → neutral proximity (0.7), still ranked (equal peso), never dropped.
+    expect(result.names).toContain('SinShow')
+  })
+
+  it('falls back to tier 2 (importance) WITH the suffix when the user declared no genres at all (JD-002)', async () => {
+    vi.mocked(findRankingContext).mockResolvedValue({ declaredGenreKeys: [], cityCoords: null })
+    vi.mocked(findTopImportanceArtists).mockResolvedValue([
+      { artistId: 'a1', name: 'Divididos', peso: 0.9 },
+      { artistId: 'a2', name: 'Babasónicos', peso: 0.8 },
+      { artistId: 'a3', name: 'Wos', peso: 0.7 },
+    ])
+
+    const result = await getFirstTimeSeeds('u1', NOW)
+
+    expect(result.note).toBe('Los más escuchados y cargados del país · completá el registro para afinarlo')
+    expect(result.names).toEqual(['Divididos', 'Babasónicos', 'Wos'])
+  })
+
+  it('falls back to tier 2 WITHOUT the suffix when genres were declared but fewer than 3 matched', async () => {
+    vi.mocked(findRankingContext).mockResolvedValue({ declaredGenreKeys: ['indie'], cityCoords: null })
+    vi.mocked(findArtistsByGenres).mockResolvedValue([{ artistId: 'a1', name: 'Bandalos Chinos', peso: 0.5 }])
+    vi.mocked(findTopImportanceArtists).mockResolvedValue([
+      { artistId: 'b1', name: 'Divididos', peso: 0.9 },
+      { artistId: 'b2', name: 'Babasónicos', peso: 0.8 },
+      { artistId: 'b3', name: 'Wos', peso: 0.7 },
+    ])
+
+    const result = await getFirstTimeSeeds('u1', NOW)
+
+    expect(result.note).toBe('Los más escuchados y cargados del país')
+  })
+
+  it('falls back to tier 3 (hardcoded) when neither tier has enough data', async () => {
+    const result = await getFirstTimeSeeds('u1', NOW)
+
+    expect(result.note).toBe('Para arrancar')
+    expect(result.names.length).toBeGreaterThan(0)
+  })
+
+  it('never throws even when every source rejects at once', async () => {
+    vi.mocked(findRankingContext).mockRejectedValue(new Error('rls denied'))
+    vi.mocked(findArtistsByGenres).mockRejectedValue(new Error('boom'))
+    vi.mocked(findTopImportanceArtists).mockRejectedValue(new Error('boom'))
+    vi.mocked(listSuggestionCandidates).mockRejectedValue(new Error('boom'))
+
+    await expect(getFirstTimeSeeds('u1', NOW)).resolves.toMatchObject({ note: 'Para arrancar' })
   })
 })

@@ -13,11 +13,22 @@ import {
   getArtistImportance as getArtistImportanceData,
   getArtistGenres as getArtistGenresData,
   findRankingContext as findRankingContextData,
+  findArtistsByGenres as findArtistsByGenresData,
+  findTopImportanceArtists as findTopImportanceArtistsData,
 } from './data'
-import type { GenreOption, TasteProfileRow, RankingContext } from './data'
+import type { GenreOption, TasteProfileRow, RankingContext, SeedArtistCandidate } from './data'
 import type { ArtistImportance, TasteBasis, TasteProfile, TasteSourceId } from './types'
 
-export type { GenreOption, TasteProfileRow, RankingContext, ArtistImportance, TasteBasis, TasteProfile, TasteSourceId }
+export type {
+  GenreOption,
+  TasteProfileRow,
+  RankingContext,
+  SeedArtistCandidate,
+  ArtistImportance,
+  TasteBasis,
+  TasteProfile,
+  TasteSourceId,
+}
 
 /**
  * Use-case layer for the taste domain (ADR 0001) — same seam as
@@ -125,6 +136,16 @@ export async function getArtistGenres(artistIds: readonly string[]): Promise<Map
 /** Declared genres + city coordinates for the ranking pure core (proximity + declared-genres basis). */
 export async function findRankingContext(userId: string): Promise<RankingContext | null> {
   return findRankingContextData(userId)
+}
+
+/** Tier 1 of the first-time seed ladder (issue #81): artists matching a declared genre. */
+export async function findArtistsByGenres(genreKeys: readonly string[]): Promise<SeedArtistCandidate[]> {
+  return findArtistsByGenresData(genreKeys)
+}
+
+/** Tier 2 of the first-time seed ladder (issue #81): top artists nationwide by peso. */
+export async function findTopImportanceArtists(limit: number): Promise<SeedArtistCandidate[]> {
+  return findTopImportanceArtistsData(limit)
 }
 
 /**

@@ -97,6 +97,65 @@ export async function findRankingContext(userId: string): Promise<RankingContext
   }
 }
 
+/** One artist candidate for the first-time seed ladder — `peso` is `null` when the artist has no `artist_importance` row yet (the caller floors it, same as the main strip's `computeImportance`). */
+export interface SeedArtistCandidate {
+  artistId: string
+  name: string
+  peso: number | null
+}
+
+/**
+ * Artists whose declared genre matches (tier 1 of the seed ladder, issue
+ * #81). Two queries instead of one nested filter — same reasoning as the
+ * rest of this file: `artist_genres` has no direct relationship to
+ * `artist_importance`, only to `artists`, so a single PostgREST embed can't
+ * reach peso from a genre filter in one hop.
+ */
+export async function findArtistsByGenres(genreKeys: readonly string[]): Promise<SeedArtistCandidate[]> {
+  if (genreKeys.length === 0) return []
+
+  const supabase = await createClient()
+  const { data: genreRows, error: genreError } = await supabase
+    .from('artist_genres')
+    .select('artist_id')
+    .in('genre_key', genreKeys as string[])
+  if (genreError || !genreRows) return []
+
+  const artistIds = [...new Set(genreRows.map((row) => row.artist_id as string))]
+  if (artistIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('artists')
+    .select('id, name, artist_importance ( peso )')
+    .in('id', artistIds)
+  if (error || !data) return []
+
+  return data.map((row) => {
+    const importance = row.artist_importance as unknown as { peso: number | null } | null
+    return { artistId: row.id as string, name: row.name as string, peso: importance?.peso ?? null }
+  })
+}
+
+/** Top artists nationwide by `peso` (tier 2 of the seed ladder) — public data, no user context needed. */
+export async function findTopImportanceArtists(limit: number): Promise<SeedArtistCandidate[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('artist_importance')
+    .select('artist_id, peso, artists ( name )')
+    .not('peso', 'is', null)
+    .order('peso', { ascending: false })
+    .limit(limit)
+  if (error || !data) return []
+
+  return data
+    .map((row) => ({
+      artistId: row.artist_id as string,
+      name: ((row.artists as unknown as { name: string } | null)?.name ?? '') as string,
+      peso: row.peso as number,
+    }))
+    .filter((artist) => artist.name.length > 0)
+}
+
 /** Batched read of `artist_importance`, for change 2's ranking function. Empty ids never touch the DB. */
 export async function getArtistImportance(artistIds: readonly string[]): Promise<Map<string, ArtistImportance>> {
   if (artistIds.length === 0) return new Map()
