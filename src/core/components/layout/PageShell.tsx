@@ -15,7 +15,11 @@ const TITLE_CLASS = 'font-display text-5xl uppercase text-ritual-bone'
 /**
  * Wrapper de página: maneja márgenes, ancho máximo y estructura de título.
  * La navegación (Navbar/Footer) queda delegada al layout.tsx global.
- * El pt-20 compensa la altura del Navbar sticky (h-16).
+ * El pt-20 en md+ compensa la altura del Navbar de escritorio sticky (h-16),
+ * que está oculto por debajo de md (ver Navbar.tsx) — ahí no hace falta ese
+ * aire. En mobile el aire inferior sale de `--ritual-mobile-clearance`
+ * (globals.css): el `padBottom` del prototipo, que sube solo cuando la
+ * pantalla fija su acción principal sobre el talón.
  */
 export function PageShell({
   backHref,
@@ -26,7 +30,7 @@ export function PageShell({
   children,
 }: PageShellProps) {
   return (
-    <main className="min-h-screen bg-ritual-bg text-ritual-bone pt-20 pb-16">
+    <main className="min-h-screen bg-ritual-bg text-ritual-bone pt-6 md:pt-20 pb-[var(--ritual-mobile-clearance)] md:pb-16">
       <div className="max-w-7xl mx-auto px-6 md:px-8">
         {backHref ? (
           <Link

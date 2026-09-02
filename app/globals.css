@@ -38,10 +38,60 @@
   --color-ritual-paper-ink: #141210;
   --color-ritual-paper-red: #C2261C;
 
+  /*
+   * Tokens propios del mobile nativo (handoff Ritual Mobile.dc.html,
+   * Claude Design) — no coinciden exacto con ningún token de escritorio
+   * existente, así que se declaran aparte en vez de aproximarlos a uno
+   * cercano. El resto de los colores del talón de navegación (glifo activo,
+   * inactivo, marca) SÍ coinciden con tokens ya existentes (bone, gray-mid,
+   * red) y usan esos, no hex sueltos.
+   */
+  --color-ritual-mobile-nav-bg: #0E0E11;
+  --color-ritual-mobile-nav-border: #1E1E23;
+
+  /*
+   * Banda de entrada (contexto "Tu entrada de hoy" sobre el talón, .dc.html
+   * líneas ~733-736): fondo y borde también son valores propios, un tono
+   * más claro que --color-ritual-mobile-nav-bg/-border pero sin coincidir
+   * con --color-ritual-surface (#101013) ni --color-ritual-border-3
+   * (#2E2E35) — se aproximaban ahí y quedaban imprecisos, así que se separan
+   * en sus propios tokens en vez de reusar uno cercano.
+   */
+  --color-ritual-mobile-banda-bg: #101012;
+  --color-ritual-mobile-banda-border: #232327;
+
+  /*
+   * Grises de Hoy mobile (estado "primera vez" y listas): el talón sin
+   * emitir se dibuja con tintas que no coinciden exacto con ningún token de
+   * escritorio — el más cercano de cada una es otro tono — así que se
+   * declaran aparte.
+   */
+  --color-ritual-mobile-line: #2A2A2E;
+  --color-ritual-mobile-dashed: #2E2E33;
+  --color-ritual-mobile-ghost: #26262B;
+  --color-ritual-mobile-ghost-label: #3E3E44;
+  --color-ritual-mobile-blank: #0D0D0F;
+
   --shadow-ritual-low: 0 14px 28px -18px rgba(0, 0, 0, 0.9);
   --shadow-ritual-high: 0 34px 70px -30px rgba(0, 0, 0, 0.95);
 
   --ease-ritual: cubic-bezier(0.16, 0.84, 0.16, 1);
+
+  /*
+   * Aire inferior de la página en mobile para que la pila fija de abajo no
+   * tape el contenido — el `padBottom` del prototipo (Ritual Mobile.dc.html).
+   * Sube cuando una pantalla fija su acción principal sobre el talón (ver
+   * MobileAction.tsx, que marca `data-mobile-action` en <html>).
+   */
+  --ritual-mobile-clearance: 94px;
+}
+
+html[data-mobile-action="hero"] {
+  --ritual-mobile-clearance: 162px;
+}
+
+html[data-mobile-action="alt"] {
+  --ritual-mobile-clearance: 220px;
 }
 
 @theme inline {
@@ -75,6 +125,15 @@
   --color-ritual-paper-2: var(--color-ritual-paper-2);
   --color-ritual-paper-ink: var(--color-ritual-paper-ink);
   --color-ritual-paper-red: var(--color-ritual-paper-red);
+  --color-ritual-mobile-nav-bg: var(--color-ritual-mobile-nav-bg);
+  --color-ritual-mobile-nav-border: var(--color-ritual-mobile-nav-border);
+  --color-ritual-mobile-banda-bg: var(--color-ritual-mobile-banda-bg);
+  --color-ritual-mobile-banda-border: var(--color-ritual-mobile-banda-border);
+  --color-ritual-mobile-line: var(--color-ritual-mobile-line);
+  --color-ritual-mobile-dashed: var(--color-ritual-mobile-dashed);
+  --color-ritual-mobile-ghost: var(--color-ritual-mobile-ghost);
+  --color-ritual-mobile-ghost-label: var(--color-ritual-mobile-ghost-label);
+  --color-ritual-mobile-blank: var(--color-ritual-mobile-blank);
 
   --shadow-ritual-low: var(--shadow-ritual-low);
   --shadow-ritual-high: var(--shadow-ritual-high);

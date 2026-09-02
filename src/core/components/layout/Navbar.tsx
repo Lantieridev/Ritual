@@ -53,7 +53,7 @@ export function Navbar({ user }: NavbarProps) {
     }
 
     return (
-        <header className="fixed top-0 inset-x-0 z-50 h-16 border-b border-ritual-border-subtle bg-ritual-panel/90 backdrop-blur-md">
+        <header className="hidden md:block fixed top-0 inset-x-0 z-50 h-16 border-b border-ritual-border-subtle bg-ritual-panel/90 backdrop-blur-md">
             <div className="max-w-7xl mx-auto h-full px-6 md:px-8 flex items-center justify-between gap-8">
                 {/* Logo */}
                 <Link

@@ -9,7 +9,7 @@ import {
   Space_Grotesk,
 } from "next/font/google";
 import "./globals.css";
-import { Navbar, Footer } from "@/src/core/components/layout";
+import { Navbar, MobileTabBar, Footer, MobileActionProvider } from "@/src/core/components/layout";
 
 const anton = Anton({ variable: "--font-anton", weight: "400", subsets: ["latin"] });
 const archivoBlack = Archivo_Black({ variable: "--font-archivo-black", weight: "400", subsets: ["latin"] });
@@ -63,10 +63,13 @@ export default async function RootLayout({
     <html lang="es" className="dark">
       <body className={`${fontVariables} antialiased font-sans`}>
         <GraphQLProvider>
-          <Navbar user={user} />
-          {children}
-          <Footer />
-          {showOnboarding && <OnboardingTour />}
+          <MobileActionProvider>
+            <Navbar user={user} />
+            {children}
+            <Footer />
+            <MobileTabBar user={user} />
+            {showOnboarding && <OnboardingTour />}
+          </MobileActionProvider>
         </GraphQLProvider>
       </body>
     </html>

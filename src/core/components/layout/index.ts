@@ -1,4 +1,7 @@
 export { PageShell } from './PageShell'
 export type { PageShellProps } from './PageShell'
 export { Navbar } from './Navbar'
+export { MobileTabBar } from './MobileTabBar'
+export { MobileActionProvider, MobileHeroAction, useMobileHeroAction } from './MobileAction'
+export type { MobileHeroActionSpec } from './MobileAction'
 export { Footer } from './Footer'
