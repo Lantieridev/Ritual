@@ -13,6 +13,14 @@ const mockEvent: EventWithAttendance = {
   attendance: [{ id: 'att-1', status: 'going', user_id: 'u-1', rating: null, review: null }]
 }
 
+// Fixture del hero mobile de Hoy sin dirección, clima ni "Lo último que
+// viste": prueba en mano y en e2e que esas secciones se omiten enteras en
+// vez de mostrar un placeholder inventado.
+const mockEventSinDatos: EventWithAttendance = {
+  ...mockEvent,
+  venues: { name: 'Mock Venue', city: 'Buenos Aires', country: 'Argentina' },
+}
+
 export default async function DevHoyPage({ params }: { params: Promise<{ estado: string }> }) {
   if (process.env.NODE_ENV === 'production') notFound()
 
@@ -43,6 +51,12 @@ export default async function DevHoyPage({ params }: { params: Promise<{ estado:
       break
     case 'show-today':
       state = { kind: 'show-today', event: mockEvent }
+      break
+    case 'normal-sin-datos':
+      state = { kind: 'normal', nextShow: mockEventSinDatos, daysUntil: 5 }
+      break
+    case 'show-today-sin-datos':
+      state = { kind: 'show-today', event: mockEventSinDatos }
       break
     default:
       notFound()

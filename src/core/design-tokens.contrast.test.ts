@@ -532,6 +532,100 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
     isBold: true,
     isLarge: false,
   },
+
+  // --- HomeHeroStates.tsx / TonightMobileHero (#82 — hoy mobile) ---
+  {
+    id: 'HHT-01',
+    component: 'HomeHeroStates / TonightMobileHero',
+    element: 'Heading h1 headliner',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-panel',
+    fontSize: '78px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'HHT-02',
+    component: 'HomeHeroStates / TonightMeta',
+    element: 'Venue line',
+    textToken: '--color-ritual-gray-light-3',
+    bgToken: '--color-ritual-panel',
+    fontSize: '22px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'HHT-03',
+    component: 'HomeHeroStates / TonightMeta',
+    element: 'Address text',
+    textToken: '--color-ritual-gray-text',
+    bgToken: '--color-ritual-panel',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'HHT-04',
+    component: 'HomeHeroStates / TonightMeta',
+    element: 'Weather tag',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-panel',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'HHT-05',
+    component: 'HomeHeroStates / TonightMeta',
+    element: 'Separator "·" (aria-hidden)',
+    textToken: '--color-ritual-mobile-sep',
+    bgToken: '--color-ritual-panel',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+    exempt: true,
+    exemptReason: 'Decorative separator, aria-hidden="true" — not a text pair a screen reader user reads',
+  },
+  {
+    id: 'HHT-06',
+    component: 'HomeHeroStates / RecentSeenList',
+    element: 'List kicker "Lo último que viste"',
+    textToken: '--color-ritual-gray-mid-2',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'HHT-07',
+    component: 'HomeHeroStates / RecentSeenList',
+    element: 'Recent show name',
+    textToken: '--color-ritual-bone',
+    bgToken: '--color-ritual-bg',
+    fontSize: '21px',
+    isBold: true,
+    isLarge: true,
+  },
+  {
+    id: 'HHT-08',
+    component: 'HomeHeroStates / RecentSeenList',
+    element: 'Recent show meta',
+    textToken: '--color-ritual-gray-mid-2',
+    bgToken: '--color-ritual-bg',
+    fontSize: '9px',
+    isBold: false,
+    isLarge: false,
+  },
+  {
+    id: 'HHT-09',
+    component: 'HomeHeroStates / RecentSeenList',
+    element: 'Recent show score',
+    textToken: '--color-ritual-red',
+    bgToken: '--color-ritual-bg',
+    fontSize: '19px',
+    isBold: true,
+    isLarge: true,
+  },
 ]
 
 describe('Design Tokens & Color Contrast (WCAG AA)', () => {
@@ -542,10 +636,15 @@ describe('Design Tokens & Color Contrast (WCAG AA)', () => {
     expect(TOKENS['--color-ritual-panel']).toBe('#0B0B0C')
   })
 
+  it('declares the mobile-sep token for the Hoy hero separator (#82)', () => {
+    expect(TOKENS['--color-ritual-mobile-sep']).toBe('#33333A')
+  })
+
   // Pares que salen tal cual del prototipo aprobado y no llegan a AA (#78). No
   // se cuentan acá: los cubre el bloque de deuda de diseño (`it.fails`) de abajo.
   const DESIGN_DEBT_PAIR_IDS = new Set([
     'HHS-05', 'MAS-02', 'HHS-09', 'HHS-11', 'HHS-24', 'HHS-26', 'HHS-27', 'HHS-28', 'MTB-05', 'MTB-07',
+    'HHT-04', 'HHT-06', 'HHT-08', // #78
   ])
 
   it('every non-exempt text pair outside the known design debt meets WCAG AA', () => {
@@ -593,6 +692,7 @@ describe('Design Tokens & Color Contrast (WCAG AA)', () => {
     { label: 'Notas de semillas (gray-mid sobre bg, 9–12.5px)', text: '--color-ritual-gray-mid', bg: '--color-ritual-bg', required: 4.5 },
     { label: 'Subtítulo de la banda (gray-mid-2 sobre banda-bg, 9px)', text: '--color-ritual-gray-mid-2', bg: '--color-ritual-mobile-banda-bg', required: 4.5 },
     { label: 'Acción de la banda (panel sobre rojo, 16px)', text: '--color-ritual-panel', bg: '--color-ritual-red', required: 4.5 },
+    { label: 'Tag de clima de Hoy (rojo sobre panel, 9px)', text: '--color-ritual-red', bg: '--color-ritual-panel', required: 4.5 },
   ]
 
   for (const debt of DESIGN_DEBT) {

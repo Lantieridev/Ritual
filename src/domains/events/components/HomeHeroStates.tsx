@@ -3,7 +3,9 @@ import type { ReactNode } from 'react'
 import { MobileHeroAction } from '@/src/core/components/layout/MobileAction'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
+import { heroBadgeText, weatherTag, type HomeHeroState } from '@/src/domains/events/home-view'
 import type { EventWithAttendance, EventWithRelations } from '@/src/domains/events/service'
+import type { EventWeather } from '@/src/domains/weather/weather-service'
 import { MorningAfterScore } from './MorningAfterScore'
 
 /*
@@ -382,5 +384,129 @@ export function GuestHero({ event, image }: { event: EventWithRelations | undefi
 
       <MobileHeroAction label="Cortar tu talón" href={routes.login} />
     </>
+  )
+}
+
+/**
+ * Dirección y clima del show de hoy, ya resueltos — el tipo canónico
+ * `HeroVenueDetails` (misma forma) se define en `hero-details.ts` (issue #8 /
+ * #82); acá se declara localmente para que este archivo no dependa todavía
+ * de ese módulo server-only, que llega en un commit posterior.
+ */
+export interface TonightMetaDetails {
+  address: string | null
+  weather: EventWeather | null
+}
+
+/* Scrim propio del hero de "hoy" mobile (.dc.html línea 271): más abierto que
+   el resto porque el h1 y el meta que sigue debajo necesitan leerse sobre la
+   foto sin que el degradado los tape antes de tiempo. */
+const TONIGHT_SCRIM = 'from-ritual-panel from-[8%] via-ritual-panel/35 via-[60%] to-ritual-panel/55'
+
+/**
+ * Hero mobile de "hoy" (show-today) y "cuenta regresiva" (normal) — sin la
+ * butaca hardcodeada del desktop (Ritual no tiene esa data) y sin el 3D, que
+ * en mobile no monta (issue #82). HomeHero.tsx lo cablea dentro de un
+ * `md:hidden`, junto al desktop existente.
+ */
+export function TonightMobileHero({
+  state,
+  image,
+  details,
+}: {
+  state: Extract<HomeHeroState, { kind: 'show-today' | 'normal' }>
+  image: string | null
+  details: TonightMetaDetails | null
+}) {
+  const event = state.kind === 'show-today' ? state.event : state.nextShow
+  const headliner = headlinerOf(event)
+  const venueName = event.venues?.name ?? ''
+
+  return (
+    <div className="relative h-[500px] overflow-hidden bg-ritual-panel">
+      <div className="absolute inset-0 ritual-photo-fallback" />
+      {image && (
+        <div
+          className="absolute inset-0 ritual-photo ritual-photo-bg"
+          style={{ backgroundImage: `url(${image})`, backgroundSize: 'cover', backgroundPosition: '56% 22%' }}
+        />
+      )}
+      <div className={`absolute inset-0 bg-gradient-to-t ${TONIGHT_SCRIM}`} />
+      <p className="absolute left-5 top-[104px] z-20 font-label text-[9px] font-bold tracking-[0.26em] uppercase px-[9px] py-[5px] bg-ritual-red text-ritual-panel">
+        {heroBadgeText(state)}
+      </p>
+      <div className="absolute inset-x-5 bottom-5 z-20">
+        <h1 className="font-display text-[length:min(78px,19vw)] leading-[0.79] tracking-[-0.02em] uppercase text-ritual-bone">
+          {headliner}
+        </h1>
+        {venueName && (
+          <p className="font-subtitle font-black text-[22px] uppercase leading-none text-ritual-gray-light-3 mt-2">
+            {venueName}
+          </p>
+        )}
+        <TonightMeta details={details} />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Línea de dirección y clima del show de hoy — sin dato inventado: cada
+ * parte se omite si no está resuelta, y el separador nunca queda colgando
+ * (issue #82).
+ */
+export function TonightMeta({ details }: { details: TonightMetaDetails | null }) {
+  if (!details) return null
+  const { address, weather } = details
+  if (!address && !weather) return null
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mt-[9px] font-label text-[9px] tracking-[0.1em] uppercase text-ritual-gray-text">
+      {address && <span>{address}</span>}
+      {address && weather && (
+        <span aria-hidden="true" className="text-ritual-mobile-sep">·</span>
+      )}
+      {weather && <span className="text-ritual-red">{weatherTag(weather)}</span>}
+    </div>
+  )
+}
+
+/**
+ * "Lo último que viste" — hasta `RECENT_SEEN_LIMIT` shows vistos, con o sin
+ * puntaje (issue #82). Se omite entera sin shows vistos; nunca rellena con
+ * slots vacíos si hay menos de tres.
+ */
+export function RecentSeenList({ events }: { events: EventWithAttendance[] }) {
+  if (events.length === 0) return null
+
+  return (
+    <div className="px-5 pt-[22px]">
+      <p className={LIST_KICKER}>Lo último que viste</p>
+      {events.map((ev) => {
+        const rating = ev.attendance?.[0]?.rating
+        const meta = [ev.venues?.name, formatDate(ev.date, { day: '2-digit', month: 'short' })]
+          .filter(Boolean)
+          .join(' · ')
+        return (
+          <div key={ev.id} className="flex items-center gap-[13px] py-3 border-b border-ritual-surface-high">
+            <div aria-hidden="true" className="w-11 h-14 flex-none ritual-photo-fallback" />
+            <div className="flex-1 min-w-0">
+              <p className="font-subtitle font-black text-[21px] uppercase leading-none text-ritual-bone">
+                {headlinerOf(ev)}
+              </p>
+              <p className="font-label text-[9px] tracking-[0.1em] uppercase text-ritual-gray-mid-2 mt-[3px]">
+                {meta}
+              </p>
+            </div>
+            {rating != null && (
+              <span className="font-display text-[19px] text-ritual-red">
+                <span aria-hidden="true">{rating}/5</span>
+                <span className="sr-only">Le pusiste {rating} de 5</span>
+              </span>
+            )}
+          </div>
+        )
+      })}
+    </div>
   )
 }

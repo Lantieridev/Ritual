@@ -72,6 +72,14 @@
   --color-ritual-mobile-ghost-label: #3E3E44;
   --color-ritual-mobile-blank: #0D0D0F;
 
+  /*
+   * Separador "·" del meta de dirección/clima del hero de Hoy (#82,
+   * .dc.html línea ~285) — más oscuro que --color-ritual-mobile-line
+   * (#2A2A2E) y sin coincidir con ningún token existente; es decorativo
+   * (aria-hidden) así que no necesita pasar contraste AA.
+   */
+  --color-ritual-mobile-sep: #33333A;
+
   --shadow-ritual-low: 0 14px 28px -18px rgba(0, 0, 0, 0.9);
   --shadow-ritual-high: 0 34px 70px -30px rgba(0, 0, 0, 0.95);
 
@@ -134,6 +142,7 @@ html[data-mobile-action="alt"] {
   --color-ritual-mobile-ghost: var(--color-ritual-mobile-ghost);
   --color-ritual-mobile-ghost-label: var(--color-ritual-mobile-ghost-label);
   --color-ritual-mobile-blank: var(--color-ritual-mobile-blank);
+  --color-ritual-mobile-sep: var(--color-ritual-mobile-sep);
 
   --shadow-ritual-low: var(--shadow-ritual-low);
   --shadow-ritual-high: var(--shadow-ritual-high);
