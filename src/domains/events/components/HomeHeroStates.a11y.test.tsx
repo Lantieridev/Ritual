@@ -36,14 +36,24 @@ describe('HomeHeroStates — Accessibility (A11y)', () => {
       expect(h1s[0].textContent?.trim()).toBe('Cosquín Rock 2026')
     })
 
-    it('estado "show-today": tiene exactamente un h1 no vacío', () => {
+    // "show-today"/"normal" (#82) renderizan un h1 por breakpoint —
+    // escritorio (`hidden md:block`) y mobile (`md:hidden`) — para que cada
+    // uno tenga su propia estructura (sin talón 3D ni butaca en mobile).
+    // jsdom no evalúa esas media queries (no hay motor de layout real), así
+    // que ambos quedan en el árbol de accesibilidad acá; en un navegador
+    // real sólo uno es visible a la vez — ese "exactamente uno" lo cubre
+    // e2e (Playwright), que sí corre con CSS real.
+    it('estado "show-today": el h1 de escritorio y el de mobile no están vacíos y coinciden', () => {
       render(<HomeHero state={{ kind: 'show-today', event: sampleEvent }} backgroundImage={null} />)
       const h1s = screen.getAllByRole('heading', { level: 1 })
-      expect(h1s).toHaveLength(1)
-      expect(h1s[0].textContent?.trim().length).toBeGreaterThan(0)
+      expect(h1s).toHaveLength(2)
+      for (const h1 of h1s) {
+        expect(h1.textContent?.trim().length).toBeGreaterThan(0)
+      }
+      expect(h1s[0].textContent?.trim()).toBe(h1s[1].textContent?.trim())
     })
 
-    it('estado "normal": tiene exactamente un h1 no vacío', () => {
+    it('estado "normal": el h1 de escritorio y el de mobile no están vacíos y coinciden', () => {
       render(
         <HomeHero
           state={{ kind: 'normal', nextShow: sampleEvent, daysUntil: 12 }}
@@ -51,8 +61,11 @@ describe('HomeHeroStates — Accessibility (A11y)', () => {
         />
       )
       const h1s = screen.getAllByRole('heading', { level: 1 })
-      expect(h1s).toHaveLength(1)
-      expect(h1s[0].textContent?.trim().length).toBeGreaterThan(0)
+      expect(h1s).toHaveLength(2)
+      for (const h1 of h1s) {
+        expect(h1.textContent?.trim().length).toBeGreaterThan(0)
+      }
+      expect(h1s[0].textContent?.trim()).toBe(h1s[1].textContent?.trim())
     })
 
     it('estado "morning-after": tiene exactamente un h1 no vacío', () => {

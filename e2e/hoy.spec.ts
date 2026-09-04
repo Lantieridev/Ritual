@@ -8,7 +8,11 @@ const STATES = [
   'past-only-sin-efemeride',
   'morning-after',
   'normal',
-  'show-today'
+  'show-today',
+  // Sin sede/clima/"Lo último que viste" (#82) — misma pasada genérica de
+  // overflow, targets ≥44px y clearance de footer, con la degradación honesta.
+  'normal-sin-datos',
+  'show-today-sin-datos'
 ];
 
 const DESKTOP_VIEWPORTS = [

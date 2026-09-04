@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
+import { MobileActionProvider } from '@/src/core/components/layout/MobileAction'
+import { MobileTabBar } from '@/src/core/components/layout/MobileTabBar'
 import type { EventWithAttendance } from '@/src/domains/events/service'
 
 // El puntaje de "la mañana después" guarda vía Server Action y refresca el
-// router: ninguno de los dos existe fuera de Next.
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
+// router: ninguno de los dos existe fuera de Next. `usePathname` lo pide
+// MobileTabBar, que hace falta acá para disparar la acción hoisted.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => '/' }))
 vi.mock('@/src/domains/events/attendance-actions', () => ({ saveMemory: vi.fn(async () => ({})) }))
 
 /**
@@ -230,6 +233,62 @@ describe('HomeHero — sin sesión', () => {
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
     expect(screen.getByText(/colección vacía/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Entrar' })).toBeInTheDocument()
+  })
+})
+
+describe('HomeHero — mobile (#82)', () => {
+  it('el CTA hoisted del talón mobile abre el mismo talón que el botón de escritorio', () => {
+    render(
+      <MobileActionProvider>
+        <HomeHero state={{ kind: 'normal', nextShow: event, daysUntil: 12 }} backgroundImage={null} />
+        <MobileTabBar />
+      </MobileActionProvider>
+    )
+
+    expect(screen.queryAllByText('Entrada válida')).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir mi entrada' }))
+    // El talón vive una vez por breakpoint (desktop `hidden md:block`, mobile
+    // `md:hidden`): jsdom no evalúa media queries, así que ambas instancias
+    // quedan en el DOM — sólo una es visible según el ancho real.
+    expect(screen.getAllByText('Entrada válida').length).toBeGreaterThan(0)
+  })
+
+  it('initialOpen muestra el talón ya abierto al montar', () => {
+    render(
+      <HomeHero state={{ kind: 'show-today', event }} backgroundImage={null} initialOpen />
+    )
+
+    expect(screen.getAllByText('Entrada válida').length).toBeGreaterThan(0)
+  })
+
+  it('el botón de cerrar crece a 44px en mobile y vuelve a su tamaño en desktop', () => {
+    render(<HomeHero state={{ kind: 'show-today', event }} backgroundImage={null} initialOpen />)
+
+    const closeButtons = screen.getAllByRole('button', { name: /cerrar/i })
+    expect(closeButtons.length).toBeGreaterThan(0)
+    for (const closeButton of closeButtons) {
+      expect(closeButton.className).toContain('min-h-[44px]')
+      expect(closeButton.className).toContain('md:min-h-0')
+    }
+  })
+
+  it('la sección de escritorio queda oculta en mobile', () => {
+    const { container } = renderNormal(12)
+    const section = container.querySelector('section')
+    expect(section?.className).toContain('hidden')
+    expect(section?.className).toContain('md:block')
+  })
+
+  it('hay un único CTA "Abrir mi entrada" — el del escritorio dice distinto ("ABRIR MI ENTRADA")', () => {
+    render(
+      <MobileActionProvider>
+        <HomeHero state={{ kind: 'normal', nextShow: event, daysUntil: 12 }} backgroundImage={null} />
+        <MobileTabBar />
+      </MobileActionProvider>
+    )
+
+    expect(screen.getAllByRole('button', { name: 'Abrir mi entrada' })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'ABRIR MI ENTRADA' })).toBeInTheDocument()
   })
 })
 

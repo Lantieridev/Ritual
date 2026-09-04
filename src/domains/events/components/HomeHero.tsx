@@ -7,11 +7,67 @@ import { MobileHeroAction } from '@/src/core/components/layout/MobileAction'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import type { HomeHeroState } from '@/src/domains/events/home-view'
-import { FirstTimeHero, GuestHero, MorningAfterHero, PastOnlyHero } from './HomeHeroStates'
+import type { EventWithAttendance } from '@/src/domains/events/service'
+import {
+  FirstTimeHero,
+  GuestHero,
+  MorningAfterHero,
+  PastOnlyHero,
+  RecentSeenList,
+  TonightMobileHero,
+  type TonightMetaDetails,
+} from './HomeHeroStates'
 
 interface HomeHeroProps {
   state: HomeHeroState
   backgroundImage: Promise<string | null> | string | null
+  /** "Lo último que viste" — sólo se muestra en el hero mobile (#82). */
+  recentSeen?: EventWithAttendance[]
+  /** Abre el talón ya al montar — deep link `?entrada=hoy` (#82). */
+  initialOpen?: boolean
+  /** Dirección y clima ya resueltos, sólo se usa en el hero mobile (#82). */
+  details?: TonightMetaDetails | null
+}
+
+/**
+ * El talón abierto, compartido entre el hero de escritorio y el de mobile —
+ * cada uno lo envuelve con su propio posicionamiento (#82). `dateLine` ya
+ * viene compuesta por quien llama porque el desktop conserva la butaca
+ * hardcodeada ("Campo general") y el mobile no la muestra (Ritual no tiene
+ * esa data — ver Requirement "Mobile Hero Layout").
+ */
+function TicketPass({
+  headliner,
+  venueName,
+  venueLocation,
+  dateLine,
+  onClose,
+}: {
+  headliner: string
+  venueName: string
+  venueLocation: string
+  dateLine: string
+  onClose: () => void
+}) {
+  return (
+    <div className="max-w-md border-l-[3px] border-ritual-red bg-ritual-surface/95 px-6 py-6 backdrop-blur-sm">
+      <p className="font-label text-[10px] tracking-[0.16em] text-ritual-red-hover uppercase mb-2">Entrada válida</p>
+      <p className="font-display text-4xl uppercase text-ritual-bone">{headliner}</p>
+      <p className="font-subtitle font-black uppercase text-ritual-gray-light-3 mt-1">
+        {venueName}{venueLocation && ` · ${venueLocation}`}
+      </p>
+      <p className="font-label text-[10px] tracking-[0.16em] text-ritual-gray-text uppercase mt-3">
+        {dateLine}
+      </p>
+      <button
+        type="button"
+        onClick={onClose}
+        className="font-label text-[10px] tracking-[0.16em] text-ritual-gray-text uppercase border border-ritual-border px-4 py-2 mt-6 min-h-[44px] md:min-h-0"
+      >
+        Cerrar ✕
+      </button>
+    </div>
+  )
 }
 
 /**
@@ -21,9 +77,15 @@ interface HomeHeroProps {
  * El talón 3D solo entra en juego para show-today y normal: un festival no
  * tiene "una" entrada, tiene un evento por día.
  */
-export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
+export function HomeHero({
+  state,
+  backgroundImage,
+  recentSeen = [],
+  initialOpen = false,
+  details = null,
+}: HomeHeroProps) {
   const resolvedBg = backgroundImage instanceof Promise ? use(backgroundImage) : backgroundImage
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initialOpen)
   // En mobile la acción vive fija abajo y se puede tocar con la página
   // scrolleada: se vuelve al hero para que la entrada se abra a la vista.
   const openTicket = useCallback(() => {
@@ -67,12 +129,19 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
   const venueName = event.venues?.name ?? ''
   const venueLocation = [event.venues?.city, event.venues?.country].filter(Boolean).join(', ')
   const days = state.kind === 'show-today' ? 0 : state.daysUntil
+  const desktopDateLine = `${formatDate(event.date, { weekday: 'long', day: 'numeric', month: 'long' })} · Campo general`
+  const mobileDateLine = formatDate(event.date, { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
-    <section className="relative min-h-screen snap-start overflow-hidden bg-ritual-panel">
-      {/* En mobile la acción vive fija sobre el talón de navegación. */}
+    <>
+      {/* En mobile la acción vive fija sobre el talón de navegación —
+          compartida entre el hero de escritorio y el mobile: es la misma
+          entrada, no una por breakpoint. */}
       <MobileHeroAction label="Abrir mi entrada" onClick={openTicket} />
 
+      {/* Escritorio: talón 3D, contador en hueco y butaca hardcodeada —
+          ninguno de los tres entra en mobile (issue #82). */}
+      <section className="relative min-h-screen snap-start overflow-hidden bg-ritual-panel hidden md:block">
       {/* El bloque tonal va siempre, debajo de la foto: si la fuente externa
           no resolvió imagen el hero igual tiene volumen en vez de negro
           plano, que es como el diseño lo piensa sin fotos. */}
@@ -243,25 +312,36 @@ export function HomeHero({ state, backgroundImage }: HomeHeroProps) {
 
       {open && (
         <div className="absolute inset-x-0 bottom-0 z-30 px-6 md:px-10 pb-[var(--ritual-mobile-clearance)] md:pb-16">
-          <div className="max-w-md border-l-[3px] border-ritual-red bg-ritual-surface/95 px-6 py-6 backdrop-blur-sm">
-            <p className="font-label text-[10px] tracking-[0.16em] text-ritual-red-hover uppercase mb-2">Entrada válida</p>
-            <p className="font-display text-4xl uppercase text-ritual-bone">{headliner}</p>
-            <p className="font-subtitle font-black uppercase text-ritual-gray-light-3 mt-1">
-              {venueName}{venueLocation && ` · ${venueLocation}`}
-            </p>
-            <p className="font-label text-[10px] tracking-[0.16em] text-ritual-gray-text uppercase mt-3">
-              {formatDate(event.date, { weekday: 'long', day: 'numeric', month: 'long' })} · Campo general
-            </p>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="font-label text-[10px] tracking-[0.16em] text-ritual-gray-text uppercase border border-ritual-border px-4 py-2 mt-6"
-            >
-              Cerrar ✕
-            </button>
-          </div>
+          <TicketPass
+            headliner={headliner}
+            venueName={venueName}
+            venueLocation={venueLocation}
+            dateLine={desktopDateLine}
+            onClose={() => setOpen(false)}
+          />
         </div>
       )}
-    </section>
+      </section>
+
+      {/* Mobile: sin talón 3D, sin butaca inventada — badge, headliner, sede,
+          meta honesto y "Lo último que viste" (issue #82). El CTA ya está
+          hoisted arriba, sobre el talón de navegación. */}
+      <div className="md:hidden">
+        <TonightMobileHero state={state} image={resolvedBg} details={details} />
+        <RecentSeenList events={recentSeen} />
+
+        {open && (
+          <div className="fixed inset-x-0 bottom-[var(--ritual-mobile-clearance)] z-40 px-5 md:hidden">
+            <TicketPass
+              headliner={headliner}
+              venueName={venueName}
+              venueLocation={venueLocation}
+              dateLine={mobileDateLine}
+              onClose={() => setOpen(false)}
+            />
+          </div>
+        )}
+      </div>
+    </>
   )
 }

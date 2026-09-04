@@ -423,7 +423,7 @@ export function TonightMobileHero({
   const venueName = event.venues?.name ?? ''
 
   return (
-    <div className="relative h-[500px] overflow-hidden bg-ritual-panel">
+    <section className="relative h-[500px] overflow-hidden bg-ritual-panel">
       <div className="absolute inset-0 ritual-photo-fallback" />
       {image && (
         <div
@@ -446,7 +446,7 @@ export function TonightMobileHero({
         )}
         <TonightMeta details={details} />
       </div>
-    </div>
+    </section>
   )
 }
 
