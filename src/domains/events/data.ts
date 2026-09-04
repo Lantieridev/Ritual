@@ -1,6 +1,7 @@
 import { createClient } from '@/src/core/lib/supabase/server'
 import type { EventWithRelations } from '@/src/core/types'
 import { getCurrentUserId } from '@/src/core/auth/session'
+import { combineDateAndTime, todayDateOnly } from '@/src/core/lib/dates'
 
 const EVENTS_SELECT = `
   *,
@@ -268,6 +269,33 @@ export async function getUpcomingEventsInCity(city: string, now: Date = new Date
 
   if (error) {
     console.error('Error buscando shows por ciudad:', error)
+    return []
+  }
+  return (data ?? []) as unknown as EventWithRelations[]
+}
+
+/**
+ * Próximos shows del catálogo entero, del más cercano en adelante. Es lo que
+ * ve en Home un visitante sin sesión: no hay ciudad ni gustos para afinar
+ * (con ciudad, ver getUpcomingEventsInCity arriba).
+ *
+ * Corta desde el comienzo de hoy en hora argentina, no desde este instante:
+ * para la app un show de hoy sigue siendo próximo aunque ya haya empezado
+ * (misma regla que isUpcomingEvent), y uno cargado sin hora queda a
+ * medianoche y se perdería a media mañana.
+ */
+export async function getUpcomingEvents(limit: number = NEARBY_LIMIT, now: Date = new Date()): Promise<EventWithRelations[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('events')
+    .select(EVENTS_SELECT)
+    .gte('date', combineDateAndTime(todayDateOnly(now), '00:00'))
+    .order('date', { ascending: true })
+    .limit(limit)
+
+  if (error) {
+    console.error('Error buscando próximos shows:', error)
     return []
   }
   return (data ?? []) as unknown as EventWithRelations[]
