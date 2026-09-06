@@ -138,9 +138,9 @@ describe('buildHomeHeroState', () => {
     expect(state).toEqual({ kind: 'normal', nextShow: futureShow, daysUntil: 5 })
   })
 
-  it('is normal with a null countdown when there is no next show at all', () => {
+  it('is first-time rather than an empty countdown when there is no show at all', () => {
     const state = buildHomeHeroState(undefined, [], NOW)
 
-    expect(state).toEqual({ kind: 'normal', nextShow: undefined, daysUntil: null })
+    expect(state).toEqual({ kind: 'first-time' })
   })
 })

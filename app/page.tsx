@@ -1,8 +1,8 @@
 import * as React from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { listMyEvents, listUpcomingEventsInCity } from '@/src/domains/events/service'
-import { buildHomeFeed, buildHomeHeroState } from '@/src/domains/events/home-view'
+import { listMyEvents, listUpcomingEvents, listUpcomingEventsInCity } from '@/src/domains/events/service'
+import { buildHomeFeed, buildHomeHeroState, heroEventOf } from '@/src/domains/events/home-view'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
 import { gql } from 'urql'
 import { getClient } from '@/src/graphql/client'
@@ -248,18 +248,18 @@ export default async function HomePage() {
   const now = new Date()
 
   const { nextShow, byYear, years } = buildHomeFeed(allEvents, 'went', now)
-  const heroState = buildHomeHeroState(nextShow, festivals, now)
+  // Un visitante sin sesión no tiene shows propios: su hero sale del catálogo.
+  const catalogUpcoming = userId ? [] : await listUpcomingEvents()
+  const heroState = buildHomeHeroState(nextShow, festivals, now, {
+    myEvents: allEvents,
+    signedIn: Boolean(userId),
+    catalogUpcoming,
+  })
 
-  const heroEvent = heroState.kind === 'show-today' ? heroState.event : heroState.kind === 'normal' ? heroState.nextShow : undefined
-
-  // Cuando no hay próximo show el hero muestra su estado vacío, pero antes
-  // quedaba además sin fondo: `nextShow` sólo considera los marcados como
-  // 'going', así que alguien con historial pero sin nada agendado veía la
-  // pantalla pelada. Se cae al último show del archivo — ya está en memoria,
-  // así que no cuesta una query extra.
-  const ultimoDelArchivo = allEvents[0]
-  const headlinerDe = (ev: typeof heroEvent) => ev?.lineups?.[0]?.artists.name ?? ev?.name ?? null
-  const heroHeadliner = headlinerDe(heroEvent) ?? headlinerDe(ultimoDelArchivo)
+  // La foto de fondo sale del show que protagoniza el estado (el próximo, el
+  // de anoche, la efeméride o el del catálogo); primera vez no lleva foto.
+  const heroEvent = heroEventOf(heroState)
+  const heroHeadliner = heroEvent?.lineups?.[0]?.artists.name ?? heroEvent?.name ?? null
 
   // No se condiciona a que Spotify esté configurado: getArtistImage prueba
   // Spotify y cae en Deezer, que no pide credenciales. Antes, sin las dos
@@ -279,8 +279,8 @@ export default async function HomePage() {
 
   return (
     <>
-      <React.Suspense fallback={<HomeHero state={heroState} backgroundImage={null} archiveCount={archiveCount} />}>
-        <HomeHero state={heroState} backgroundImage={heroImagePromise} archiveCount={archiveCount} />
+      <React.Suspense fallback={<HomeHero state={heroState} backgroundImage={null} />}>
+        <HomeHero state={heroState} backgroundImage={heroImagePromise} />
       </React.Suspense>
 
       <React.Suspense fallback={<div className="min-h-screen bg-ritual-bg animate-pulse flex items-center justify-center"><p className="text-ritual-gray-text font-label uppercase">Buscando shows cerca tuyo...</p></div>}>
@@ -328,6 +328,9 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* Sin archivo esta sección no suma: primera vez y sin sesión ya tienen
+          su propia invitación arriba, y "0 talones" no le dice nada a nadie. */}
+      {hasArchive && (
       <section className="px-6 md:px-10 py-20 bg-ritual-bg">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
           <div>
@@ -341,15 +344,6 @@ export default async function HomePage() {
           </p>
         </div>
 
-        {!hasArchive ? (
-          <p className="font-body text-ritual-gray-text">
-            Marcá shows como &quot;Fui&quot; para verlos acá.{' '}
-            <Link href={routes.events.search} className="text-ritual-red-hover underline underline-offset-4">
-              Buscá shows
-            </Link>
-            .
-          </p>
-        ) : (
           <div className="space-y-10">
             {years.map((year) => (
               <div key={year}>
@@ -381,7 +375,6 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
-        )}
 
         <div className="mt-10">
           <Link
@@ -392,6 +385,7 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
+      )}
     </>
   )
 }

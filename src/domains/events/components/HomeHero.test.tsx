@@ -1,8 +1,13 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
 import type { EventWithAttendance } from '@/src/domains/events/service'
+
+// El puntaje de "la mañana después" guarda vía Server Action y refresca el
+// router: ninguno de los dos existe fuera de Next.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
+vi.mock('@/src/domains/events/attendance-actions', () => ({ saveMemory: vi.fn(async () => ({})) }))
 
 /**
  * El hero del Inicio se porta pixel-perfect del handoff de rediseño (01 del
@@ -21,7 +26,15 @@ const event: EventWithAttendance = {
   lineups: [{ artists: { id: 'a1', name: 'Divididos', genre: 'Rock' }, is_headliner: true }],
 } as unknown as EventWithAttendance
 
-function renderNormal(daysUntil: number | null) {
+function withAttendance(overrides: Partial<EventWithAttendance>, status: string, rating: number | null) {
+  return {
+    ...event,
+    ...overrides,
+    attendance: [{ id: 'att', status, user_id: 'u1', rating, review: null }],
+  } as EventWithAttendance
+}
+
+function renderNormal(daysUntil: number) {
   return render(
     <HomeHero state={{ kind: 'normal', nextShow: event, daysUntil }} backgroundImage="https://x/y.jpg" />
   )
@@ -130,29 +143,93 @@ describe('HomeHero — el resto del hero', () => {
   })
 })
 
-describe('HomeHero — sin show agendado', () => {
-  const emptyState = { kind: 'normal', nextShow: undefined, daysUntil: null } as const
+describe('HomeHero — la mañana después', () => {
+  const lastNight = withAttendance({ id: 'ln', date: '2026-06-14' }, 'went', null)
 
-  it('sin archivo: invita a cargar el primer show, no a "buscar el próximo"', () => {
-    render(<HomeHero state={emptyState} backgroundImage={null} archiveCount={0} />)
-    expect(screen.getByText(/todavía no hay/i)).toBeInTheDocument()
-    expect(screen.getByText(/ningún talón/i)).toBeInTheDocument()
-    expect(screen.getByText('BUSCAR SHOWS')).toBeInTheDocument()
-    expect(screen.queryByText(/sin nada agendado/i)).not.toBeInTheDocument()
+  it('pregunta cómo estuvo y ofrece puntuar en un toque', () => {
+    render(<HomeHero state={{ kind: 'morning-after', event: lastNight }} backgroundImage={null} />)
+
+    expect(screen.getByText('Anoche · sin puntuar')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Cómo.*estuvo/)
+    const score = screen.getByRole('group', { name: 'Puntaje del show' })
+    expect(within(score).getAllByRole('button')).toHaveLength(5)
   })
 
-  it('con archivo: no repite "todavía no hay ningún talón" a quien ya tiene shows', () => {
-    render(<HomeHero state={emptyState} backgroundImage={null} archiveCount={14} />)
-    expect(screen.getByText(/sin nada agendado/i)).toBeInTheDocument()
-    expect(screen.getByText('14')).toBeInTheDocument()
-    expect(screen.getByText(/talones en el archivo/i)).toBeInTheDocument()
-    expect(screen.getByText('BUSCAR TU PRÓXIMO SHOW')).toBeInTheDocument()
+  it('lo que queda de anoche apunta a la reseña y al gasto de ese show', () => {
+    render(<HomeHero state={{ kind: 'morning-after', event: lastNight }} backgroundImage={null} />)
+
+    expect(screen.getByRole('link', { name: /escribir la reseña/i })).toHaveAttribute('href', '/events/ln')
+    expect(screen.getByRole('link', { name: /cargar el gasto/i })).toHaveAttribute('href', '/events/ln/gastos')
+  })
+})
+
+describe('HomeHero — sólo pasado', () => {
+  const past = withAttendance({ date: '2025-06-15' }, 'went', 5)
+
+  it('abre con la efeméride y el puntaje que le puso', () => {
+    render(<HomeHero state={{ kind: 'past-only', event: past, yearsAgo: 1 }} backgroundImage={null} />)
+
+    expect(screen.getByText('Hace un año, hoy')).toBeInTheDocument()
+    expect(screen.getByText(/le pusiste 5\/5/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Divididos')
+    expect(screen.getByRole('link', { name: /ver ese show/i })).toHaveAttribute('href', '/events/e1')
+  })
+
+  it('con más de un año de distancia lo dice en plural', () => {
+    render(<HomeHero state={{ kind: 'past-only', event: past, yearsAgo: 3 }} backgroundImage={null} />)
+    expect(screen.getByText('Hace 3 años, hoy')).toBeInTheDocument()
+  })
+
+  it('sin efeméride no la inventa: es lo último que vio', () => {
+    render(<HomeHero state={{ kind: 'past-only', event: past, yearsAgo: null }} backgroundImage={null} />)
+    expect(screen.getByText('Lo último que viste')).toBeInTheDocument()
+    expect(screen.queryByText(/hoy$/)).not.toBeInTheDocument()
+  })
+
+  it('sin puntaje no muestra un "le pusiste" vacío', () => {
+    const unrated = withAttendance({ date: '2025-06-15' }, 'went', null)
+    render(<HomeHero state={{ kind: 'past-only', event: unrated, yearsAgo: 1 }} backgroundImage={null} />)
+    expect(screen.queryByText(/le pusiste/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('HomeHero — primera vez', () => {
+  it('no es un vacío: talón sin emitir y "empezá por el último que viste"', () => {
+    render(<HomeHero state={{ kind: 'first-time' }} backgroundImage={null} />)
+
+    expect(screen.getByText('Talón Nº 0000001')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Empezá por/)
     expect(screen.queryByText(/todavía no hay/i)).not.toBeInTheDocument()
   })
 
-  it('con exactamente un talón, el kicker va en singular', () => {
-    render(<HomeHero state={emptyState} backgroundImage={null} archiveCount={1} />)
-    expect(screen.getByText(/talón en el archivo/i)).toBeInTheDocument()
+  it('cada semilla busca los shows de ese artista', () => {
+    render(<HomeHero state={{ kind: 'first-time' }} backgroundImage={null} />)
+    expect(screen.getByRole('link', { name: 'Divididos' })).toHaveAttribute('href', '/buscar?artist=Divididos')
+  })
+
+  it('en desktop las dos salidas quedan en el flujo', () => {
+    render(<HomeHero state={{ kind: 'first-time' }} backgroundImage={null} />)
+    expect(screen.getByRole('link', { name: 'Buscar mi primer show' })).toHaveAttribute('href', '/buscar')
+    expect(screen.getByRole('link', { name: 'Cargarlo a mano' })).toHaveAttribute('href', '/events/nuevo')
+  })
+})
+
+describe('HomeHero — sin sesión', () => {
+  it('muestra el próximo show del catálogo y la puerta de entrada', () => {
+    render(<HomeHero state={{ kind: 'guest', event }} backgroundImage={null} />)
+
+    expect(screen.getByText('Se viene')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Divididos')
+    expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login')
+    expect(screen.getByText(/colección vacía/i)).toBeInTheDocument()
+  })
+
+  it('sin nada en el catálogo no inventa un show', () => {
+    render(<HomeHero state={{ kind: 'guest', event: undefined }} backgroundImage={null} />)
+
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
+    expect(screen.getByText(/colección vacía/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Entrar' })).toBeInTheDocument()
   })
 })
 
@@ -160,7 +237,10 @@ describe('HomeHero — scroll snap', () => {
   it.each([
     ['normal', { kind: 'normal', nextShow: event, daysUntil: 12 }],
     ['show-today', { kind: 'show-today', event }],
-    ['vacío', { kind: 'normal', nextShow: undefined, daysUntil: null }],
+    ['la mañana después', { kind: 'morning-after', event }],
+    ['sólo pasado', { kind: 'past-only', event, yearsAgo: null }],
+    ['primera vez', { kind: 'first-time' }],
+    ['sin sesión', { kind: 'guest', event }],
   ] as const)('la sección engancha el scroll en el estado %s', (_label, state) => {
     const { container } = render(<HomeHero state={state as never} backgroundImage={null} />)
     const section = container.querySelector('section')

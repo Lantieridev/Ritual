@@ -30,6 +30,11 @@ Porque la música es cultura compartida. Queremos que RITUAL sea construido por 
 - **Historial de Shows**: Registro automático de eventos pasados.
 - **Portales**: Páginas ricas de Artistas, Festivales y Venues.
 
+### 📱 Hoy (Inicio)
+- **Nativo en el celular**: navegación abajo, al alcance del pulgar (Hoy · Buscar · Archivo · Vos), con la acción del momento fija encima.
+- **Cambia según tu día**: el show de esta noche con tu entrada, la cuenta regresiva al próximo, "¿cómo estuvo?" la mañana después, un recuerdo de hace un año cuando no tenés nada agendado y un arranque guiado la primera vez.
+- **Sin sesión, sin inventos**: te muestra lo que se viene en cartelera y no finge conocerte.
+
 ## 🤝 Cómo Contribuir
 
 ¡Toda ayuda es bienvenida! Ya sea reportando bugs, proponiendo ideas o tirando código.
