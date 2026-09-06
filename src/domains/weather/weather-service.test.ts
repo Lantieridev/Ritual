@@ -5,7 +5,7 @@ vi.mock('./open-meteo', () => ({
     fetchForecastHourly: vi.fn(),
 }))
 
-import { getEventWeather, describeWeatherCode } from './weather-service'
+import { getEventWeather, getEventWeatherCached, describeWeatherCode } from './weather-service'
 import { fetchHistoricalHourly, fetchForecastHourly } from './open-meteo'
 
 const NOW = new Date('2026-08-22T15:00:00Z') // 2026-08-22 12:00 ART
@@ -132,6 +132,54 @@ describe('getEventWeather', () => {
 
         const result = await getEventWeather({ date: '2026-07-01T23:00:00Z' }, { lat: -34.5447, lng: -58.4497 }, NOW)
 
+        expect(result?.isRain).toBe(true)
+    })
+})
+
+/*
+ * `getEventWeatherCached` envuelve `getEventWeather` en `cache()` de React
+ * (R1-009, issue #82) para que dos consumidores del mismo show+sede dentro
+ * de la misma request (el fallback de Suspense y el render final) compartan
+ * una sola llamada real a Open-Meteo. `cache()` sólo memoiza en el runtime
+ * real de Server Components de Next.js — bajo Vitest (sin la condición
+ * "react-server") es un passthrough sin memoria (confirmado a mano: dos
+ * llamadas con los mismos argumentos primitivos igual disparan la función
+ * dos veces acá), así que este test verifica la delegación correcta —
+ * mismo criterio que ya usa `getCurrentUserId` en session.test.ts, que
+ * tampoco intenta probar la memoización de `cache()` en sí.
+ */
+describe('getEventWeatherCached', () => {
+    beforeEach(() => {
+        vi.mocked(fetchHistoricalHourly).mockReset()
+        vi.mocked(fetchForecastHourly).mockReset()
+    })
+
+    it('delega en getEventWeather con la fecha y las coordenadas como primitivos separados (sin objeto venue)', async () => {
+        vi.mocked(fetchHistoricalHourly).mockResolvedValue([
+            { time: '2020-01-01T20:00', temperatureC: 9.5, precipitationMm: 0, weatherCode: 2 },
+        ])
+
+        const result = await getEventWeatherCached('2020-01-01T23:00:00Z', -34.5447, -58.4497)
+
+        expect(fetchHistoricalHourly).toHaveBeenCalledWith(-34.5447, -58.4497, '2020-01-01', 'America/Argentina/Buenos_Aires')
+        expect(result).toEqual({
+            temperatureC: 9.5,
+            precipitationMm: 0,
+            weatherCode: 2,
+            isRain: false,
+            description: 'Parcialmente nublado',
+            hourLabel: '20:00',
+        })
+    })
+
+    it('pasa las coordenadas de una sede distinta tal cual, sin mezclarlas con una llamada anterior', async () => {
+        vi.mocked(fetchHistoricalHourly).mockResolvedValue([
+            { time: '2020-02-02T18:00', temperatureC: 22.1, precipitationMm: 1.2, weatherCode: 61 },
+        ])
+
+        const result = await getEventWeatherCached('2020-02-02T21:00:00Z', -31.4, -64.2)
+
+        expect(fetchHistoricalHourly).toHaveBeenCalledWith(-31.4, -64.2, '2020-02-02', 'America/Argentina/Buenos_Aires')
         expect(result?.isRain).toBe(true)
     })
 })

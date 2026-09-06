@@ -4,7 +4,7 @@ import { findOrCreateByName } from '@/src/core/lib/find-or-create'
 import { geocodeVenue } from '@/src/core/lib/nominatim'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, Venue, VenueCreateInput } from '@/src/core/types'
-import { getVenues, getVenueById, getVenueEventsBatch, getVenueTipsBatch } from './data'
+import { getVenues, getVenueById, getVenueLocation as getVenueLocationData, getVenueEventsBatch, getVenueTipsBatch } from './data'
 import type { VenueWithEvents, VenueEvent, VenueTip, VenueTipCategory } from './data'
 
 export type { VenueWithEvents, VenueEvent, VenueTip, VenueTipCategory }
@@ -41,6 +41,11 @@ export async function listVenues(): Promise<Venue[]> {
 /** Finds one venue by id, with its show history attached. */
 export async function findVenueById(id: string): Promise<VenueWithEvents | null> {
   return getVenueById(id)
+}
+
+/** Sólo dirección y coordenadas de una sede — para el hero de Hoy mobile (issue #82/#8). */
+export async function getVenueLocation(id: string): Promise<Pick<Venue, 'address' | 'lat' | 'lng'> | null> {
+  return getVenueLocationData(id)
 }
 
 /** Versión por lote de `findVenueById(...).events`, para el DataLoader de `Venue.events`. */

@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { Suspense } from 'react'
+import { render, screen, act } from '@testing-library/react'
 import { TonightMobileHero, TonightMeta, RecentSeenList } from '@/src/domains/events/components/HomeHeroStates'
 import type { EventWithAttendance } from '@/src/domains/events/service'
 import type { EventWeather } from '@/src/domains/weather/weather-service'
+import type { HeroVenueDetails } from '@/src/domains/events/hero-details'
 
 /**
  * El hero mobile de "hoy" (show-today/normal, #82): badge de hora, sin
@@ -70,6 +72,43 @@ describe('TonightMobileHero', () => {
     )
     const foto = container.querySelector('.ritual-photo')
     expect(foto?.className).toContain('ritual-photo-bg')
+  })
+})
+
+/*
+ * WU3 (#82/#8, R1-008): `details` puede llegar como Promise (dirección y
+ * clima resueltos por `getHeroVenueDetails`) — el resto del hero (foto,
+ * badge, headliner, sede) nunca debe esperarla. `TonightMobileHero` la
+ * resuelve en su propio `<Suspense fallback={null}>`, así que el Suspense
+ * exterior (el de `HomeHero`/Home) nunca cae en fallback por su culpa.
+ */
+describe('TonightMobileHero — details como Promise (#82, R1-008)', () => {
+  it('no bloquea el resto del hero mientras la promesa de dirección/clima está pendiente', async () => {
+    let resolveDetails!: (v: HeroVenueDetails) => void
+    const pending = new Promise<HeroVenueDetails>((resolve) => {
+      resolveDetails = resolve
+    })
+
+    await act(async () => {
+      render(
+        <Suspense fallback={<div data-testid="outer-fallback" />}>
+          <TonightMobileHero state={{ kind: 'show-today', event: baseEvent }} image={null} details={pending} />
+        </Suspense>
+      )
+    })
+
+    // El resto del hero ya está en pantalla — no espera al clima.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Dillom')
+    expect(screen.getByText('Estadio Obras')).toBeInTheDocument()
+    expect(screen.queryByTestId('outer-fallback')).not.toBeInTheDocument()
+    expect(screen.queryByText('Humboldt 450')).not.toBeInTheDocument()
+
+    await act(async () => {
+      resolveDetails({ address: 'Humboldt 450', weather: null })
+      await pending
+    })
+
+    expect(screen.getByText('Humboldt 450')).toBeInTheDocument()
   })
 })
 

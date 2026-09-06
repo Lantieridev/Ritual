@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { listMyEvents, listUpcomingEvents, listUpcomingEventsInCity } from '@/src/domains/events/service'
 import { buildHomeFeed, buildHomeHeroState, heroEventOf } from '@/src/domains/events/home-view'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
+import { getHeroVenueDetails } from '@/src/domains/events/hero-details'
 import { gql } from 'urql'
 import { getClient } from '@/src/graphql/client'
 import type { GraphQLArtist, GraphQLFestival } from '@/src/core/types'
@@ -269,6 +270,18 @@ export default async function HomePage() {
     ? getArtistImage(heroHeadliner).then(({ image }) => image)
     : Promise.resolve(null)
 
+  // Dirección y clima del show que protagoniza el hero mobile de Hoy — sólo
+  // aplica a show-today/normal (el resto de los estados no tiene un show por
+  // delante que mostrar). Nunca se espera acá: HomeHero la resuelve en su
+  // propio Suspense (issue #82/#8, R1-008), así el resto del hero no queda
+  // atado a que Open-Meteo responda.
+  const heroDetails =
+    heroState.kind === 'show-today'
+      ? getHeroVenueDetails(heroState.event)
+      : heroState.kind === 'normal'
+        ? getHeroVenueDetails(heroState.nextShow)
+        : null
+
   const upcomingFestivals = festivals
     .filter((f) => !isPastEvent(f.end_date ?? f.start_date, now))
     .filter((f) => !(heroState.kind === 'festival' && f.id === heroState.festival.id))
@@ -280,7 +293,7 @@ export default async function HomePage() {
   return (
     <>
       <React.Suspense fallback={<HomeHero state={heroState} backgroundImage={null} />}>
-        <HomeHero state={heroState} backgroundImage={heroImagePromise} />
+        <HomeHero state={heroState} backgroundImage={heroImagePromise} details={heroDetails} />
       </React.Suspense>
 
       <React.Suspense fallback={<div className="min-h-screen bg-ritual-bg animate-pulse flex items-center justify-center"><p className="text-ritual-gray-text font-label uppercase">Buscando shows cerca tuyo...</p></div>}>

@@ -30,6 +30,7 @@
  * limitación conocida, no un crash.
  */
 import 'server-only'
+import { cache } from 'react'
 import { APP_TIMEZONE, isPastEvent, daysUntil } from '@/src/core/lib/dates'
 import { fetchHistoricalHourly, fetchForecastHourly, type HourlyWeatherPoint } from './open-meteo'
 
@@ -158,3 +159,16 @@ export async function getEventWeather(
         hourLabel: hourKey.slice(11),
     }
 }
+
+/**
+ * Versión memoizada de `getEventWeather` para el hero de Hoy mobile (issue
+ * #82, R1-009): dentro de una misma request de Server Components, el
+ * fallback de Suspense y el render final pueden pedir el clima del mismo
+ * show+sede más de una vez — `cache()` de React dedupea esas llamadas en
+ * una sola. Argumentos primitivos (no un objeto `venue`) porque `cache()`
+ * compara por identidad de argumento, y un objeto nuevo en cada llamada
+ * nunca sería un hit.
+ */
+export const getEventWeatherCached = cache((date: string, lat: number, lng: number) =>
+    getEventWeather({ date }, { lat, lng })
+)

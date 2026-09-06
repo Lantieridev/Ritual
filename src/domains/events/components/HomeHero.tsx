@@ -8,6 +8,7 @@ import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import type { HomeHeroState } from '@/src/domains/events/home-view'
 import type { EventWithAttendance } from '@/src/domains/events/service'
+import type { HeroVenueDetails } from '@/src/domains/events/hero-details'
 import {
   FirstTimeHero,
   GuestHero,
@@ -15,7 +16,6 @@ import {
   PastOnlyHero,
   RecentSeenList,
   TonightMobileHero,
-  type TonightMetaDetails,
 } from './HomeHeroStates'
 
 interface HomeHeroProps {
@@ -25,8 +25,8 @@ interface HomeHeroProps {
   recentSeen?: EventWithAttendance[]
   /** Abre el talón ya al montar — deep link `?entrada=hoy` (#82). */
   initialOpen?: boolean
-  /** Dirección y clima ya resueltos, sólo se usa en el hero mobile (#82). */
-  details?: TonightMetaDetails | null
+  /** Dirección y clima del hero mobile (#82/#8) — Promise-aware: `TonightMobileHero` la resuelve en su propio Suspense, nunca bloquea el resto del hero (R1-008). */
+  details?: Promise<HeroVenueDetails> | HeroVenueDetails | null
 }
 
 /**

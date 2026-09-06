@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { Suspense, use, type ReactNode } from 'react'
 import { MobileHeroAction } from '@/src/core/components/layout/MobileAction'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
 import { heroBadgeText, weatherTag, type HomeHeroState } from '@/src/domains/events/home-view'
 import type { EventWithAttendance, EventWithRelations } from '@/src/domains/events/service'
-import type { EventWeather } from '@/src/domains/weather/weather-service'
+import type { HeroVenueDetails } from '@/src/domains/events/hero-details'
 import { MorningAfterScore } from './MorningAfterScore'
 
 /*
@@ -387,21 +387,18 @@ export function GuestHero({ event, image }: { event: EventWithRelations | undefi
   )
 }
 
-/**
- * Dirección y clima del show de hoy, ya resueltos — el tipo canónico
- * `HeroVenueDetails` (misma forma) se define en `hero-details.ts` (issue #8 /
- * #82); acá se declara localmente para que este archivo no dependa todavía
- * de ese módulo server-only, que llega en un commit posterior.
- */
-export interface TonightMetaDetails {
-  address: string | null
-  weather: EventWeather | null
-}
-
 /* Scrim propio del hero de "hoy" mobile (.dc.html línea 271): más abierto que
    el resto porque el h1 y el meta que sigue debajo necesitan leerse sobre la
    foto sin que el degradado los tape antes de tiempo. */
 const TONIGHT_SCRIM = 'from-ritual-panel from-[8%] via-ritual-panel/35 via-[60%] to-ritual-panel/55'
+
+/**
+ * Resuelve la Promise de dirección/clima en su propio Suspense (R1-008,
+ * issue #82): sólo esta pieza espera al clima, nunca el resto del hero.
+ */
+function ResolvedTonightMeta({ details }: { details: Promise<HeroVenueDetails> }) {
+  return <TonightMeta details={use(details)} />
+}
 
 /**
  * Hero mobile de "hoy" (show-today) y "cuenta regresiva" (normal) — sin la
@@ -416,7 +413,7 @@ export function TonightMobileHero({
 }: {
   state: Extract<HomeHeroState, { kind: 'show-today' | 'normal' }>
   image: string | null
-  details: TonightMetaDetails | null
+  details: Promise<HeroVenueDetails> | HeroVenueDetails | null
 }) {
   const event = state.kind === 'show-today' ? state.event : state.nextShow
   const headliner = headlinerOf(event)
@@ -444,7 +441,9 @@ export function TonightMobileHero({
             {venueName}
           </p>
         )}
-        <TonightMeta details={details} />
+        <Suspense fallback={null}>
+          {details instanceof Promise ? <ResolvedTonightMeta details={details} /> : <TonightMeta details={details} />}
+        </Suspense>
       </div>
     </section>
   )
@@ -455,7 +454,7 @@ export function TonightMobileHero({
  * parte se omite si no está resuelta, y el separador nunca queda colgando
  * (issue #82).
  */
-export function TonightMeta({ details }: { details: TonightMetaDetails | null }) {
+export function TonightMeta({ details }: { details: HeroVenueDetails | null }) {
   if (!details) return null
   const { address, weather } = details
   if (!address && !weather) return null

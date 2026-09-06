@@ -75,6 +75,19 @@ describe('fetchHistoricalHourly', () => {
 
         expect(result).toBeNull()
     })
+
+    // Un show pasado no cambia nunca, así que no tiene sentido revalidarlo
+    // por tiempo — a diferencia del pronóstico (ver describe de abajo).
+    it('does not set a next.revalidate option on the underlying fetch', async () => {
+        vi.mocked(global.fetch).mockResolvedValue(
+            mockJsonResponse(200, { hourly: { time: [], temperature_2m: [], precipitation: [], weather_code: [] } })
+        )
+
+        await fetchHistoricalHourly(-34.5447, -58.4497, '2024-05-01', 'America/Argentina/Buenos_Aires')
+
+        const [, init] = vi.mocked(global.fetch).mock.calls[0] as [string, RequestInit & { next?: unknown }]
+        expect(init.next).toBeUndefined()
+    })
 })
 
 describe('fetchForecastHourly', () => {
@@ -104,5 +117,19 @@ describe('fetchForecastHourly', () => {
         expect(calledUrl).toContain('api.open-meteo.com/v1/forecast')
         expect(calledUrl).toContain('forecast_days=3')
         expect(result).toEqual([{ time: '2026-08-23T00:00', temperatureC: 12.1, precipitationMm: 0, weatherCode: 0 }])
+    })
+
+    // Cachea la respuesta entre requests distintos (issue #82, R1-009):
+    // varios visitantes pidiendo el mismo show comparten un fetch a
+    // Open-Meteo por 30 minutos en vez de uno cada uno.
+    it('passes next: { revalidate: 1800 } through to the underlying fetch, for cross-request caching', async () => {
+        vi.mocked(global.fetch).mockResolvedValue(
+            mockJsonResponse(200, { hourly: { time: [], temperature_2m: [], precipitation: [], weather_code: [] } })
+        )
+
+        await fetchForecastHourly(-34.5447, -58.4497, 'America/Argentina/Buenos_Aires', 3)
+
+        const [, init] = vi.mocked(global.fetch).mock.calls[0] as [string, RequestInit & { next?: { revalidate?: number } }]
+        expect(init.next).toEqual({ revalidate: 1800 })
     })
 })

@@ -13,6 +13,7 @@ vi.mock('@/src/core/auth/session', () => ({
 vi.mock('@/src/domains/venues/data', () => ({
   getVenues: vi.fn(),
   getVenueById: vi.fn(),
+  getVenueLocation: vi.fn(),
   getVenueTipsBatch: vi.fn(),
 }))
 
@@ -25,8 +26,8 @@ vi.mock('@/src/core/lib/nominatim', () => ({
   geocodeVenue: vi.fn().mockResolvedValue({ lat: null, lng: null }),
 }))
 
-import { listVenues, findVenueById, insertVenue, findOrCreateVenue, addVenueTip, removeVenueTip } from '@/src/domains/venues/service'
-import { getVenues, getVenueById } from '@/src/domains/venues/data'
+import { listVenues, findVenueById, getVenueLocation, insertVenue, findOrCreateVenue, addVenueTip, removeVenueTip } from '@/src/domains/venues/service'
+import { getVenues, getVenueById, getVenueLocation as getVenueLocationData } from '@/src/domains/venues/data'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { geocodeVenue } from '@/src/core/lib/nominatim'
 
@@ -62,6 +63,12 @@ describe('listVenues / findVenueById', () => {
     vi.mocked(getVenueById).mockResolvedValue(null)
     await expect(findVenueById('v-1')).resolves.toBeNull()
     expect(getVenueById).toHaveBeenCalledWith('v-1')
+  })
+
+  it('delegates the location read to the data layer', async () => {
+    vi.mocked(getVenueLocationData).mockResolvedValue({ address: 'Humboldt 450', lat: -34.58, lng: -58.43 })
+    await expect(getVenueLocation('v-1')).resolves.toEqual({ address: 'Humboldt 450', lat: -34.58, lng: -58.43 })
+    expect(getVenueLocationData).toHaveBeenCalledWith('v-1')
   })
 })
 

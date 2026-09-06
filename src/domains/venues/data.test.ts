@@ -6,7 +6,7 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
-import { getVenues, getVenueById, getVenueTipsBatch } from '@/src/domains/venues/data'
+import { getVenues, getVenueById, getVenueLocation, getVenueTipsBatch } from '@/src/domains/venues/data'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -88,6 +88,42 @@ describe('getVenueById', () => {
     mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
 
     const result = await getVenueById('v1')
+
+    expect(result).toBeNull()
+  })
+})
+
+describe('getVenueLocation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('devuelve sólo address/lat/lng de la sede pedida', async () => {
+    const fromMock = vi.fn(() =>
+      makeQueryBuilder({ data: { address: 'Humboldt 450', lat: -34.5874, lng: -58.43891 }, error: null })
+    )
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getVenueLocation('v1')
+
+    expect(fromMock).toHaveBeenCalledWith('venues')
+    expect(result).toEqual({ address: 'Humboldt 450', lat: -34.5874, lng: -58.43891 })
+  })
+
+  it('devuelve null cuando la sede no existe', async () => {
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: null, error: null }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getVenueLocation('missing')
+
+    expect(result).toBeNull()
+  })
+
+  it('devuelve null cuando la consulta falla', async () => {
+    const fromMock = vi.fn(() => makeQueryBuilder({ data: null, error: { message: 'boom' } }))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    const result = await getVenueLocation('v1')
 
     expect(result).toBeNull()
   })

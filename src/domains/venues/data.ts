@@ -63,6 +63,25 @@ export async function getVenueById(id: string): Promise<VenueWithEvents | null> 
 }
 
 /**
+ * Sólo la dirección y coordenadas de una sede — para el hero de Hoy mobile
+ * (issue #82/#8), que necesita ubicación exacta pero no el historial de
+ * shows completo de `getVenueById`.
+ */
+export async function getVenueLocation(
+  id: string
+): Promise<Pick<Venue, 'address' | 'lat' | 'lng'> | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('venues')
+    .select('address, lat, lng')
+    .eq('id', id)
+    .single()
+
+  if (error || !data) return null
+  return data as Pick<Venue, 'address' | 'lat' | 'lng'>
+}
+
+/**
  * Historial de shows de sedes, para el DataLoader de `Venue.events`. Pedir
  * `events` sobre `getVenues()` (que no incluye la relación) disparaba un
  * `getVenueById` — detalle anidado completo — por sede en la query de

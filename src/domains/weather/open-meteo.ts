@@ -48,9 +48,9 @@ interface OpenMeteoHourlyResponse {
     reason?: string
 }
 
-async function fetchHourly(url: string): Promise<HourlyWeatherPoint[] | null> {
+async function fetchHourly(url: string, init: RequestInit = {}): Promise<HourlyWeatherPoint[] | null> {
     try {
-        const res = await fetchWithRetry(url, {}, { timeoutMs: 8000 })
+        const res = await fetchWithRetry(url, init, { timeoutMs: 8000 })
         if (!res.ok) {
             const body = (await res.json().catch(() => null)) as OpenMeteoHourlyResponse | null
             console.error('Open-Meteo respondió con error', res.status, body?.reason ?? '')
@@ -116,5 +116,9 @@ export async function fetchForecastHourly(
         timezone,
         forecast_days: String(forecastDays),
     })
-    return fetchHourly(`${FORECAST_BASE}?${params}`)
+    // Cachea la respuesta entre requests distintas por 30 minutos (issue
+    // #82, R1-009): varios visitantes pidiendo el clima del mismo show
+    // comparten un fetch a Open-Meteo en vez de uno cada uno. El histórico
+    // no lleva esta opción — un show pasado no cambia nunca.
+    return fetchHourly(`${FORECAST_BASE}?${params}`, { next: { revalidate: 1800 } })
 }
