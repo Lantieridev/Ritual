@@ -18,6 +18,21 @@ export interface MobileHeroActionSpec {
     altOnClick?: () => void
 }
 
+/**
+ * La banda de "Tu entrada de hoy" (issue #82) — a diferencia de
+ * `MobileHeroActionSpec`, la resuelve un Server Component (el layout raíz) y
+ * se pasa tal cual a `MobileTabBar` (Client Component): no puede llevar
+ * funciones (`onClick`), porque un prop función desde un Server Component
+ * rompe el render RSC. `href` es obligatorio — la banda siempre navega,
+ * nunca dispara un handler.
+ */
+export interface MobileBandaLink {
+    subtitle: string
+    title: string
+    actionLabel: string
+    href: string
+}
+
 interface MobileActionContextValue {
     action: MobileHeroActionSpec | null
     setAction: (action: MobileHeroActionSpec | null) => void

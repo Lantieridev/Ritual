@@ -39,6 +39,9 @@ export const routes = {
     expenses: (id: string) => `/events/${id}/gastos` as const,
   },
 
+  /** Deep link de la banda de "Tu entrada de hoy" de vuelta a Home — abre el talón si el estado sigue siendo show-today (issue #82). */
+  tonightTicket: '/?entrada=hoy',
+
   expenses: {
     list: '/expenses',
     new: '/expenses/nuevo',

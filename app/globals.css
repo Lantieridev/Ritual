@@ -102,6 +102,15 @@ html[data-mobile-action="alt"] {
   --ritual-mobile-clearance: 220px;
 }
 
+/*
+ * Banda de "Tu entrada de hoy" (issue #82): la marca MobileTabBar mientras
+ * la banda está en pantalla — declarada después de las de arriba para que
+ * gane por orden de fuente si alguna vez coexisten con data-mobile-action.
+ */
+html[data-mobile-banda] {
+  --ritual-mobile-clearance: 154px;
+}
+
 @theme inline {
   --color-ritual-bg: var(--color-ritual-bg);
   --color-ritual-panel: var(--color-ritual-panel);

@@ -3,8 +3,9 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MobileTabBar } from '@/src/core/components/layout/MobileTabBar'
 import { MobileActionProvider, MobileHeroAction } from '@/src/core/components/layout/MobileAction'
+import { usePathname } from 'next/navigation'
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/' }))
+vi.mock('next/navigation', () => ({ usePathname: vi.fn(() => '/') }))
 
 describe('MobileTabBar — Accessibility (A11y)', () => {
   it('contiene aria-current="page" únicamente en la pestaña activa', () => {
@@ -52,6 +53,10 @@ describe('MobileTabBar — Accessibility (A11y)', () => {
   })
 
   it('soporta bandaAction con botones/enlaces que poseen nombres accesibles válidos', () => {
+    // La banda sólo se muestra en sus rutas propias (issue #82) — Home no
+    // es una de ellas, así que este caso necesita una ruta distinta a la
+    // que usan los tests de arriba.
+    vi.mocked(usePathname).mockReturnValueOnce('/buscar')
     const { container } = render(
       <MobileTabBar
         bandaAction={{
