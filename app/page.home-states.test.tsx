@@ -13,12 +13,12 @@ import type { HomeHeroState } from '@/src/domains/events/home-view'
  * para capturar el estado que recibe, y se renderiza el árbol devuelto para
  * mirar el resto de la página (la sección "Tu archivo").
  */
-const mockHomeHero = vi.fn((props: { state: HomeHeroState }) => (
+const mockHomeHero = vi.fn((props: { state: HomeHeroState; recentSeen?: unknown[]; initialOpen?: boolean }) => (
   <div data-testid="mock-home-hero">{props.state.kind}</div>
 ))
 
 vi.mock('@/src/domains/events/components/HomeHero', () => ({
-  HomeHero: (props: { state: HomeHeroState }) => mockHomeHero(props),
+  HomeHero: (props: { state: HomeHeroState; recentSeen?: unknown[]; initialOpen?: boolean }) => mockHomeHero(props),
 }))
 
 vi.mock('@/src/domains/events/service', () => ({
@@ -174,5 +174,57 @@ describe('HomePage integration — home states', () => {
         },
       })
     )
+  })
+
+  it('(f) wires "Lo último que viste" — HomeHero recibe los shows "went" más recientes, no una lista vacía', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-123')
+    const wentShow = {
+      id: 'went-1',
+      name: 'Show Visto',
+      date: '2026-09-01T21:00:00-03:00',
+      venue_id: 'v1',
+      venues: { name: 'Niceto', city: 'CABA', country: 'AR' },
+      lineups: [{ artists: { id: 'a1', name: 'Divididos', genre: 'Rock' }, is_headliner: true }],
+      attendance: [{ id: 'att-1', status: 'went', user_id: 'user-123', rating: 5, review: null }],
+    }
+    vi.mocked(listMyEvents).mockResolvedValue([wentShow] as never)
+
+    const element = await HomePage()
+    render(element)
+
+    expect(mockHomeHero).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recentSeen: [expect.objectContaining({ id: 'went-1' })],
+      })
+    )
+  })
+
+  it('(g) ?entrada=hoy abre el talón cuando el estado es show-today', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-123')
+    const todayShow = {
+      id: 'today-1',
+      name: 'Show de esta noche',
+      date: '2026-09-12T21:00:00-03:00',
+      venue_id: 'v1',
+      venues: { name: 'Niceto', city: 'CABA', country: 'AR' },
+      lineups: [{ artists: { id: 'a1', name: 'Divididos', genre: 'Rock' }, is_headliner: true }],
+      attendance: [{ id: 'att-1', status: 'going', user_id: 'user-123', rating: null, review: null }],
+    }
+    vi.mocked(listMyEvents).mockResolvedValue([todayShow] as never)
+
+    const element = await HomePage({ searchParams: Promise.resolve({ entrada: 'hoy' }) })
+    render(element)
+
+    expect(mockHomeHero).toHaveBeenCalledWith(expect.objectContaining({ initialOpen: true }))
+  })
+
+  it('(h) ?entrada=hoy se ignora sin error cuando el estado no es show-today', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-123')
+    vi.mocked(listMyEvents).mockResolvedValue([])
+
+    const element = await HomePage({ searchParams: Promise.resolve({ entrada: 'hoy' }) })
+    render(element)
+
+    expect(mockHomeHero).toHaveBeenCalledWith(expect.objectContaining({ initialOpen: false }))
   })
 })

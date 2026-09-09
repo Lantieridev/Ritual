@@ -41,6 +41,7 @@ import { createClient } from "@/src/core/lib/supabase/server";
 import { GraphQLProvider } from "@/src/graphql/provider";
 import { findProfile } from "@/src/domains/auth/service";
 import { OnboardingTour } from "@/src/domains/auth/components";
+import { loadBandaAction } from "@/src/domains/events/show-tonight.server";
 
 export default async function RootLayout({
   children,
@@ -56,7 +57,14 @@ export default async function RootLayout({
   // Resuelto acá, server-side, en vez de que el tour dispare su propia query
   // al montar: evita el flash de "nada" mientras esa query resuelve, y a un
   // visitante sin sesión no le cuesta ni siquiera la consulta a profiles.
-  const profile = user ? await findProfile(user.id) : null;
+  //
+  // La banda de "Tu entrada de hoy" (issue #82) se resuelve en paralelo con
+  // el mismo user.id ya validado más arriba — loadBandaAction nunca vuelve a
+  // llamar a auth.getUser() (R1-002).
+  const [profile, bandaAction] = await Promise.all([
+    user ? findProfile(user.id) : Promise.resolve(null),
+    loadBandaAction(user?.id ?? null),
+  ]);
   const showOnboarding = Boolean(user) && !profile?.onboarding_completed_at;
 
   return (
@@ -67,7 +75,7 @@ export default async function RootLayout({
             <Navbar user={user} />
             {children}
             <Footer />
-            <MobileTabBar user={user} />
+            <MobileTabBar user={user} bandaAction={bandaAction} />
             {showOnboarding && <OnboardingTour />}
           </MobileActionProvider>
         </GraphQLProvider>

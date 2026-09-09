@@ -20,6 +20,7 @@ import {
   insertEvent,
   modifyEvent,
   removeEvent,
+  findShowTonight,
 } from '@/src/domains/events/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { FutureEvent } from '@/src/core/types'
@@ -548,5 +549,31 @@ describe('insertEvent / modifyEvent / removeEvent — sin redirect', () => {
     const result = await removeEvent(VALID_EVENT_ID)
 
     expect(result.error).toBeTruthy()
+  })
+})
+
+describe('findShowTonight', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('delega en la capa de datos y devuelve el show de esta noche', async () => {
+    const now = new Date('2026-07-21T15:00:00Z')
+    const rows = [
+      { status: 'going', events: { id: 'e1', name: 'Show de esta noche', date: '2026-07-21T21:00:00-03:00', lineups: null } },
+    ]
+    const builder = makeQueryBuilder({ data: rows, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await findShowTonight('user-1', now)
+
+    expect(result).toEqual({ id: 'e1', headliner: 'Show de esta noche', date: '2026-07-21T21:00:00-03:00' })
+  })
+
+  it('devuelve null cuando no hay ningún show hoy', async () => {
+    const builder = makeQueryBuilder({ data: [], error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    await expect(findShowTonight('user-1')).resolves.toBeNull()
   })
 })

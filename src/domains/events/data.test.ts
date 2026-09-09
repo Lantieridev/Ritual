@@ -10,7 +10,7 @@ vi.mock('@/src/core/auth/session', () => ({
   getCurrentUserId: vi.fn(),
 }))
 
-import { getEvents, getEventsWithAttendance, getEventIdsForSitemap, getUpcomingEventsInCity, MAX_EVENTS } from '@/src/domains/events/data'
+import { getEvents, getEventsWithAttendance, getEventIdsForSitemap, getUpcomingEventsInCity, getShowTonight, MAX_EVENTS } from '@/src/domains/events/data'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
@@ -244,5 +244,73 @@ describe('getUpcomingEventsInCity', () => {
     const result = await getUpcomingEventsInCity('CABA')
 
     expect(result).toEqual([])
+  })
+})
+
+describe('getShowTonight', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function makeAttendanceBuilder(result: { data: unknown; error: unknown }) {
+    const builder: Record<string, unknown> = {}
+    const chain = () => builder
+    builder.select = vi.fn(chain)
+    builder.eq = vi.fn(chain)
+    builder.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
+      Promise.resolve(result).then(onFulfilled, onRejected)
+    return builder
+  }
+
+  // Query "attendance-first": acotada a las propias filas 'going' del
+  // usuario (tabla chica), sin filtro de fecha en SQL (pickShowTonight ya
+  // filtra el día calendario) y sin `!inner` (el repo lo evita, ver
+  // data.ts:236 en getUpcomingEventsInCity — acá directamente no aplica
+  // porque no hay filtro anidado). R1-003.
+  it('consulta attendance filtrando sólo por user_id y status=going, sin filtro de fecha', async () => {
+    const builder = makeAttendanceBuilder({ data: [], error: null })
+    const fromMock = vi.fn(() => builder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    await getShowTonight('user-1')
+
+    expect(fromMock).toHaveBeenCalledWith('attendance')
+    expect(builder.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(builder.eq).toHaveBeenCalledWith('status', 'going')
+    expect(builder.eq).toHaveBeenCalledTimes(2)
+  })
+
+  it('devuelve el show de esta noche cuando pickShowTonight encuentra uno', async () => {
+    const now = new Date('2026-07-21T15:00:00Z')
+    const rows = [
+      {
+        status: 'going',
+        events: { id: 'e1', name: 'Show de esta noche', date: '2026-07-21T21:00:00-03:00', lineups: null },
+      },
+    ]
+    const builder = makeAttendanceBuilder({ data: rows, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await getShowTonight('user-1', now)
+
+    expect(result).toEqual({ id: 'e1', headliner: 'Show de esta noche', date: '2026-07-21T21:00:00-03:00' })
+  })
+
+  it('devuelve null cuando no hay ningún show hoy', async () => {
+    const builder = makeAttendanceBuilder({ data: [], error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await getShowTonight('user-1')
+
+    expect(result).toBeNull()
+  })
+
+  it('devuelve null cuando la consulta falla', async () => {
+    const builder = makeAttendanceBuilder({ data: null, error: { message: 'boom' } })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await getShowTonight('user-1')
+
+    expect(result).toBeNull()
   })
 })

@@ -2,6 +2,7 @@ import { createClient } from '@/src/core/lib/supabase/server'
 import type { EventWithRelations } from '@/src/core/types'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import { combineDateAndTime, todayDateOnly } from '@/src/core/lib/dates'
+import { pickShowTonight, type ShowTonight, type ShowTonightRow } from './show-tonight'
 
 const EVENTS_SELECT = `
   *,
@@ -299,4 +300,34 @@ export async function getUpcomingEvents(limit: number = NEARBY_LIMIT, now: Date 
     return []
   }
   return (data ?? []) as unknown as EventWithRelations[]
+}
+
+/**
+ * El show al que el usuario va esta noche (issue #82), para la banda de
+ * "Tu entrada de hoy" del layout raíz. Consulta "attendance-first": acotada
+ * a las propias filas 'going' del usuario (tabla chica) en vez de partir del
+ * catálogo entero de eventos — un filtro de fecha en SQL sobre el embed
+ * necesitaría `!inner`, que el repo evita (ver getUpcomingEventsInCity más
+ * arriba); `pickShowTonight` filtra el día calendario en Argentina (R1-003).
+ */
+export async function getShowTonight(userId: string, now: Date = new Date()): Promise<ShowTonight | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('attendance')
+    .select(`
+      status,
+      events (
+        id, name, date,
+        lineups ( artists ( name ) )
+      )
+    `)
+    .eq('user_id', userId)
+    .eq('status', 'going')
+
+  if (error) {
+    console.error('Error buscando el show de esta noche:', error)
+    return null
+  }
+
+  return pickShowTonight((data ?? []) as unknown as ShowTonightRow[], now)
 }

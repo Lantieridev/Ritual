@@ -4,8 +4,9 @@ import { findOrCreateByName } from '@/src/core/lib/find-or-create'
 import { parseExternalDateTime } from '@/src/core/lib/dates'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, EventCreateInput, EventUpdateInput, FutureEvent, EventWithRelations } from '@/src/core/types'
-import { getEvents, getEventsWithAttendance, getEventById, getEventIdsForSitemap, getMyEvents, getUpcomingEvents, getUpcomingEventsInCity } from './data'
+import { getEvents, getEventsWithAttendance, getEventById, getEventIdsForSitemap, getMyEvents, getUpcomingEvents, getUpcomingEventsInCity, getShowTonight } from './data'
 import type { EventWithAttendance } from './data'
+import type { ShowTonight } from './show-tonight'
 import { getAttendanceForEvent, getAttendanceForEventsBatch } from './attendance-data'
 import type { EventAttendance } from './attendance-data'
 import { getOrCreateAttendance, setAttendanceStatus, saveMemory } from './attendance-actions'
@@ -16,7 +17,7 @@ import { getEventMessages, addEventMessage } from './messages-data'
 import type { EventMessage } from './messages-data'
 import { buildLineupRows } from './lineup-b2b'
 
-export type { EventWithRelations, EventWithAttendance, EventAttendance, AttendanceStatus, EventPhoto, EventMessage }
+export type { EventWithRelations, EventWithAttendance, EventAttendance, AttendanceStatus, EventPhoto, EventMessage, ShowTonight }
 
 /**
  * Attendance y fotos de un evento puntual: mismos casos de uso, repartidos en
@@ -87,6 +88,11 @@ export async function listUpcomingEventsInCity(city: string): Promise<EventWithR
 /** Próximos shows del catálogo entero, del más cercano en adelante — Home sin sesión. */
 export async function listUpcomingEvents(limit?: number): Promise<EventWithRelations[]> {
   return getUpcomingEvents(limit)
+}
+
+/** El show al que el usuario va esta noche (issue #82), para la banda de "Tu entrada de hoy". */
+export async function findShowTonight(userId: string, now?: Date): Promise<ShowTonight | null> {
+  return getShowTonight(userId, now)
 }
 
 const MAX_NAME_LENGTH = 200

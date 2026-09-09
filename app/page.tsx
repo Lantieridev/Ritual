@@ -2,7 +2,7 @@ import * as React from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { listMyEvents, listUpcomingEvents, listUpcomingEventsInCity } from '@/src/domains/events/service'
-import { buildHomeFeed, buildHomeHeroState, heroEventOf } from '@/src/domains/events/home-view'
+import { buildHomeFeed, buildHomeHeroState, heroEventOf, pickRecentSeen, resolveInitialOpen } from '@/src/domains/events/home-view'
 import { HomeHero } from '@/src/domains/events/components/HomeHero'
 import { getHeroVenueDetails } from '@/src/domains/events/hero-details'
 import { gql } from 'urql'
@@ -232,7 +232,13 @@ async function CityShowsWrapper({ city }: { city: string | undefined }) {
   )
 }
 
-export default async function HomePage() {
+interface HomePageProps {
+  /** `?entrada=hoy` — deep link de la banda de "Tu entrada de hoy" de vuelta a Home (issue #82). */
+  searchParams?: Promise<{ entrada?: string | string[] }>
+}
+
+export default async function HomePage({ searchParams }: HomePageProps = {}) {
+  const params = searchParams ? await searchParams : {}
   const [allEvents, { data }, userId] = await Promise.all([
     listMyEvents(),
     getClient().query<{
@@ -282,6 +288,13 @@ export default async function HomePage() {
         ? getHeroVenueDetails(heroState.nextShow)
         : null
 
+  // "Lo último que viste" del hero mobile (issue #82) — sólo los shows
+  // propios que el usuario ya vio, sin importar si tienen puntaje.
+  const recentSeen = pickRecentSeen(allEvents, now)
+  // Abre el talón de esta noche al llegar desde la banda (?entrada=hoy),
+  // sólo cuando el estado sigue siendo show-today (R1-007).
+  const initialOpen = resolveInitialOpen(params.entrada, heroState)
+
   const upcomingFestivals = festivals
     .filter((f) => !isPastEvent(f.end_date ?? f.start_date, now))
     .filter((f) => !(heroState.kind === 'festival' && f.id === heroState.festival.id))
@@ -293,7 +306,13 @@ export default async function HomePage() {
   return (
     <>
       <React.Suspense fallback={<HomeHero state={heroState} backgroundImage={null} />}>
-        <HomeHero state={heroState} backgroundImage={heroImagePromise} details={heroDetails} />
+        <HomeHero
+          state={heroState}
+          backgroundImage={heroImagePromise}
+          details={heroDetails}
+          recentSeen={recentSeen}
+          initialOpen={initialOpen}
+        />
       </React.Suspense>
 
       <React.Suspense fallback={<div className="min-h-screen bg-ritual-bg animate-pulse flex items-center justify-center"><p className="text-ritual-gray-text font-label uppercase">Buscando shows cerca tuyo...</p></div>}>

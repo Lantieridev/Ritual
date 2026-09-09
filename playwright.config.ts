@@ -44,5 +44,9 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
+    // Sin esto, `banda.spec.ts` (issue #82) se saltea siempre: el token
+    // tiene que llegar al `next dev` que arranca este webServer, no sólo al
+    // proceso de Playwright — nunca se setea en producción.
+    env: { RITUAL_E2E_BANDA_TOKEN: process.env.RITUAL_E2E_BANDA_TOKEN ?? '' },
   },
 });
