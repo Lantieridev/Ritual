@@ -104,9 +104,13 @@ su acción principal sobre el talón con `<MobileHeroAction>`
 (`src/core/components/layout/MobileAction.tsx`), y el aire inferior de la página
 sale del token `--ritual-mobile-clearance`, que crece con esa pila.
 
-Los estados mobile de Hoy (primera vez, sólo pasado, la mañana después y sin
-sesión) ya están portados. Queda llevar "show hoy" a su maqueta mobile (hoy usa la
-de desktop) y la tira de sugeridos con el ranking unificado (#82, #81).
+Los estados mobile de Hoy (primera vez, sólo pasado, la mañana después, sin
+sesión, show hoy y cuenta regresiva) ya están portados — issue #82 cerrado: hero
+mobile propio (badge de hora, "Lo último que viste", degradación honesta de
+dirección y clima) más la banda de "Tu entrada de hoy" sobre Buscar/Colección/Vos,
+con su propio aire de clearance (`html[data-mobile-banda]`). Introdujo tres pares
+de contraste nuevos/extendidos por debajo de AA — ver §7 (issue #78). Queda la
+tira de sugeridos con el ranking unificado (#81).
 
 `Footer` tiene 2 breakpoints. `ProfileDropdown`, 1.
 
@@ -230,16 +234,22 @@ Anotados acá para que no se confundan con huecos visuales:
 Encontrada en el QA de los estados de Hoy (2026-09-12). Son decisiones del
 prototipo aprobado, así que se resuelven en Claude Design, no en código:
 
-- **Contraste por debajo de WCAG AA** (#78). Seis pares texto/fondo del prototipo:
+- **Contraste por debajo de WCAG AA** (#78). Siete pares texto/fondo del prototipo:
   - badge rojo con texto `panel` a 9px (3,84:1);
   - puntaje apagado `gray-muted-2` sobre `surface-high` (2,03:1);
-  - etiquetas `gray-mid-2` a 9px sobre el fondo (3,72:1);
+  - etiquetas `gray-mid-2` a 9px sobre el fondo (3,72:1) — el kicker "Lo último
+    que viste" (`HHT-06`) y la meta de cada show reciente (`HHT-08`) del hero
+    mobile de Hoy comparten este mismo par;
   - notas `gray-mid` (3,11:1);
   - subtítulo de la banda (3,53:1);
-  - acción de la banda a 16px (3,84:1).
+  - acción de la banda a 16px (3,84:1);
+  - tag de clima del hero mobile de Hoy, rojo sobre panel a 9px (3,84:1) —
+    nuevo, `HHT-04`.
 
-  `src/core/design-tokens.contrast.test.ts` los mantiene como `it.fails`, así que
-  el día que el diseño los suba el test avisa que hay que pasarlos a normales.
+  `src/core/design-tokens.contrast.test.ts` los mantiene como `it.fails`
+  (`DESIGN_DEBT_PAIR_IDS` incluye `HHT-04`, `HHT-06` y `HHT-08` contra este
+  issue), así que el día que el diseño los suba el test avisa que hay que
+  pasarlos a normales.
 - **Escala del puntaje** (#79). El prototipo dibuja 1–10; el rating de la app es 1–5
   (`validateRating`). La UI usa cinco botones hasta que se decida.
 - **Copy que afirma datos que no existen.** "Lo más fuerte de esta semana", "queda
