@@ -56,3 +56,10 @@ mcp/dist/
 /scratch/
 /test-adapters.ts
 /msg.txt
+
+# Referencia de diseño local (Claude Design) — no se commitea
+.design-reference/
+
+# Playwright
+test-results/
+playwright-report/

@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "supabase:db-pull": "npx supabase db pull",
     "supabase:db-push": "npx supabase db push",
     "supabase:gen-types": "npx supabase gen types typescript -o src/lib/database.types.ts"
@@ -39,6 +40,7 @@
     "urql": "^5.0.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",

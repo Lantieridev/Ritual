@@ -16,7 +16,9 @@
 5.  **Probá antes de abrir el PR**:
     *   `npx tsc --noEmit` (tipos)
     *   `npx vitest run` (tests)
+    *   `npm run test:e2e` (Playwright: layout de los estados de Hoy en Chromium, Firefox, WebKit y emulación de celular — necesita `npm run dev` corriendo y los navegadores instalados una vez con `npx playwright install`)
     *   `npx eslint app src --ext .ts,.tsx` (lint)
+    *   Para mirar los estados de Hoy con datos de prueba sin cargar nada: `/dev/hoy/<estado>` (sólo en desarrollo; en producción devuelve 404).
 6.  **Pull Request**:
     *   Describí qué cambios hiciste y por qué.
     *   Adjuntá capturas de pantalla si cambiaste algo visual.
