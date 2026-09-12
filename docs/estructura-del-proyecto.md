@@ -22,7 +22,7 @@ src/
       index.ts                # Tipos de dominio (Artist, Venue, Event, Expense…)
     components/
       ui/                     # Primitivos del sistema de diseño: Button, Card, Input, TicketEmbed, StarRating…
-      layout/                 # Navbar, Footer, PageShell
+      layout/                 # Navbar (desktop), MobileTabBar + MobileAction (mobile), Footer, PageShell
       home/                   # Piezas compuestas específicas del Home
 
   domains/                    # Un folder por dominio (datos + acciones + vistas + componentes)
@@ -56,8 +56,10 @@ app/                           # Solo rutas y páginas (importan de src/core, sr
   events/, venues/, artists/, festivals/, expenses/, stats/, wishlist/, wrapped/
   login/, signup/, profile/
   buscar/ (activa) — search/ (alias legado, ver R2-009)
+  dev/hoy/[estado]/            # Estados de Hoy con datos de prueba — sólo en desarrollo (404 en producción)
 
 proxy.ts                       # Auth guard + refresh de cookies (antes middleware.ts, ver docs/adr)
+e2e/                           # Playwright (npm run test:e2e): layout de Hoy en 5 navegadores × 7 tamaños
 ```
 
 ### Diseño (Tailwind 4)
@@ -65,7 +67,7 @@ proxy.ts                       # Auth guard + refresh de cookies (antes middlewa
 - Sistema de tokens `ritual-*` en `app/globals.css` (`@theme inline`, CSS-first, sin `tailwind.config.js`): colores, sombras y motion namespaced.
 - Tipografía: 7 fuentes de Google Fonts vía `next/font/google` (Anton, Archivo Black, Archivo, Big Shoulders, Bebas Neue, Space Mono, Space Grotesk).
 - `--radius-*` global en `0px`: todos los `rounded-*` quedan planos por diseño (excepto `rounded-full`).
-- Accesibilidad WCAG 2.2 AA verificada con cálculo real de contraste (no a ojo) — ver auditoría en el historial de commits de julio/agosto 2026.
+- Contraste verificado con cálculo real (no a ojo) en `src/core/design-tokens.contrast.test.ts`. La UI de escritorio cumplía WCAG 2.2 AA según la auditoría de julio/agosto 2026; el diseño mobile trae seis pares por debajo de AA, registrados como deuda de diseño en `docs/design-backlog.md` (sección 7).
 
 ### Ventajas
 

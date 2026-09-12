@@ -96,11 +96,17 @@ primero, no para concluir que está rota.
 
 ### Navegación
 
-`Navbar` (`src/core/components/layout/Navbar.tsx`) ya tiene una estrategia mobile
-deliberada: los links van en un contenedor con scroll horizontal y un degradado de
-fade en el borde derecho, comentado en el código como tal. No hay menú hamburguesa
-ni drawer. Si eso alcanza o no es una decisión de diseño abierta, pero no es un
-olvido.
+Resuelta para mobile (2026-09). Por debajo de `md` el `Navbar` se oculta y la
+navegación pasa a ser el talón fijo de abajo
+(`src/core/components/layout/MobileTabBar.tsx`: cuatro palabras, Hoy · Buscar ·
+Archivo · Vos), portado del handoff mobile de Claude Design. Una página puede fijar
+su acción principal sobre el talón con `<MobileHeroAction>`
+(`src/core/components/layout/MobileAction.tsx`), y el aire inferior de la página
+sale del token `--ritual-mobile-clearance`, que crece con esa pila.
+
+Los estados mobile de Hoy (primera vez, sólo pasado, la mañana después y sin
+sesión) ya están portados. Queda llevar "show hoy" a su maqueta mobile (hoy usa la
+de desktop) y la tira de sugeridos con el ranking unificado (#82, #81).
 
 `Footer` tiene 2 breakpoints. `ProfileDropdown`, 1.
 
@@ -216,3 +222,26 @@ Anotados acá para que no se confundan con huecos visuales:
 - Las tres páginas de moderación hacen `throw new Error(...)` si falla el query,
   en vez de degradar como hace el resto del repo.
 - `src/graphql/builder.ts` tiene un error de tipos con `relayOptions` de Pothos v4.
+
+---
+
+## 7. Deuda de diseño abierta (mobile)
+
+Encontrada en el QA de los estados de Hoy (2026-09-12). Son decisiones del
+prototipo aprobado, así que se resuelven en Claude Design, no en código:
+
+- **Contraste por debajo de WCAG AA** (#78). Seis pares texto/fondo del prototipo:
+  - badge rojo con texto `panel` a 9px (3,84:1);
+  - puntaje apagado `gray-muted-2` sobre `surface-high` (2,03:1);
+  - etiquetas `gray-mid-2` a 9px sobre el fondo (3,72:1);
+  - notas `gray-mid` (3,11:1);
+  - subtítulo de la banda (3,53:1);
+  - acción de la banda a 16px (3,84:1).
+
+  `src/core/design-tokens.contrast.test.ts` los mantiene como `it.fails`, así que
+  el día que el diseño los suba el test avisa que hay que pasarlos a normales.
+- **Escala del puntaje** (#79). El prototipo dibuja 1–10; el rating de la app es 1–5
+  (`validateRating`). La UI usa cinco botones hasta que se decida.
+- **Copy que afirma datos que no existen.** "Lo más fuerte de esta semana", "queda
+  cargado con la fecha y la sede", los compañeros ("con Tomás y Juli"). Se
+  reescribieron en versión honesta hasta que haya datos que los respalden.
