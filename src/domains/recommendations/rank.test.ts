@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { rankSuggestions } from '@/src/domains/recommendations/rank'
-import type { RankingInput, SuggestionCandidate } from '@/src/domains/recommendations/types'
+import { rankSuggestions, compareRanked } from '@/src/domains/recommendations/rank'
+import type { RankedCandidate, RankingInput, SuggestionCandidate } from '@/src/domains/recommendations/types'
 
 const NOW = new Date('2026-09-14T12:00:00-03:00')
 const HERE = { lat: -34.6037, lng: -58.3816 }
@@ -90,7 +90,7 @@ describe('rankSuggestions — tie-break and determinism', () => {
         expect(first).toEqual(second)
     })
 
-    it('breaks a tied score by the nearer date', () => {
+    it('sorts by score, with a farther but more important show beating a nearer one', () => {
         const candidates = [
             candidate({ key: 'far', startsAt: '2026-09-20' }),
             candidate({ key: 'near', startsAt: '2026-09-15' }),
@@ -99,6 +99,36 @@ describe('rankSuggestions — tie-break and determinism', () => {
         const ranked = rankSuggestions(candidates, baseCtx())
 
         expect(ranked.map((r) => r.key)).toEqual(['near', 'far'])
+    })
+
+    /**
+     * `rankSuggestions` no produce puntajes idénticos bit a bit entre dos
+     * candidatos calculados por caminos distintos — de ahí que este tier del
+     * comparador se pruebe directo, con objetos ya armados, en vez de
+     * intentar "empatar" el puntaje real combinando factores (eso depende de
+     * la aritmética de punto flotante, no de la regla de desempate).
+     */
+    it('compareRanked breaks a tied score by the nearer date, then by key', () => {
+        const base: RankedCandidate = {
+            key: 'a',
+            source: 'catalog',
+            href: '/events/a',
+            headliner: 'a',
+            artistIds: [],
+            venueName: 'Niceto',
+            startsAt: '2026-09-14',
+            venueCoords: HERE,
+            score: 0.5,
+            factors: { importance: 0.5, affinity: 1, proximity: 1, date: 1 },
+            daysAway: 5,
+            distanceKm: null,
+            reason: null,
+        }
+
+        expect(compareRanked({ ...base, daysAway: 5 }, { ...base, daysAway: 10 })).toBeLessThan(0)
+        expect(compareRanked({ ...base, daysAway: 10 }, { ...base, daysAway: 5 })).toBeGreaterThan(0)
+        expect(compareRanked({ ...base, key: 'alfa' }, { ...base, key: 'zeta' })).toBeLessThan(0)
+        expect(compareRanked(base, { ...base, score: 0.9 })).toBeGreaterThan(0) // el puntaje manda antes que la fecha
     })
 })
 
@@ -117,6 +147,17 @@ describe('rankSuggestions — exclusions and finiteness', () => {
         const ranked = rankSuggestions(candidates, baseCtx())
 
         expect(ranked.map((r) => r.key)).toEqual(['ok'])
+    })
+
+    it('includes a candidate exactly on day 90 and excludes one on day 91', () => {
+        const candidates = [
+            candidate({ key: 'day-90', startsAt: '2026-12-13' }),
+            candidate({ key: 'day-91', startsAt: '2026-12-14' }),
+        ]
+
+        const ranked = rankSuggestions(candidates, baseCtx())
+
+        expect(ranked.map((r) => r.key)).toEqual(['day-90'])
     })
 
     it('produces a finite score for empty lineups, missing importance, and null coordinates', () => {

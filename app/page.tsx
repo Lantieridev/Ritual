@@ -207,10 +207,15 @@ export default async function HomePage({ searchParams }: HomePageProps = {}) {
     <>
       <React.Suspense
         fallback={
+          // El talón de acá abajo sólo dura hasta que resuelva
+          // `heroImagePromise` — un esqueleto en vez de `suggestionsElement`
+          // evita ejecutar `getHomeSuggestions` dos veces (una acá, otra en
+          // el hero real de abajo), que sería una ida doble a Supabase y a
+          // Ticketmaster en cada carga sin sesión.
           <HomeHero
             state={heroState}
             backgroundImage={null}
-            suggestions={isGuest ? suggestionsElement : undefined}
+            suggestions={isGuest ? <SuggestionsStripSkeleton /> : undefined}
             seeds={seedsPromise}
           />
         }

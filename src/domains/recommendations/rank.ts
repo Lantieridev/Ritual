@@ -12,7 +12,7 @@ import type { RankedCandidate, RankingInput, SuggestionCandidate } from './types
  * code-unit comparison — locale-independent, so the order never depends on
  * the runtime's `Intl` locale.
  */
-function compareRanked(a: RankedCandidate, b: RankedCandidate): number {
+export function compareRanked(a: RankedCandidate, b: RankedCandidate): number {
     if (a.score !== b.score) return b.score - a.score
     if (a.daysAway !== b.daysAway) return a.daysAway - b.daysAway
     if (a.key < b.key) return -1

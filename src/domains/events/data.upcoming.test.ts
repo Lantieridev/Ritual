@@ -116,7 +116,7 @@ describe('listSuggestionCandidates', () => {
     vi.clearAllMocks()
   })
 
-  it('queries events using the narrow SUGGESTION_CANDIDATES_SELECT, from today (AR) to +90d, ordered by date asc, capped at CANDIDATE_LIMIT', async () => {
+  it('queries events using the narrow SUGGESTION_CANDIDATES_SELECT, from today (AR) through day 90 inclusive, ordered by date asc, capped at CANDIDATE_LIMIT', async () => {
     const rows = [{ id: 'e1', name: 'Show A', date: '2026-09-15T20:00:00.000Z', venues: null, lineups: [] }]
     const builder = makeQueryBuilder({ data: rows, error: null })
     const fromMock = vi.fn(() => builder)
@@ -128,7 +128,10 @@ describe('listSuggestionCandidates', () => {
     expect(fromMock).toHaveBeenCalledWith('events')
     expect(builder.select).toHaveBeenCalledWith(SUGGESTION_CANDIDATES_SELECT)
     expect(builder.gte).toHaveBeenCalledWith('date', '2026-09-14T00:00:00-03:00')
-    expect(builder.lt).toHaveBeenCalledWith('date', '2026-12-13T00:00:00-03:00')
+    // El corte es una día después del día 90 (exclusivo): computeDateFactor
+    // acepta 0-90 días inclusive, así que el día 90 entero tiene que
+    // aparecer en la query, no quedar afuera por el `.lt` exclusivo.
+    expect(builder.lt).toHaveBeenCalledWith('date', '2026-12-14T00:00:00-03:00')
     expect(builder.order).toHaveBeenCalledWith('date', { ascending: true })
     expect(builder.limit).toHaveBeenCalledWith(CANDIDATE_LIMIT)
     expect(CANDIDATE_LIMIT).toBe(100)

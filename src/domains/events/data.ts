@@ -321,7 +321,9 @@ const CANDIDATE_WINDOW_DAYS = 90
 export async function listSuggestionCandidates(now: Date = new Date()): Promise<SuggestionCandidateRow[]> {
   const supabase = await createClient()
   const start = combineDateAndTime(todayDateOnly(now), '00:00')
-  const cutoff = new Date(now.getTime() + CANDIDATE_WINDOW_DAYS * MS_PER_DAY)
+  // +1 día porque el corte es exclusivo (`.lt`) y el día 90 mismo tiene que
+  // entrar — `computeDateFactor` acepta 0–90 días inclusive.
+  const cutoff = new Date(now.getTime() + (CANDIDATE_WINDOW_DAYS + 1) * MS_PER_DAY)
   const end = combineDateAndTime(todayDateOnly(cutoff), '00:00')
 
   const { data, error } = await supabase
