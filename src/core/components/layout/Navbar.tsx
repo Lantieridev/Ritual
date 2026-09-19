@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { routes } from '@/src/core/lib/routes'
 
+import { NotificationBell } from '@/src/domains/notifications/components'
 import { ProfileDropdown } from './ProfileDropdown'
 
 // Colección (artistas/sedes/festivales) es el catálogo compartido: cualquiera
@@ -41,9 +42,10 @@ import type { User } from '@supabase/supabase-js'
 
 interface NavbarProps {
     user?: User | null
+    unreadNotifications?: number
 }
 
-export function Navbar({ user }: NavbarProps) {
+export function Navbar({ user, unreadNotifications = 0 }: NavbarProps) {
     const pathname = usePathname()
     const navLinks = user ? [...PUBLIC_NAV_LINKS, ...AUTHENTICATED_NAV_LINKS] : PUBLIC_NAV_LINKS
 
@@ -104,7 +106,10 @@ export function Navbar({ user }: NavbarProps) {
                         </Link>
                     )}
                     {user ? (
-                        <ProfileDropdown user={user} />
+                        <>
+                            <NotificationBell unreadCount={unreadNotifications} />
+                            <ProfileDropdown user={user} />
+                        </>
                     ) : (
                         <Link
                             href={routes.login}

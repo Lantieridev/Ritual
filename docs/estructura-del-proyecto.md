@@ -57,7 +57,10 @@ src/
 app/                           # Solo rutas y páginas (importan de src/core, src/domains, src/graphql)
   api/graphql/                 # Endpoint único de GraphQL (Yoga)
   api/cron/                    # Crons de Vercel (vercel.json), protegidos con CRON_SECRET: fuentes
-                               # externas, importancia de artistas y refresco de Last.fm
+                               # externas, importancia de artistas, refresco de Last.fm y notificaciones
+                               # (notify-post-show encola, deliver-notifications envía por email; requieren
+                               # RESEND_API_KEY y NOTIFICATIONS_FROM_EMAIL — sin ellas responden 503 y la
+                               # bandeja in-app sigue funcionando)
   page.tsx                     # Home
   layout.tsx
   coleccion/                   # Artistas + Sedes + Festivales unificados

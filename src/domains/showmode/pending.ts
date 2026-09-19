@@ -2,20 +2,18 @@
  * Qué le falta cargar al usuario de un show (issue #9).
  *
  * ════════════════════════════════════════════════════════════════════════
- * DEPENDENCIA — issue #6 (sistema de notificaciones), NO implementado
+ * AVISO POST-SHOW — issue #6 (sistema de notificaciones)
  * ════════════════════════════════════════════════════════════════════════
  * El issue #9 pide "un solo aviso que junta todo lo pendiente del show
- * (gastos + rating + reseña), no notificaciones sueltas". Ese aviso necesita
- * un canal (mail/push) que todavía no existe: el issue #6 está frenado
- * esperando una decisión de tooling del dueño del proyecto.
+ * (gastos + rating + reseña), no notificaciones sueltas". Ese aviso lo arma
+ * el cron `notify-post-show` del dominio de notificaciones
+ * (`src/domains/notifications/jobs/notifyPostShow.ts`), que reusa esta misma
+ * función sin reimplementar la regla.
  *
- * Lo que SÍ vive acá es la mitad que no depende de esa decisión: el cálculo
- * de qué está pendiente. Es deliberadamente puro y agnóstico del canal —
- * hoy lo consume la propia página del evento para mostrar el aviso in-app
- * durante la ventana posterior al show, y cuando el issue #6 se destrabe,
- * el job que mande el mail/push puede reusar esta misma función sin
- * reimplementar la regla. No hay nada de infraestructura de notificaciones
- * en este archivo ni en este PR.
+ * Lo que vive acá es el cálculo de qué está pendiente. Es deliberadamente puro
+ * y agnóstico del canal: lo consume tanto la página del evento (aviso in-app
+ * durante la ventana posterior al show) como el job que encola el aviso por
+ * bandeja y email. No hay infraestructura de notificaciones en este archivo.
  */
 
 export type PendingKind = 'attendance' | 'expenses' | 'rating' | 'review'

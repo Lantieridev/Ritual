@@ -16,6 +16,9 @@ export const routes = {
   collection: '/coleccion',
   /** Ajustes del modo recital activo: ventana y plantilla del checklist — issue #9. */
   showMode: '/modo-recital',
+  /** Inbox de avisos y ajustes por tipo/canal — issue #6. */
+  notifications: '/notificaciones',
+  notificationSettings: '/notificaciones/ajustes',
 
   artists: {
     list: '/artists',
