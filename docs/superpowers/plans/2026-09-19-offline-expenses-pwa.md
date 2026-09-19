@@ -2132,6 +2132,16 @@ git commit -m "test(pwa): add offline expense E2E and record the design in an AD
 
 ---
 
+## Execution notes (deviations from the plan as written)
+
+- **Owner scoping (security).** A commit security review flagged that the outbox lives on the device while the flusher sends under whoever is signed in, so a second user on the same phone would flush the first user's queued expenses into their own account. Fixed in `026812e`: `OutboxEntry.ownerId`, `enqueue(payload, ownerId)`, `listEntries(ownerId)`, `flushOutbox(send, ownerId)`, a module-level `outbox-owner.ts` set by `<OutboxSync userId />` from the layout's verified user, and no queueing when no owner is known. Task 6 was executed with this design (the `OutboxSync`/`usePendingExpenses`/`useOutboxFlush` snippets above predate it).
+- **`PwaProvider`** uses the provider's own `disable` prop and sets `reloadOnOnline={false}` (its default reloads the page when signal returns, which would wipe a half-filled form).
+- **tsconfig:** adding `"webworker"` to `lib` type-checks cleanly, so the `exclude` fallback was not needed.
+- **Manifest/icons** use the app's real tokens (`#08080A` background, `#EDEBE6` foreground) instead of the placeholder hex values.
+- **Tests:** the "quick-add inserts" panel test now awaits the UI (`findByText`), because the create path awaits the outbox (IndexedDB) before reporting success.
+- **ADR 0005** is written in Spanish to match the existing ADRs.
+- **Not run:** the Playwright E2E (Task 8) needs a dedicated Supabase test account (`RITUAL_E2E_EMAIL`/`RITUAL_E2E_PASSWORD`), so cold-start offline caching is still unverified in a real browser (see risk 1).
+
 ## Known risks (verify during implementation, not assumptions)
 
 1. **Cold-start caching of authenticated pages** is proven only by Task 8's E2E; the warm-up fetch approach may need the `Accept` header tweak described there.
