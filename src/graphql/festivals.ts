@@ -6,6 +6,9 @@ import {
     removeFestival,
     saveFestivalAttendance,
     linkEventToFestival,
+    markFestivalArtistSeen,
+    unmarkFestivalArtistSeen,
+    listFestivalSeenArtistsByDay,
 } from '@/src/domains/festivals/service'
 import type { Festival } from '@/src/domains/festivals/service'
 import { MutationResultRef, toMutationResult } from './shared'
@@ -72,6 +75,23 @@ FestivalAttendanceEntryRef.implement({
     }),
 })
 
+const FestivalSeenArtistSummaryRef = builder.objectRef<{ id: string; name: string }>('FestivalSeenArtistSummary')
+FestivalSeenArtistSummaryRef.implement({
+    fields: (t) => ({
+        id: t.exposeID('id'),
+        name: t.exposeString('name'),
+    }),
+})
+
+const FestivalSeenDayRef = builder.objectRef<{ dayLabel: string | null; date: string; artists: Array<{ id: string; name: string }> }>('FestivalSeenDay')
+FestivalSeenDayRef.implement({
+    fields: (t) => ({
+        dayLabel: t.exposeString('dayLabel', { nullable: true }),
+        date: t.exposeString('date'),
+        artists: t.field({ type: [FestivalSeenArtistSummaryRef], resolve: (d) => d.artists }),
+    }),
+})
+
 export const FestivalRef = builder.objectRef<Festival>('Festival')
 FestivalRef.implement({
     fields: (t) => ({
@@ -92,6 +112,23 @@ FestivalRef.implement({
         festivalAttendance: t.field({ type: [FestivalAttendanceEntryRef], resolve: (f) => f.festival_attendance }),
     }),
 })
+
+builder.queryField('festivalSeenArtistsByDay', (t) =>
+    t.field({
+        type: [FestivalSeenDayRef],
+        args: {
+            festivalId: t.arg.id({ required: true }),
+        },
+        resolve: async (_root, args) => {
+            const rows = await listFestivalSeenArtistsByDay(String(args.festivalId))
+            return rows.map((row) => ({
+                dayLabel: row.dayLabel,
+                date: row.date,
+                artists: row.artists,
+            }))
+        },
+    })
+)
 
 builder.queryField('festivals', (t) =>
     t.field({
@@ -195,5 +232,29 @@ builder.mutationField('linkEventToFestival', (t) =>
             toMutationResult(
                 await linkEventToFestival(String(args.festivalId), String(args.eventId), args.dayLabel ?? undefined)
             ),
+    })
+)
+
+builder.mutationField('markFestivalArtistSeen', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            festivalId: t.arg.id({ required: true }),
+            artistId: t.arg.id({ required: true }),
+        },
+        resolve: async (_root, args) =>
+            toMutationResult(await markFestivalArtistSeen(String(args.festivalId), String(args.artistId))),
+    })
+)
+
+builder.mutationField('unmarkFestivalArtistSeen', (t) =>
+    t.field({
+        type: MutationResultRef,
+        args: {
+            festivalId: t.arg.id({ required: true }),
+            artistId: t.arg.id({ required: true }),
+        },
+        resolve: async (_root, args) =>
+            toMutationResult(await unmarkFestivalArtistSeen(String(args.festivalId), String(args.artistId))),
     })
 )
