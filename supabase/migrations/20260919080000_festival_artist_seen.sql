@@ -13,7 +13,7 @@ create table if not exists public.festival_artist_seen (
   id uuid not null default extensions.uuid_generate_v4(),
   festival_id uuid not null references public.festivals(id) on delete cascade,
   event_id uuid not null references public.events(id) on delete cascade,
-  user_id uuid not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
   artist_id uuid not null references public.artists(id) on delete restrict,
   created_at timestamp with time zone not null default now(),
   constraint festival_artist_seen_pkey primary key (id),
@@ -25,23 +25,23 @@ alter table public.festival_artist_seen enable row level security;
 create policy "Users can select own festival_artist_seen rows"
 on public.festival_artist_seen for select
 to authenticated
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
 
 create policy "Users can insert own festival_artist_seen rows"
 on public.festival_artist_seen for insert
 to authenticated
-with check (auth.uid() = user_id);
+with check ((select auth.uid()) = user_id);
 
 create policy "Users can update own festival_artist_seen rows"
 on public.festival_artist_seen for update
 to authenticated
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
 create policy "Users can delete own festival_artist_seen rows"
 on public.festival_artist_seen for delete
 to authenticated
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
 
 create index if not exists festival_artist_seen_festival_user_idx
   on public.festival_artist_seen (festival_id, user_id);
