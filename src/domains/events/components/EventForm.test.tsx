@@ -87,10 +87,9 @@ describe('EventForm — create mode', () => {
       expect(createEventMock).toHaveBeenCalledWith({
         input: {
           name: 'Show en Niceto',
-          // Fecha + hora combinadas en un timestamp con el offset fijo de
-          // Argentina (-03:00) — "20:00" es el default del input de hora, no
-          // se tocó en este test (issue #8).
-          date: '2024-05-01T20:00:00-03:00',
+          // Sin tocar el input de hora (arranca vacío), el form manda la
+          // fecha sola: el servicio la guarda como "sin hora" (issue #11).
+          date: '2024-05-01',
           venueId: 'v1',
           artistIds: ['a1'],
           b2bGroups: [],
@@ -120,10 +119,25 @@ describe('EventForm — create mode', () => {
     })
   })
 
-  it('defaults the time input to 20:00 for a new event', () => {
+  it('starts the time input empty for a new event', () => {
     render(<EventForm venues={venues} artists={artists} />)
 
-    expect(screen.getByLabelText(/Hora/)).toHaveValue('20:00')
+    expect(screen.getByLabelText(/Hora/)).toHaveValue('')
+  })
+
+  it('sends the date alone when the time input is left empty', async () => {
+    render(<EventForm venues={venues} artists={artists} />)
+
+    await userEvent.type(screen.getByLabelText(/Nombre del recital/), 'Show')
+    await userEvent.type(screen.getByLabelText(/Fecha/), '2024-05-01')
+    await pickVenue('Niceto')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar y generar el talón' }))
+
+    await waitFor(() => {
+      expect(createEventMock).toHaveBeenCalledWith({
+        input: expect.objectContaining({ date: '2024-05-01' }),
+      })
+    })
   })
 
   it('removes an artist chip when its "x" is clicked', async () => {
@@ -356,6 +370,25 @@ describe('EventForm — edit mode', () => {
     expect(screen.getByText('Niceto')).toBeInTheDocument()
     expect(screen.getByText('Bandalos Chinos')).toBeInTheDocument()
     expect(screen.queryByText('Usted Señalemelo')).not.toBeInTheDocument()
+  })
+
+  it('leaves the time input empty when the stored show has no known time', () => {
+    render(<EventForm venues={venues} artists={artists} event={{ ...event, time_known: false }} />)
+
+    expect(screen.getByLabelText(/Hora/)).toHaveValue('')
+  })
+
+  it('sends the date alone on save when the show has no known time and the input stays empty', async () => {
+    render(<EventForm venues={venues} artists={artists} event={{ ...event, time_known: false }} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+    await waitFor(() => {
+      expect(updateEventMock).toHaveBeenCalledWith({
+        id: 'e1',
+        input: expect.objectContaining({ date: '2024-05-01' }),
+      })
+    })
   })
 
   it('does not render the rating/review/expense fields — those are only for the create flow', () => {

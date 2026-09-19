@@ -1,4 +1,4 @@
-import { isPastEvent, eventYear, daysUntil, toDateOnly, todayDateOnly, eventTimeOfDay } from '@/src/core/lib/dates'
+import { isPastEvent, eventYear, daysUntil, toDateOnly, todayDateOnly, eventTimeOfDay, isTimeKnown } from '@/src/core/lib/dates'
 import { nearestUpcoming } from '@/src/core/lib/dates'
 import { formatDate } from '@/src/core/lib/utils'
 import type { EventWithAttendance, EventWithRelations } from '@/src/domains/events/service'
@@ -195,9 +195,10 @@ export function heroEventOf(state: HomeHeroState): EventWithRelations | undefine
  */
 export function heroBadgeText(state: Extract<HomeHeroState, { kind: 'show-today' | 'normal' }>): string {
     const event = state.kind === 'show-today' ? state.event : state.nextShow
-    const time = eventTimeOfDay(event.date)
-    if (state.kind === 'show-today') return `Esta noche · ${time}`
-    return `${formatDate(event.date, { day: 'numeric', month: 'short' })} · ${time}`
+    // Sin hora conocida (issue #11) el badge muestra sólo el día, no un "00:00" inventado.
+    const time = isTimeKnown(event.time_known) ? ` · ${eventTimeOfDay(event.date)}` : ''
+    if (state.kind === 'show-today') return `Esta noche${time}`
+    return `${formatDate(event.date, { day: 'numeric', month: 'short' })}${time}`
 }
 
 /** Cuántos shows entran en "Lo último que viste" del hero mobile (#82). */

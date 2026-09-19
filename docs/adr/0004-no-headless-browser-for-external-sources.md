@@ -11,7 +11,7 @@ El cron `sync-external-sources` lee eventos de sitios de ticketeras con `fetch()
 - **Paseshow**: reCAPTCHA en la home, catálogo aparentemente detrás de login.
 - **venti.live**: SPA client-side sin datos server-renderizados.
 
-Se probó Chromium headless de Playwright contra Passline desde una IP residencial: no pasó el challenge de Cloudflare (quedó en "Just a moment..." hasta el timeout). Desde una función de Vercel, con IP de datacenter, el resultado sería igual o peor.
+En una prueba puntual (un intento de 45 s), Chromium headless de Playwright sin ninguna evasión, corriendo desde una máquina de desarrollo local, no pasó el challenge de Cloudflare de Passline: quedó en "Just a moment..." hasta el timeout. Desde una función de Vercel, con IP de datacenter, es esperable el mismo resultado o uno peor (inferencia, no se probó).
 
 ## Decisión
 No se agrega un browser headless (Puppeteer/Playwright) al cron. Passline, Edén y Paseshow quedan fuera del alcance; venti sigue registrado y devuelve el error explicado.

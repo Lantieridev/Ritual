@@ -217,7 +217,7 @@ describe('getShowTonight', () => {
 
     const result = await getShowTonight('user-1', now)
 
-    expect(result).toEqual({ id: 'e1', headliner: 'Show de esta noche', date: '2026-07-21T21:00:00-03:00' })
+    expect(result).toEqual({ id: 'e1', headliner: 'Show de esta noche', date: '2026-07-21T21:00:00-03:00', timeKnown: true })
   })
 
   it('devuelve null cuando no hay ningún show hoy', async () => {

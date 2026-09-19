@@ -45,7 +45,7 @@ describe('loadBandaAction', () => {
   })
 
   it('devuelve el link cuando hay un show esta noche', async () => {
-    vi.mocked(findShowTonight).mockResolvedValue({ id: 'e1', headliner: 'Divididos', date: '2026-07-21T21:00:00-03:00' })
+    vi.mocked(findShowTonight).mockResolvedValue({ id: 'e1', headliner: 'Divididos', date: '2026-07-21T21:00:00-03:00', timeKnown: true })
 
     const result = await loadBandaAction('user-1')
 

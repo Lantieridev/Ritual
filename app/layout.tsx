@@ -47,6 +47,7 @@ import { OnboardingTour } from "@/src/domains/auth/components";
 import { OutboxSync } from "@/src/domains/expenses/components";
 import { PwaProvider } from "@/src/core/components/pwa/PwaProvider";
 import { loadBandaAction } from "@/src/domains/events/show-tonight.server";
+import { countMyUnreadNotifications } from "@/src/domains/notifications/service";
 
 export default async function RootLayout({
   children,
@@ -66,9 +67,10 @@ export default async function RootLayout({
   // La banda de "Tu entrada de hoy" (issue #82) se resuelve en paralelo con
   // el mismo user.id ya validado más arriba — loadBandaAction nunca vuelve a
   // llamar a auth.getUser() (R1-002).
-  const [profile, bandaAction] = await Promise.all([
+  const [profile, bandaAction, unreadNotifications] = await Promise.all([
     user ? findProfile(user.id) : Promise.resolve(null),
     loadBandaAction(user?.id ?? null),
+    user ? countMyUnreadNotifications() : Promise.resolve(0),
   ]);
   const showOnboarding = Boolean(user) && !profile?.onboarding_completed_at;
 
@@ -79,7 +81,7 @@ export default async function RootLayout({
           <GraphQLProvider>
             {user && <OutboxSync userId={user.id} />}
             <MobileActionProvider>
-              <Navbar user={user} />
+              <Navbar user={user} unreadNotifications={unreadNotifications} />
               {children}
               <Footer />
               <MobileTabBar user={user} bandaAction={bandaAction} />
