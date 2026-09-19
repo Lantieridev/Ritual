@@ -52,7 +52,11 @@ describe('insertArtist', () => {
     })
 
     const result = await insertArtist({ name: 'Existing Artist' })
-    expect(result).toEqual({ error: 'Ya existe un artista con ese nombre.', existingId: 'existing-id' })
+    expect(result).toEqual({
+      error: 'Ya existe un artista con ese nombre.',
+      errorCode: 'CONFLICT',
+      existingId: 'existing-id',
+    })
     expect(selectBuilder.ilike).toHaveBeenCalledWith('name', 'Existing Artist')
   })
 
