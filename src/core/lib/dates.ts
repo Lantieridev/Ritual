@@ -64,6 +64,16 @@ export function hasTimeOfDay(dateStr: string): boolean {
     return !BARE_DATE.test(dateStr)
 }
 
+/**
+ * Whether an event's stored `time_known` flag says its hour is real.
+ * `events.date` is a timestamptz, so a show saved without an hour still comes
+ * back as a full instant; the flag is the only record that the hour is a
+ * placeholder. Absent (rows and fixtures from before the column) means known.
+ */
+export function isTimeKnown(timeKnown: boolean | null | undefined): boolean {
+    return timeKnown !== false
+}
+
 /** Today's calendar date (YYYY-MM-DD) in the app's timezone, not the server's. */
 export function todayDateOnly(reference: Date = new Date()): string {
     return new Intl.DateTimeFormat('en-CA', { timeZone: APP_TIMEZONE }).format(reference)
