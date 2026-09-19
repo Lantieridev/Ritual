@@ -41,6 +41,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@serwist/turbopack": "^9.5.12",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
@@ -49,10 +50,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.10",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^25.0.1",
+    "serwist": "^9.5.12",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"

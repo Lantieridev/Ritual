@@ -33,6 +33,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "RITUAL — Tu agenda de recitales",
   description: "Plataforma de gestión de recitales: itinerarios, giras y memoria en vivo.",
+  applicationName: "RITUAL",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "RITUAL" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
 import { isAuthSessionMissingError } from "@supabase/supabase-js";
@@ -42,6 +45,7 @@ import { GraphQLProvider } from "@/src/graphql/provider";
 import { findProfile } from "@/src/domains/auth/service";
 import { OnboardingTour } from "@/src/domains/auth/components";
 import { OutboxSync } from "@/src/domains/expenses/components";
+import { PwaProvider } from "@/src/core/components/pwa/PwaProvider";
 import { loadBandaAction } from "@/src/domains/events/show-tonight.server";
 
 export default async function RootLayout({
@@ -71,16 +75,18 @@ export default async function RootLayout({
   return (
     <html lang="es" className="dark">
       <body className={`${fontVariables} antialiased font-sans`}>
-        <GraphQLProvider>
-          {user && <OutboxSync userId={user.id} />}
-          <MobileActionProvider>
-            <Navbar user={user} />
-            {children}
-            <Footer />
-            <MobileTabBar user={user} bandaAction={bandaAction} />
-            {showOnboarding && <OnboardingTour />}
-          </MobileActionProvider>
-        </GraphQLProvider>
+        <PwaProvider>
+          <GraphQLProvider>
+            {user && <OutboxSync userId={user.id} />}
+            <MobileActionProvider>
+              <Navbar user={user} />
+              {children}
+              <Footer />
+              <MobileTabBar user={user} bandaAction={bandaAction} />
+              {showOnboarding && <OnboardingTour />}
+            </MobileActionProvider>
+          </GraphQLProvider>
+        </PwaProvider>
       </body>
     </html>
   );

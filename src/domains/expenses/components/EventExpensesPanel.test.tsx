@@ -128,7 +128,9 @@ describe('EventExpensesPanel', () => {
     })
 
     // Total grows from $23.000 to $25.000, and the new category shows up expanded.
-    expect(screen.getByText('$25.000')).toBeInTheDocument()
+    // The create path now awaits the offline outbox (IndexedDB) before it reports
+    // success, so the UI settles a tick after the mutation is sent — wait for it.
+    expect(await screen.findByText('$25.000')).toBeInTheDocument()
     expect(screen.getByText(/4 ítems/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Merch: \$2\.000 · 1 ítem$/ })).toBeInTheDocument()
     // Quick-add form closes after a successful add.
