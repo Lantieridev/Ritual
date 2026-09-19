@@ -235,3 +235,183 @@ export async function linkEventToFestival(
     revalidatePath(routes.festivals.detail(festivalId))
     return {}
 }
+
+export interface FestivalSeenArtistEntry {
+    id: string
+    name: string
+}
+
+export interface FestivalArtistSeenDay {
+    dayLabel: string | null
+    date: string
+    artists: FestivalSeenArtistEntry[]
+}
+
+type FestivalEventLinkRow = {
+    event_id?: string | null
+    events?: {
+        id?: string | null
+        date?: string | null
+        lineups?: Array<{ artist_id?: string | null }> | null
+    } | null
+}
+
+type FestivalSeenRow = {
+    event_id?: string | null
+    artist_id?: string | null
+    artists?: { id?: string | null; name?: string | null } | null
+    events?: { id?: string | null; date?: string | null } | null
+}
+
+type FestivalDayRow = {
+    event_id?: string | null
+    day_label?: string | null
+}
+
+export async function markFestivalArtistSeen(
+    festivalId: string,
+    artistId: string
+): Promise<ActionResult> {
+    const festErr = validateUUID(festivalId, 'Festival')
+    if (festErr) return { error: festErr }
+    const artistErr = validateUUID(artistId, 'Artista')
+    if (artistErr) return { error: artistErr }
+
+    const userId = await getCurrentUserId()
+    if (!userId) return { error: 'Usuario no autenticado' }
+
+    const supabase = await createClient()
+
+    const { data: festivalDays, error: dayError } = await supabase
+        .from('festival_events')
+        .select('event_id, day_label, events ( id, date, lineups ( artist_id ) )')
+        .eq('festival_id', festivalId)
+
+    if (dayError) {
+        console.error('Error leyendo días del festival para marcar artista visto:', dayError)
+        return { error: sanitizeError(dayError) }
+    }
+
+    const rows = (festivalDays ?? []).flatMap((link) => {
+        const typedLink = link as FestivalEventLinkRow
+        const eventId = typedLink.event_id ?? typedLink.events?.id
+        if (!eventId) return []
+
+        const lineups = Array.isArray(typedLink.events?.lineups) ? typedLink.events.lineups : []
+        const isMatch = lineups.some((lineup) => lineup.artist_id === artistId)
+        if (!isMatch) return []
+
+        return [{
+            festival_id: festivalId,
+            user_id: userId,
+            artist_id: artistId,
+            event_id: eventId,
+        }]
+    })
+
+    if (rows.length === 0) {
+        return { error: 'Ese artista no pertenece al cartel del festival.' }
+    }
+
+    const { error } = await supabase
+        .from('festival_artist_seen')
+        .upsert(rows, { onConflict: 'user_id,festival_id,artist_id,event_id', ignoreDuplicates: true })
+
+    if (error) {
+        console.error('Error marcando artista visto en festival:', error)
+        return { error: sanitizeError(error) }
+    }
+
+    revalidatePath(routes.festivals.detail(festivalId))
+    return {}
+}
+
+export async function unmarkFestivalArtistSeen(
+    festivalId: string,
+    artistId: string
+): Promise<ActionResult> {
+    const festErr = validateUUID(festivalId, 'Festival')
+    if (festErr) return { error: festErr }
+    const artistErr = validateUUID(artistId, 'Artista')
+    if (artistErr) return { error: artistErr }
+
+    const userId = await getCurrentUserId()
+    if (!userId) return { error: 'Usuario no autenticado' }
+
+    const supabase = await createClient()
+    const { error } = await supabase
+        .from('festival_artist_seen')
+        .delete()
+        .eq('festival_id', festivalId)
+        .eq('user_id', userId)
+        .eq('artist_id', artistId)
+
+    if (error) {
+        console.error('Error desmarcando artista visto en festival:', error)
+        return { error: sanitizeError(error) }
+    }
+
+    revalidatePath(routes.festivals.detail(festivalId))
+    return {}
+}
+
+export async function listFestivalSeenArtistsByDay(
+    festivalId: string
+): Promise<FestivalArtistSeenDay[]> {
+    const festErr = validateUUID(festivalId, 'Festival')
+    if (festErr) return []
+
+    const userId = await getCurrentUserId()
+    if (!userId) return []
+
+    const supabase = await createClient()
+    const { data: seenRows, error: seenError } = await supabase
+        .from('festival_artist_seen')
+        .select('event_id, artist_id, artists ( id, name ), events ( id, date )')
+        .eq('festival_id', festivalId)
+        .eq('user_id', userId)
+
+    if (seenError) {
+        console.error('Error leyendo artistas vistos del festival:', seenError)
+        return []
+    }
+
+    const { data: dayRows, error: dayError } = await supabase
+        .from('festival_events')
+        .select('event_id, day_label')
+        .eq('festival_id', festivalId)
+
+    if (dayError) {
+        console.error('Error leyendo días del festival:', dayError)
+        return []
+    }
+
+    const dayMap = new Map<string, { dayLabel: string | null; date: string; artists: FestivalSeenArtistEntry[] }>()
+    const dayLabelByEvent = new Map<string, string | null>((dayRows ?? []).map((row: FestivalDayRow) => [row.event_id ?? '', row.day_label ?? null]))
+
+    for (const row of (seenRows ?? []) as FestivalSeenRow[]) {
+        const eventId = row.event_id
+        const artist = row.artists
+        if (!eventId || !artist?.id || !artist?.name) continue
+
+        const date = row.events?.date ?? ''
+        const existing = dayMap.get(eventId) ?? {
+            dayLabel: dayLabelByEvent.get(eventId) ?? null,
+            date,
+            artists: [],
+        }
+
+        existing.artists.push({ id: artist.id, name: artist.name })
+        dayMap.set(eventId, existing)
+    }
+
+    return Array.from(dayMap.values())
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((day) => ({
+            dayLabel: day.dayLabel,
+            date: day.date,
+            artists: day.artists
+                .filter((artist, index, array) => array.findIndex((item) => item.id === artist.id) === index)
+                .sort((a, b) => a.name.localeCompare(b.name)),
+        }))
+}

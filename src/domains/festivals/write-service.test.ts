@@ -19,6 +19,9 @@ import {
   removeFestival,
   saveFestivalAttendance,
   linkEventToFestival,
+  markFestivalArtistSeen,
+  unmarkFestivalArtistSeen,
+  listFestivalSeenArtistsByDay,
 } from '@/src/domains/festivals/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
 
@@ -295,5 +298,92 @@ describe('linkEventToFestival', () => {
 
     expect(result.error).toBeTruthy()
     expect(builder.insert).not.toHaveBeenCalled()
+  })
+})
+
+describe('festival seen artists', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getCurrentUserId).mockResolvedValue('user-1')
+  })
+
+  it('marks a lineup artist as seen for each matching festival day and deduplicates by event', async () => {
+    const festivalDays = [{
+      event_id: '22222222-2222-2222-2222-222222222222',
+      events: {
+        id: '22222222-2222-2222-2222-222222222222',
+        date: '2026-02-01',
+        lineups: [{ artist_id: '33333333-3333-3333-3333-333333333333' }],
+      },
+    }]
+    const seenBuilder = makeQueryBuilder({ data: null, error: null })
+    const dayBuilder = makeQueryBuilder({ data: festivalDays, error: null })
+    mockCreateClient.mockReturnValue(
+      Promise.resolve({
+        from: vi.fn((table: string) => (table === 'festival_events' ? dayBuilder : seenBuilder)),
+      })
+    )
+
+    const result = await markFestivalArtistSeen(VALID_FESTIVAL_ID, '33333333-3333-3333-3333-333333333333')
+
+    expect(result).toEqual({})
+    expect(seenBuilder.upsert).toHaveBeenCalledWith(
+      [{
+        festival_id: VALID_FESTIVAL_ID,
+        user_id: 'user-1',
+        artist_id: '33333333-3333-3333-3333-333333333333',
+        event_id: '22222222-2222-2222-2222-222222222222',
+      }],
+      { onConflict: 'user_id,festival_id,artist_id,event_id', ignoreDuplicates: true }
+    )
+  })
+
+  it('rejects artists not on the festival lineup', async () => {
+    const dayBuilder = makeQueryBuilder({ data: [{ event_id: 'e1', events: { id: 'e1', date: '2026-02-01', lineups: [] } }], error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => dayBuilder) }))
+
+    const result = await markFestivalArtistSeen(VALID_FESTIVAL_ID, '33333333-3333-3333-3333-333333333333')
+
+    expect(result.error).toBe('Ese artista no pertenece al cartel del festival.')
+  })
+
+  it('removes a festival artist from the seen list for the current user', async () => {
+    const builder = makeQueryBuilder({ data: null, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await unmarkFestivalArtistSeen(VALID_FESTIVAL_ID, '33333333-3333-3333-3333-333333333333')
+
+    expect(builder.delete).toHaveBeenCalled()
+    expect(builder.eq).toHaveBeenCalledWith('festival_id', VALID_FESTIVAL_ID)
+    expect(result).toEqual({})
+  })
+
+  it('groups seen artists by festival day using the inferred event/day metadata', async () => {
+    const seenBuilder = makeQueryBuilder({
+      data: [
+        {
+          event_id: '22222222-2222-2222-2222-222222222222',
+          artist_id: '33333333-3333-3333-3333-333333333333',
+          artists: { id: '33333333-3333-3333-3333-333333333333', name: 'Bandalos Chinos' },
+          events: { id: '22222222-2222-2222-2222-222222222222', date: '2026-02-01' },
+        },
+      ],
+      error: null,
+    })
+    const dayBuilder = makeQueryBuilder({
+      data: [{ event_id: '22222222-2222-2222-2222-222222222222', day_label: 'Día 1' }],
+      error: null,
+    })
+    mockCreateClient.mockReturnValue(
+      Promise.resolve({
+        from: vi.fn((table: string) => (table === 'festival_artist_seen' ? seenBuilder : dayBuilder)),
+      })
+    )
+
+    const result = await listFestivalSeenArtistsByDay(VALID_FESTIVAL_ID)
+
+    expect(result).toEqual([
+      { dayLabel: 'Día 1', date: '2026-02-01', artists: [{ id: '33333333-3333-3333-3333-333333333333', name: 'Bandalos Chinos' }] },
+    ])
   })
 })

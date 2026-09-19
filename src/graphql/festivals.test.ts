@@ -8,6 +8,9 @@ vi.mock('@/src/domains/festivals/service', () => ({
   removeFestival: vi.fn(),
   saveFestivalAttendance: vi.fn(),
   linkEventToFestival: vi.fn(),
+  markFestivalArtistSeen: vi.fn(),
+  unmarkFestivalArtistSeen: vi.fn(),
+  listFestivalSeenArtistsByDay: vi.fn(),
 }))
 
 vi.mock('@/src/core/lib/supabase/server', () => ({
@@ -25,6 +28,9 @@ import {
   removeFestival,
   saveFestivalAttendance,
   linkEventToFestival,
+  markFestivalArtistSeen,
+  unmarkFestivalArtistSeen,
+  listFestivalSeenArtistsByDay,
 } from '@/src/domains/festivals/service'
 import { POST } from '@/app/api/graphql/route'
 
@@ -193,6 +199,37 @@ describe('festivals GraphQL mutations', () => {
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({ linkEventToFestival: { success: true } })
     expect(linkEventToFestival).toHaveBeenCalledWith('f1', 'e1', 'Día 1')
+  })
+
+  it('marks and unmarks a festival artist as seen using the shared mutation result contract', async () => {
+    vi.mocked(markFestivalArtistSeen).mockResolvedValue({})
+    vi.mocked(unmarkFestivalArtistSeen).mockResolvedValue({})
+
+    const markBody = await query('mutation { markFestivalArtistSeen(festivalId: "f1", artistId: "a1") { success } }')
+    expect(markBody.errors).toBeUndefined()
+    expect(markBody.data).toEqual({ markFestivalArtistSeen: { success: true } })
+    expect(markFestivalArtistSeen).toHaveBeenCalledWith('f1', 'a1')
+
+    const unmarkBody = await query('mutation { unmarkFestivalArtistSeen(festivalId: "f1", artistId: "a1") { success } }')
+    expect(unmarkBody.errors).toBeUndefined()
+    expect(unmarkBody.data).toEqual({ unmarkFestivalArtistSeen: { success: true } })
+    expect(unmarkFestivalArtistSeen).toHaveBeenCalledWith('f1', 'a1')
+  })
+
+  it('lists seen artists by day for a festival', async () => {
+    vi.mocked(listFestivalSeenArtistsByDay).mockResolvedValue([
+      { dayLabel: 'Día 1', date: '2026-02-01', artists: [{ id: 'a1', name: 'Bandalos Chinos' }] },
+    ] as Awaited<ReturnType<typeof listFestivalSeenArtistsByDay>>)
+
+    const body = await query('{ festivalSeenArtistsByDay(festivalId: "f1") { dayLabel date artists { id name } } }')
+
+    expect(body.errors).toBeUndefined()
+    expect(body.data).toEqual({
+      festivalSeenArtistsByDay: [
+        { dayLabel: 'Día 1', date: '2026-02-01', artists: [{ id: 'a1', name: 'Bandalos Chinos' }] },
+      ],
+    })
+    expect(listFestivalSeenArtistsByDay).toHaveBeenCalledWith('f1')
   })
 })
 
