@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/deliver-notifications",
       "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/notify-post-show",
+      "schedule": "0 16 * * *"
     }
   ]
 }
