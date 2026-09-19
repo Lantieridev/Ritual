@@ -76,11 +76,19 @@ describe('pickShowTonight', () => {
   it('devuelve null cuando no hay filas', () => {
     expect(pickShowTonight([], NOW)).toBeNull()
   })
+
+  it('propaga time_known como timeKnown, y una fila sin el flag cuenta como hora conocida', () => {
+    const unknown = pickShowTonight([makeRow({ id: 'e1', date: '2026-07-21T00:00:00-03:00', time_known: false })], NOW)
+    const legacy = pickShowTonight([makeRow({ id: 'e2', date: '2026-07-21T21:00:00-03:00' })], NOW)
+
+    expect(unknown?.timeKnown).toBe(false)
+    expect(legacy?.timeKnown).toBe(true)
+  })
 })
 
 describe('bandaLinkFor', () => {
   it('siempre apunta a routes.tonightTicket, sin funciones', () => {
-    const show: ShowTonight = { id: 'e1', headliner: 'Divididos', date: '2026-07-21T21:00:00-03:00' }
+    const show: ShowTonight = { id: 'e1', headliner: 'Divididos', date: '2026-07-21T21:00:00-03:00', timeKnown: true }
     const link = bandaLinkFor(show)
 
     expect(link.href).toBe(routes.tonightTicket)
@@ -94,9 +102,15 @@ describe('bandaLinkFor', () => {
   })
 
   it('omite la hora cuando la fecha no la trae (fecha bare, sin time-of-day)', () => {
-    const show: ShowTonight = { id: 'e1', headliner: 'Divididos', date: '2026-07-21' }
+    const show: ShowTonight = { id: 'e1', headliner: 'Divididos', date: '2026-07-21', timeKnown: true }
     const link = bandaLinkFor(show)
 
     expect(link.title).toBe('Divididos')
+  })
+
+  it('omite la hora cuando el show se guardó sin hora (time_known = false)', () => {
+    const show: ShowTonight = { id: 'e1', headliner: 'Divididos', date: '2026-07-21T00:00:00-03:00', timeKnown: false }
+
+    expect(bandaLinkFor(show).title).toBe('Divididos')
   })
 })
