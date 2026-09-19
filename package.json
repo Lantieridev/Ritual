@@ -32,7 +32,7 @@
     "graphql": "^16.14.2",
     "graphql-yoga": "^5.21.2",
     "html-to-image": "^1.11.13",
-    "next": "^16.2.11",
+    "next": "^16.3.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "server-only": "^0.0.1",
@@ -54,6 +54,6 @@
     "jsdom": "^25.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.1"
   }
 }
