@@ -52,7 +52,7 @@ export async function getUnverifiedEvents(): Promise<EventWithRelations[]> {
         .from('events')
         .select(EVENTS_SELECT)
         .eq('status', 'unverified')
-        .order('date', { ascending: true })
+        .order('created_at', { ascending: false })
 
     if (error) throw error
     return data as unknown as EventWithRelations[]

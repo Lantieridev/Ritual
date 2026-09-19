@@ -48,7 +48,7 @@ export default async function ModerationEventsPage() {
           Eventos
         </h1>
         <p className="font-body italic text-ritual-gray-text mt-2">
-          Recitales creados a mano que no vinieron por APIs externas.
+          Eventos creados manualmente o importados desde fuentes externas que esperan revisión.
         </p>
       </div>
 
