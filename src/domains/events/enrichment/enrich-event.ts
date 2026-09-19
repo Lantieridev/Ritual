@@ -87,11 +87,11 @@ async function enrich(supabase: SupabaseClient, eventId: string): Promise<void> 
   }
 
   if (headliner && !headliner.genre && match.genre) {
-    const { error: writeError } = await supabase
-      .from('artists')
-      .update({ genre: match.genre })
-      .eq('id', headliner.id)
-      .is('genre', null)
+    // RPC acotada: un UPDATE directo sobre artists exigiría una policy que abre todas las columnas.
+    const { error: writeError } = await supabase.rpc('fill_artist_genre', {
+      p_artist_id: headliner.id,
+      p_genre: match.genre,
+    })
     if (writeError) console.warn('Enriquecimiento: no se pudo guardar el género:', writeError)
   }
 }

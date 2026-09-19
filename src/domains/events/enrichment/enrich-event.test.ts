@@ -16,12 +16,17 @@ interface Write {
   filters: Filter[]
 }
 
-/** Supabase falso: devuelve `event` en el select y registra cada update con sus guardas. */
+/** Supabase falso: devuelve `event` en el select, registra cada update con sus guardas y cada rpc. */
 function makeSupabase(
   event: unknown,
   opts: { selectError?: unknown; updateError?: unknown } = {}
 ) {
   const writes: Write[] = []
+  const rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = []
+  const rpc = vi.fn((fn: string, args: Record<string, unknown>) => {
+    rpcCalls.push({ fn, args })
+    return Promise.resolve({ error: opts.updateError ?? null })
+  })
   const from = vi.fn((table: string) => ({
     select: () => ({
       eq: () => ({
@@ -46,7 +51,7 @@ function makeSupabase(
       return chain
     },
   }))
-  return { client: { from } as never, writes }
+  return { client: { from, rpc } as never, writes, rpcCalls }
 }
 
 function eventRow(overrides: Record<string, unknown> = {}) {
@@ -100,7 +105,7 @@ describe('enrichEventFromExternal', () => {
   })
 
   it('completes the hour, poster and genre on a confident match, each write guarded', async () => {
-    const { client, writes } = makeSupabase(eventRow())
+    const { client, writes, rpcCalls } = makeSupabase(eventRow())
 
     await enrichEventFromExternal(client, 'e1')
 
@@ -115,11 +120,9 @@ describe('enrichEventFromExternal', () => {
         patch: { poster_url: 'https://img.test/poster.jpg' },
         filters: [['eq', 'id', 'e1'], ['is', 'poster_url', null]],
       },
-      {
-        table: 'artists',
-        patch: { genre: 'Rock' },
-        filters: [['eq', 'id', 'a1'], ['is', 'genre', null]],
-      },
+    ])
+    expect(rpcCalls).toEqual([
+      { fn: 'fill_artist_genre', args: { p_artist_id: 'a1', p_genre: 'Rock' } },
     ])
   })
 
@@ -145,7 +148,7 @@ describe('enrichEventFromExternal', () => {
   })
 
   it('does not overwrite an existing poster or genre', async () => {
-    const { client, writes } = makeSupabase(
+    const { client, writes, rpcCalls } = makeSupabase(
       eventRow({
         poster_url: 'https://mine.test/p.jpg',
         lineups: [{ is_headliner: true, artists: { id: 'a1', name: 'Bandalos Chinos', genre: 'Indie' } }],
@@ -155,7 +158,7 @@ describe('enrichEventFromExternal', () => {
     await enrichEventFromExternal(client, 'e1')
 
     expect(writes.some((w) => 'poster_url' in w.patch)).toBe(false)
-    expect(writes.some((w) => w.table === 'artists')).toBe(false)
+    expect(rpcCalls).toEqual([])
   })
 
   it('writes nothing when there is no candidate', async () => {
@@ -212,9 +215,10 @@ describe('enrichEventFromExternal', () => {
   })
 
   it('keeps going and does not throw when one write fails', async () => {
-    const { client, writes } = makeSupabase(eventRow(), { updateError: { message: 'rls' } })
+    const { client, writes, rpcCalls } = makeSupabase(eventRow(), { updateError: { message: 'rls' } })
 
     await expect(enrichEventFromExternal(client, 'e1')).resolves.toBeUndefined()
-    expect(writes).toHaveLength(3)
+    expect(writes).toHaveLength(2)
+    expect(rpcCalls).toHaveLength(1)
   })
 })
