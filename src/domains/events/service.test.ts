@@ -477,6 +477,28 @@ describe('insertEvent / modifyEvent / removeEvent — sin redirect', () => {
     expect(eventsBuilder.insert).toHaveBeenCalledWith(expect.objectContaining({ ticket_url: null }))
   })
 
+  it('insertEvent stores a date without an hour as local midnight with time_known false', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    await insertEvent({ name: 'Show', date: '2024-05-01', venue_id: VALID_VENUE_ID } as never)
+
+    expect(eventsBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ date: '2024-05-01T00:00:00-03:00', time_known: false })
+    )
+  })
+
+  it('insertEvent keeps a full timestamp untouched and marks time_known true', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    await insertEvent({ name: 'Show', date: '2024-05-01T21:00:00-03:00', venue_id: VALID_VENUE_ID } as never)
+
+    expect(eventsBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ date: '2024-05-01T21:00:00-03:00', time_known: true })
+    )
+  })
+
   it('modifyEvent updates and returns an empty result', async () => {
     const eventsBuilder = makeQueryBuilder({ data: null, error: null }) as Record<string, unknown>
     eventsBuilder.update = vi.fn(() => eventsBuilder)
@@ -508,6 +530,40 @@ describe('insertEvent / modifyEvent / removeEvent — sin redirect', () => {
     await modifyEvent(VALID_EVENT_ID, { ticket_url: '   ' })
 
     expect(eventsBuilder.update).toHaveBeenCalledWith(expect.objectContaining({ ticket_url: null }))
+  })
+
+  it('modifyEvent stores a date without an hour as local midnight with time_known false', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: null, error: null }) as Record<string, unknown>
+    eventsBuilder.update = vi.fn(() => eventsBuilder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    await modifyEvent(VALID_EVENT_ID, { date: '2024-05-01' })
+
+    expect(eventsBuilder.update).toHaveBeenCalledWith(
+      expect.objectContaining({ date: '2024-05-01T00:00:00-03:00', time_known: false })
+    )
+  })
+
+  it('modifyEvent marks time_known true when the date carries an hour', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: null, error: null }) as Record<string, unknown>
+    eventsBuilder.update = vi.fn(() => eventsBuilder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    await modifyEvent(VALID_EVENT_ID, { date: '2024-05-01T23:15:00-03:00' })
+
+    expect(eventsBuilder.update).toHaveBeenCalledWith(
+      expect.objectContaining({ date: '2024-05-01T23:15:00-03:00', time_known: true })
+    )
+  })
+
+  it('modifyEvent leaves time_known alone when no date is sent', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: null, error: null }) as Record<string, unknown>
+    eventsBuilder.update = vi.fn(() => eventsBuilder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    await modifyEvent(VALID_EVENT_ID, { name: 'Nuevo nombre' })
+
+    expect(eventsBuilder.update).toHaveBeenCalledWith(expect.not.objectContaining({ time_known: expect.anything() }))
   })
 
   it('removeEvent deletes lineups and the event', async () => {
