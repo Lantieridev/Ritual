@@ -85,7 +85,7 @@ export async function modifyProfile(input: ProfileUpdateInput): Promise<ActionRe
     if (error) {
         console.error('Profile update error:', error)
         if (error.code === '23505') {
-            return { error: 'Ese nombre de usuario ya está en uso.' }
+            return { error: 'Ese nombre de usuario ya está en uso.', errorCode: 'CONFLICT' }
         }
         return { error: sanitizeError(error) }
     }

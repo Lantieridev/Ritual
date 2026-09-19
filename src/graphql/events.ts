@@ -18,7 +18,7 @@ import {
 import type { EventWithAttendance, EventMessage } from '@/src/domains/events/service'
 import type { EventWithRelations, LineupRow } from '@/src/core/types'
 import type { FutureEvent } from '@/src/core/types'
-import { MutationResultRef, toMutationResult } from './shared'
+import { MutationResultRef, toMutationResult, ErrorCode, ErrorCodeRef } from './shared'
 
 export const AttendanceStatusEnum = builder.enumType('AttendanceStatus', {
     values: ['interested', 'going', 'went'] as const,
@@ -199,11 +199,12 @@ const EventUpdateInput = builder.inputType('EventUpdateInput', {
     }),
 })
 
-const CreateEventResultRef = builder.objectRef<{ id?: string; error?: string }>('CreateEventResult')
+const CreateEventResultRef = builder.objectRef<{ id?: string; error?: string; errorCode?: ErrorCode }>('CreateEventResult')
 CreateEventResultRef.implement({
     fields: (t) => ({
         id: t.exposeID('id', { nullable: true }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
     }),
 })
 
@@ -280,11 +281,12 @@ const AddExternalEventInput = builder.inputType('AddExternalEventInput', {
     }),
 })
 
-const AddExternalEventResultRef = builder.objectRef<{ eventId?: string; error?: string }>('AddExternalEventResult')
+const AddExternalEventResultRef = builder.objectRef<{ eventId?: string; error?: string; errorCode?: ErrorCode }>('AddExternalEventResult')
 AddExternalEventResultRef.implement({
     fields: (t) => ({
         eventId: t.exposeID('eventId', { nullable: true }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
     }),
 })
 

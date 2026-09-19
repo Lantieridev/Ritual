@@ -187,7 +187,7 @@ describe('insertVenue', () => {
     const result = await insertVenue({ name: 'Niceto Club' })
 
     expect(lookupBuilder.ilike).toHaveBeenCalledWith('name', 'Niceto Club')
-    expect(result).toEqual({ error: 'Ya existe una sede con ese nombre.', existingId: 'existing-venue-1' })
+    expect(result).toEqual({ error: 'Ya existe una sede con ese nombre.', existingId: 'existing-venue-1', errorCode: 'CONFLICT' })
   })
 })
 

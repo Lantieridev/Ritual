@@ -270,7 +270,7 @@ export async function addExpenseSplit(
     .from('expense_splits')
     .insert({ expense_id: expenseId, user_id: profile.id })
   if (error) {
-    if (error.code === '23505') return { error: `Ya está compartido con "${cleanUsername}".` }
+    if (error.code === '23505') return { error: `Ya está compartido con "${cleanUsername}".`, errorCode: 'CONFLICT' }
     return { error: sanitizeError(error) }
   }
   return { userId: profile.id, username: profile.username ?? undefined }

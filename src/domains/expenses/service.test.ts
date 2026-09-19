@@ -520,7 +520,7 @@ describe('addExpenseSplit', () => {
 
     const result = await addExpenseSplit(VALID_EXPENSE_ID, 'lucia')
 
-    expect(result).toEqual({ error: 'Ya está compartido con "lucia".' })
+    expect(result).toEqual({ error: 'Ya está compartido con "lucia".', errorCode: 'CONFLICT' })
   })
 })
 
