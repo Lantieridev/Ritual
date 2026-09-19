@@ -15,6 +15,14 @@ vi.mock('@/src/core/lib/find-or-create', () => ({
   findOrCreateByName: (...args: unknown[]) => mockFindOrCreateByName(...args),
 }))
 
+vi.mock('next/server', () => ({
+  after: vi.fn(),
+}))
+
+vi.mock('@/src/domains/events/enrichment/enrich-event', () => ({
+  enrichEventFromExternal: vi.fn(),
+}))
+
 import {
   addExternalEvent,
   insertEvent,
@@ -23,6 +31,8 @@ import {
   findShowTonight,
 } from '@/src/domains/events/service'
 import { getCurrentUserId } from '@/src/core/auth/session'
+import { after } from 'next/server'
+import { enrichEventFromExternal } from '@/src/domains/events/enrichment/enrich-event'
 import type { FutureEvent } from '@/src/core/types'
 
 const VALID_VENUE_ID = '11111111-1111-1111-1111-111111111111'
@@ -475,6 +485,48 @@ describe('insertEvent / modifyEvent / removeEvent — sin redirect', () => {
     await insertEvent({ name: 'Show', date: '2024-01-01', venue_id: VALID_VENUE_ID } as never)
 
     expect(eventsBuilder.insert).toHaveBeenCalledWith(expect.objectContaining({ ticket_url: null }))
+  })
+
+  it('insertEvent schedules the silent enrichment after saving, without running it before responding', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    const supabase = { from: vi.fn(() => eventsBuilder) }
+    mockCreateClient.mockReturnValue(Promise.resolve(supabase))
+
+    const result = await insertEvent({ name: 'Show', date: '2024-05-01', venue_id: VALID_VENUE_ID } as never)
+
+    expect(result).toEqual({ id: VALID_EVENT_ID })
+    expect(after).toHaveBeenCalledTimes(1)
+    expect(enrichEventFromExternal).not.toHaveBeenCalled()
+
+    const scheduled = vi.mocked(after).mock.calls[0][0] as () => unknown
+    await scheduled()
+    expect(enrichEventFromExternal).toHaveBeenCalledWith(supabase, VALID_EVENT_ID)
+  })
+
+  it('insertEvent does not schedule the enrichment when the insert fails', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: null, error: { message: 'boom' } })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => eventsBuilder) }))
+
+    const result = await insertEvent({ name: 'Show', date: '2024-05-01', venue_id: VALID_VENUE_ID } as never)
+
+    expect(result.error).toBeTruthy()
+    expect(after).not.toHaveBeenCalled()
+  })
+
+  it('insertEvent does not schedule the enrichment when the lineup insert fails', async () => {
+    const eventsBuilder = makeQueryBuilder({ data: { id: VALID_EVENT_ID }, error: null })
+    const lineupsBuilder = makeQueryBuilder({ data: null, error: { message: 'lineup boom' } })
+    const fromMock = vi.fn((table: string) => (table === 'events' ? eventsBuilder : lineupsBuilder))
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: fromMock }))
+
+    await insertEvent({
+      name: 'Show',
+      date: '2024-05-01',
+      venue_id: VALID_VENUE_ID,
+      artist_ids: [VALID_ARTIST_ID],
+    } as never)
+
+    expect(after).not.toHaveBeenCalled()
   })
 
   it('insertEvent stores a date without an hour as local midnight with time_known false', async () => {

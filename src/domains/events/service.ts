@@ -1,4 +1,5 @@
 import { cache } from 'react'
+import { after } from 'next/server'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { validateUUID, validateDate, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { findOrCreateByName } from '@/src/core/lib/find-or-create'
@@ -17,6 +18,7 @@ import type { EventPhoto } from './photo-actions'
 import { getEventMessages, addEventMessage } from './messages-data'
 import type { EventMessage } from './messages-data'
 import { buildLineupRows } from './lineup-b2b'
+import { enrichEventFromExternal } from './enrichment/enrich-event'
 
 export type { EventWithRelations, EventWithAttendance, EventAttendance, AttendanceStatus, EventPhoto, EventMessage, ShowTonight, SuggestionCandidateRow }
 
@@ -181,6 +183,12 @@ export async function insertEvent(formData: EventCreateInput): Promise<ActionRes
       }
     }
   }
+
+  // Enriquecimiento silencioso (issue #11): completa hora, póster y género
+  // desde Ticketmaster DESPUÉS de responder. after() nunca demora el guardado
+  // y enrichEventFromExternal nunca lanza, así que una API caída no puede
+  // convertir un show creado en un error (mismo criterio que modifyProfile).
+  after(() => enrichEventFromExternal(supabase, newEvent.id))
 
   return { id: newEvent.id }
 }
