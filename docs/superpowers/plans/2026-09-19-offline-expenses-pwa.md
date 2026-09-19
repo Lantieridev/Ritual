@@ -29,7 +29,7 @@
 
 | File | Responsibility |
 |---|---|
-| `supabase/migrations/20260919000000_expenses_client_id.sql` | `client_id` column + partial unique index |
+| `supabase/migrations/20260919020000_expenses_client_id.sql` | `client_id` column + partial unique index |
 | `src/domains/expenses/messages.ts` | Shared constant for the "not signed in" message (server + client classify on it) |
 | `src/domains/expenses/service.ts` (modify) | `insertExpense` accepts `client_id`, idempotent on retry |
 | `src/graphql/expenses.ts` (modify) | `clientId` on `ExpenseCreateInput` |
@@ -54,7 +54,7 @@
 ### Task 1: Idempotent `insertExpense` with `client_id`
 
 **Files:**
-- Create: `supabase/migrations/20260919000000_expenses_client_id.sql`
+- Create: `supabase/migrations/20260919020000_expenses_client_id.sql`
 - Create: `src/domains/expenses/messages.ts`
 - Modify: `src/domains/expenses/service.ts` (`requireUserId`, `insertExpense`)
 - Modify: `src/core/types/index.ts` or the file that declares `ExpenseCreateInput` (find with `rg -n "interface ExpenseCreateInput" src/core/types`)
@@ -138,7 +138,7 @@ Expected: FAIL (`client_id` not accepted / not stored / duplicate not handled).
 
 - [ ] **Step 3: Implement**
 
-`supabase/migrations/20260919000000_expenses_client_id.sql`:
+`supabase/migrations/20260919020000_expenses_client_id.sql`:
 
 ```sql
 -- Issue #10: offline expense entry. The client generates a UUID per expense
@@ -217,7 +217,7 @@ Expected: PASS (all, including the pre-existing `insertExpense` tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260919000000_expenses_client_id.sql src/domains/expenses/messages.ts src/domains/expenses/service.ts src/domains/expenses/service.test.ts src/core/types
+git add supabase/migrations/20260919020000_expenses_client_id.sql src/domains/expenses/messages.ts src/domains/expenses/service.ts src/domains/expenses/service.test.ts src/core/types
 git commit -m "feat(expenses): make insertExpense idempotent via client_id"
 ```
 
