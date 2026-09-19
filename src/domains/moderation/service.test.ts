@@ -22,6 +22,8 @@ import {
   approveVenue,
   approveEvent,
   mergeArtists,
+  mergeVenues,
+  mergeEvents,
 } from '@/src/domains/moderation/service'
 import {
   getUnverifiedArtists,
@@ -119,5 +121,51 @@ describe('mergeArtists', () => {
     mockRpc({ error: new Error('insufficient_privilege') })
 
     await expect(mergeArtists('a-source', 'a-target')).rejects.toThrow('insufficient_privilege')
+  })
+})
+
+describe('mergeVenues', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls the merge_venues RPC with the source and target ids', async () => {
+    const rpc = mockRpc({ error: null })
+
+    await mergeVenues('v-source', 'v-target')
+
+    expect(rpc).toHaveBeenCalledWith('merge_venues', {
+      source_id: 'v-source',
+      target_id: 'v-target',
+    })
+  })
+
+  it('propagates the RPC error', async () => {
+    mockRpc({ error: new Error('insufficient_privilege') })
+
+    await expect(mergeVenues('v-source', 'v-target')).rejects.toThrow('insufficient_privilege')
+  })
+})
+
+describe('mergeEvents', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls the merge_events RPC with the source and target ids', async () => {
+    const rpc = mockRpc({ error: null })
+
+    await mergeEvents('e-source', 'e-target')
+
+    expect(rpc).toHaveBeenCalledWith('merge_events', {
+      source_id: 'e-source',
+      target_id: 'e-target',
+    })
+  })
+
+  it('propagates the RPC error', async () => {
+    mockRpc({ error: new Error('insufficient_privilege') })
+
+    await expect(mergeEvents('e-source', 'e-target')).rejects.toThrow('insufficient_privilege')
   })
 })

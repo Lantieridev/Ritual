@@ -39,20 +39,37 @@ function makeSupabase(overrides: Partial<Record<'events' | 'artists' | 'venues' 
 describe('searchCatalog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
-  it('queries festivals by name alongside events/artists/venues', async () => {
+  it('queries all tables (events, artists, venues, festivals) by name in parallel', async () => {
     const festivalRows = [{ id: 'f1', name: 'Cosquín Rock', edition: '2026', city: 'Córdoba', start_date: '2026-02-14' }]
-    const supabase = makeSupabase({ festivals: { data: festivalRows, error: null } })
+    const eventRows = [{ id: 'e1', name: 'Rock Show', date: '2026-01-01' }]
+    const artistRows = [{ id: 'a1', name: 'Band', genre: 'Rock' }]
+    const venueRows = [{ id: 'v1', name: 'Stadium', city: 'City', country: 'AR' }]
+
+    const supabase = makeSupabase({ 
+      festivals: { data: festivalRows, error: null },
+      events: { data: eventRows, error: null },
+      artists: { data: artistRows, error: null },
+      venues: { data: venueRows, error: null }
+    })
     mockCreateClient.mockReturnValue(Promise.resolve(supabase))
 
-    const result = await searchCatalog('cosquin')
+    const result = await searchCatalog('rock')
 
     expect(supabase.from).toHaveBeenCalledWith('festivals')
+    expect(supabase.from).toHaveBeenCalledWith('events')
+    expect(supabase.from).toHaveBeenCalledWith('artists')
+    expect(supabase.from).toHaveBeenCalledWith('venues')
+
     expect(result.festivals).toEqual(festivalRows)
+    expect(result.events).toEqual(eventRows)
+    expect(result.artists).toEqual(artistRows)
+    expect(result.venues).toEqual(venueRows)
   })
 
-  it('caps the festivals query at MAX_RESULTS_PER_TYPE, same as events/artists/venues', async () => {
+  it('caps all queries at MAX_RESULTS_PER_TYPE (8)', async () => {
     const supabase = makeSupabase()
     mockCreateClient.mockReturnValue(Promise.resolve(supabase))
     const builders: Record<string, ReturnType<typeof makeQueryBuilder>> = {}
@@ -62,44 +79,52 @@ describe('searchCatalog', () => {
       return builder
     })
 
-    await searchCatalog('cosquin')
+    await searchCatalog('rock')
 
-    // El mock de .limit() ignora su argumento y siempre resuelve con la data
-    // configurada — el largo del resultado no puede probar el tope, así
-    // que se afirma directo el valor con el que se llamó.
     expect(builders.festivals.limit).toHaveBeenCalledWith(8)
+    expect(builders.events.limit).toHaveBeenCalledWith(8)
+    expect(builders.artists.limit).toHaveBeenCalledWith(8)
+    expect(builders.venues.limit).toHaveBeenCalledWith(8)
   })
 
-  it('escapes % and _ wildcards before querying festivals, same as the other tables', async () => {
+  it('escapes % and _ wildcards before querying all tables', async () => {
     const supabase = makeSupabase()
     mockCreateClient.mockReturnValue(Promise.resolve(supabase))
-    let festivalsPattern: unknown
+    const patterns: Record<string, string> = {}
     supabase.from = vi.fn((table: string) => {
       const builder = makeQueryBuilder({ data: [], error: null })
-      if (table === 'festivals') {
-        builder.ilike = vi.fn((_col: string, pattern: string) => {
-          festivalsPattern = pattern
-          return builder
-        })
-      }
+      builder.ilike = vi.fn((_col: string, pattern: string) => {
+        patterns[table] = pattern
+        return builder
+      })
       return builder
     })
 
     await searchCatalog('100% rock_show')
 
-    expect(festivalsPattern).toBe('%100\\% rock\\_show%')
+    const expectedPattern = '%100\\% rock\\_show%'
+    expect(patterns.festivals).toBe(expectedPattern)
+    expect(patterns.events).toBe(expectedPattern)
+    expect(patterns.artists).toBe(expectedPattern)
+    expect(patterns.venues).toBe(expectedPattern)
   })
 
-  it('returns an empty festivals array when the query errors, without throwing', async () => {
-    const supabase = makeSupabase({ festivals: { data: null, error: { message: 'boom' } } })
+  it('returns empty arrays when queries error, logging them without throwing', async () => {
+    const supabase = makeSupabase({ 
+      festivals: { data: null, error: { message: 'boom festivals' } },
+      events: { data: null, error: { message: 'boom events' } },
+      artists: { data: null, error: { message: 'boom artists' } },
+      venues: { data: null, error: { message: 'boom venues' } }
+    })
     mockCreateClient.mockReturnValue(Promise.resolve(supabase))
 
-    const result = await searchCatalog('cosquin')
+    const result = await searchCatalog('rock')
 
-    expect(result.festivals).toEqual([])
+    expect(console.error).toHaveBeenCalledTimes(4)
+    expect(result).toEqual({ events: [], artists: [], venues: [], festivals: [] })
   })
 
-  it('returns EMPTY (including festivals: []) for a blank query, without hitting the database', async () => {
+  it('returns EMPTY for a blank query, without hitting the database', async () => {
     const supabase = makeSupabase()
     mockCreateClient.mockReturnValue(Promise.resolve(supabase))
 
