@@ -41,6 +41,7 @@ import { createClient } from "@/src/core/lib/supabase/server";
 import { GraphQLProvider } from "@/src/graphql/provider";
 import { findProfile } from "@/src/domains/auth/service";
 import { OnboardingTour } from "@/src/domains/auth/components";
+import { OutboxSync } from "@/src/domains/expenses/components";
 import { loadBandaAction } from "@/src/domains/events/show-tonight.server";
 
 export default async function RootLayout({
@@ -71,6 +72,7 @@ export default async function RootLayout({
     <html lang="es" className="dark">
       <body className={`${fontVariables} antialiased font-sans`}>
         <GraphQLProvider>
+          {user && <OutboxSync userId={user.id} />}
           <MobileActionProvider>
             <Navbar user={user} />
             {children}

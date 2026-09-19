@@ -11,6 +11,7 @@ import { groupExpensesByCategory } from '@/src/domains/expenses/grouping'
 import { formatChoripanComparison } from '@/src/domains/expenses/comparisons'
 import { computeDebts } from '@/src/domains/expenses/debts'
 import { ExpenseQuickAdd } from './ExpenseQuickAdd'
+import { PendingExpensesList } from './PendingExpensesList'
 import { ExpenseInlineEdit } from './ExpenseInlineEdit'
 import { DeleteExpenseButton } from './DeleteExpenseButton'
 import { ExpenseSplitControl } from './ExpenseSplitControl'
@@ -205,6 +206,8 @@ export function EventExpensesPanel({
           ))}
         </div>
       )}
+
+      <PendingExpensesList eventId={eventId} />
 
       {notice && (
         <p role="status" className="font-body text-sm text-ritual-bone">
