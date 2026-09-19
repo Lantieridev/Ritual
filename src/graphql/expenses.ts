@@ -105,6 +105,8 @@ const ExpenseCreateInput = builder.inputType('ExpenseCreateInput', {
         note: t.string(),
         eventId: t.id(),
         date: t.string({ required: true }),
+        // Client-generated UUID: makes a retried offline sync idempotent (issue #10).
+        clientId: t.id(),
     }),
 })
 
@@ -139,6 +141,7 @@ builder.mutationField('createExpense', (t) =>
                 note: args.input.note ?? undefined,
                 event_id: args.input.eventId ? String(args.input.eventId) : undefined,
                 date: args.input.date,
+                client_id: args.input.clientId ? String(args.input.clientId) : undefined,
             }),
     })
 )
