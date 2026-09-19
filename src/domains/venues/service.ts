@@ -161,7 +161,7 @@ export async function insertVenue(
         .select('id')
         .ilike('name', name)
         .single()
-      return { error: 'Ya existe una sede con ese nombre.', existingId: existing?.id }
+      return { error: 'Ya existe una sede con ese nombre.', existingId: existing?.id, errorCode: 'CONFLICT' }
     }
     return { error: sanitizeError(error) }
   }

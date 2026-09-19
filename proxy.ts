@@ -12,8 +12,9 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
+         * - serwist (the service worker) and manifest.webmanifest (no session needed)
          * Feel free to modify this pattern to include more paths.
          */
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|serwist|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

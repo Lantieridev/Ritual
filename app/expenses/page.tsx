@@ -7,6 +7,7 @@ import { formatDate } from '@/src/core/lib/utils'
 import { getExpenseCategory } from '@/src/domains/expenses/categories'
 import { LinkButton } from '@/src/core/components/ui'
 import { PageShell } from '@/src/core/components/layout'
+import { PendingExpensesList } from '@/src/domains/expenses/components'
 
 export const metadata: Metadata = {
   title: 'Gastos | RITUAL',
@@ -44,6 +45,10 @@ export default async function ExpensesPage() {
       title="Gastos"
       action={userId ? <LinkButton href={routes.expenses.new} variant="primary" className="px-4 py-2">+ Nuevo gasto</LinkButton> : undefined}
     >
+      <div className="mb-6">
+        <PendingExpensesList />
+      </div>
+
       {!userId && (
         <p className="font-body text-sm bg-ritual-surface border border-ritual-border-subtle px-4 py-3 mb-6 text-ritual-gray-text">
           Iniciá sesión para ver y cargar gastos.

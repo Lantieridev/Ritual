@@ -41,6 +41,14 @@ export function getSpotifyClientSecret(): string | undefined {
     return process.env.SPOTIFY_CLIENT_SECRET?.trim() || undefined
 }
 
+export function getResendApiKey(): string | undefined {
+    return process.env.RESEND_API_KEY?.trim() || undefined
+}
+
+export function getNotificationsFromEmail(): string | undefined {
+    return process.env.NOTIFICATIONS_FROM_EMAIL?.trim() || undefined
+}
+
 // getSentryDsn() se borró: nadie lo llamaba. Los tres archivos de config de
 // Sentry (sentry.{client,server,edge}.config.ts) leen process.env directo,
 // que es lo que su SDK espera, así que el getter nunca se adoptó.

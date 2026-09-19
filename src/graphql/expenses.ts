@@ -2,7 +2,7 @@ import { builder } from './builder'
 import { listExpenses, findExpenseById, summarizeExpenses } from '@/src/domains/expenses/service'
 import type { ExpenseSummary, ExpenseSplitUser } from '@/src/domains/expenses/service'
 import { insertExpense, modifyExpense, removeExpense, addExpenseSplit, removeExpenseSplit } from '@/src/domains/expenses/service'
-import { MutationResultRef, toMutationResult } from './shared'
+import { MutationResultRef, toMutationResult, ErrorCode, ErrorCodeRef } from './shared'
 import { findEventById } from '@/src/domains/events/service'
 import { estimateSpendForEvent, listExpensesForEvent } from '@/src/domains/expenses/service'
 import type { VenueArtistSpendEstimate } from '@/src/domains/expenses/service'
@@ -105,6 +105,8 @@ const ExpenseCreateInput = builder.inputType('ExpenseCreateInput', {
         note: t.string(),
         eventId: t.id(),
         date: t.string({ required: true }),
+        // Client-generated UUID: makes a retried offline sync idempotent (issue #10).
+        clientId: t.id(),
     }),
 })
 
@@ -118,11 +120,12 @@ const ExpenseUpdateInput = builder.inputType('ExpenseUpdateInput', {
     }),
 })
 
-const CreateExpenseResultRef = builder.objectRef<{ id?: string; error?: string }>('CreateExpenseResult')
+const CreateExpenseResultRef = builder.objectRef<{ id?: string; error?: string; errorCode?: ErrorCode }>('CreateExpenseResult')
 CreateExpenseResultRef.implement({
     fields: (t) => ({
         id: t.exposeID('id', { nullable: true }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
     }),
 })
 
@@ -139,6 +142,7 @@ builder.mutationField('createExpense', (t) =>
                 note: args.input.note ?? undefined,
                 event_id: args.input.eventId ? String(args.input.eventId) : undefined,
                 date: args.input.date,
+                client_id: args.input.clientId ? String(args.input.clientId) : undefined,
             }),
     })
 )
@@ -199,13 +203,14 @@ builder.queryField('estimateSpendForEvent', (t) =>
 // del tageado para poder sacarlo del split después sin esperar un refetch
 // (ilike es case-insensitive, así que lo tipeado no siempre es el username
 // real tal cual está guardado).
-const AddExpenseSplitResultRef = builder.objectRef<{ error?: string; userId?: string; username?: string }>(
+const AddExpenseSplitResultRef = builder.objectRef<{ error?: string; userId?: string; username?: string; errorCode?: ErrorCode }>(
     'AddExpenseSplitResult'
 )
 AddExpenseSplitResultRef.implement({
     fields: (t) => ({
         success: t.boolean({ resolve: (r) => !r.error }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
         userId: t.exposeID('userId', { nullable: true }),
         username: t.exposeString('username', { nullable: true }),
     }),

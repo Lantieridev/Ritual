@@ -76,7 +76,7 @@ export async function insertArtist(
         .select('id')
         .ilike('name', name)
         .single()
-      return { error: 'Ya existe un artista con ese nombre.', existingId: existing?.id }
+      return { error: 'Ya existe un artista con ese nombre.', existingId: existing?.id, errorCode: 'CONFLICT' }
     }
     return { error: sanitizeError(error) }
   }

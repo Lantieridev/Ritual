@@ -8,7 +8,9 @@
  * más los campos de éxito que necesite cada action (ej. `ActionResult<{ eventId: string }>`).
  * Reemplaza los ~6 tipos de retorno distintos que había hand-rolled en cada actions.ts.
  */
-export type ActionResult<TData extends object = object> = { error?: string } & TData
+export type ErrorCodeType = 'VALIDATION' | 'UNAUTHENTICATED' | 'CONFLICT' | 'NOT_FOUND' | 'SERVER_ERROR';
+
+export type ActionResult<TData extends object = object> = { error?: string; errorCode?: ErrorCodeType } & TData
 
 /** Artista. Participa en eventos a través de la tabla lineups (muchos a muchos). */
 export interface Artist {
@@ -77,6 +79,14 @@ export interface Event {
    * completa quien carga el evento — ver issue #19.
    */
   ticket_url?: string | null
+  /** Póster del show, completado desde Ticketmaster (issue #11). */
+  poster_url?: string | null
+  /**
+   * false cuando el usuario no cargó hora: `date` guarda entonces la
+   * medianoche local sólo para no perder el día. Ausente = hora conocida —
+   * ver `isTimeKnown`.
+   */
+  time_known?: boolean
 }
 
 /**
@@ -131,6 +141,8 @@ export interface ExpenseCreateInput {
   note?: string
   event_id?: string
   date: string
+  /** Client-generated UUID that makes a retried create idempotent (issue #10). */
+  client_id?: string
 }
 
 /** Payload para actualizar un gasto (edición). */

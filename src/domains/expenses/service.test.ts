@@ -43,6 +43,7 @@ import type { EventWithRelations } from '@/src/core/types'
 
 const VALID_EXPENSE_ID = '11111111-1111-1111-1111-111111111111'
 const VALID_EVENT_ID = '22222222-2222-2222-2222-222222222222'
+const VALID_CLIENT_ID = '33333333-3333-3333-3333-333333333333'
 
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {}
@@ -250,6 +251,62 @@ describe('insertExpense', () => {
     expect(builder.insert).toHaveBeenCalledWith(
       expect.objectContaining({ event_id: null, note: null })
     )
+  })
+
+  it('rejects a malformed client_id', async () => {
+    const result = await insertExpense({
+      amount: 100,
+      category: 'Entrada',
+      date: '2024-01-01',
+      client_id: 'not-a-uuid',
+    })
+
+    expect(result.error).toBeTruthy()
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('stores client_id on the inserted row', async () => {
+    const builder = makeQueryBuilder({ data: { id: 'expense-1' }, error: null })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    await insertExpense({
+      amount: 100,
+      category: 'Entrada',
+      date: '2024-01-01',
+      client_id: VALID_CLIENT_ID,
+    })
+
+    expect(builder.insert).toHaveBeenCalledWith(expect.objectContaining({ client_id: VALID_CLIENT_ID }))
+  })
+
+  it('returns the existing id when the same client_id is retried', async () => {
+    const insertBuilder = makeQueryBuilder({
+      data: null,
+      error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+    })
+    const lookupBuilder = makeQueryBuilder({ data: { id: 'expense-1' }, error: null })
+    const from = vi.fn().mockReturnValueOnce(insertBuilder).mockReturnValueOnce(lookupBuilder)
+    mockCreateClient.mockReturnValue(Promise.resolve({ from }))
+
+    const result = await insertExpense({
+      amount: 100,
+      category: 'Entrada',
+      date: '2024-01-01',
+      client_id: VALID_CLIENT_ID,
+    })
+
+    expect(result).toEqual({ id: 'expense-1' })
+    expect(lookupBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(lookupBuilder.eq).toHaveBeenCalledWith('client_id', VALID_CLIENT_ID)
+  })
+
+  it('still reports a unique violation when no client_id was sent', async () => {
+    const builder = makeQueryBuilder({ data: null, error: { code: '23505', message: 'dup' } })
+    mockCreateClient.mockReturnValue(Promise.resolve({ from: vi.fn(() => builder) }))
+
+    const result = await insertExpense({ amount: 100, category: 'Entrada', date: '2024-01-01' })
+
+    expect(result.error).toBeTruthy()
   })
 
   it('returns a sanitized error when the insert fails, never the raw DB message', async () => {
@@ -520,7 +577,7 @@ describe('addExpenseSplit', () => {
 
     const result = await addExpenseSplit(VALID_EXPENSE_ID, 'lucia')
 
-    expect(result).toEqual({ error: 'Ya está compartido con "lucia".' })
+    expect(result).toEqual({ error: 'Ya está compartido con "lucia".', errorCode: 'CONFLICT' })
   })
 })
 

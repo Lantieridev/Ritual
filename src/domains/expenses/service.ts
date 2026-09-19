@@ -14,6 +14,7 @@ import {
 import type { ExpenseSummary, VenueArtistSpendEstimate, ExpenseSplitUser } from './data'
 import { listEvents } from '@/src/domains/events/service'
 import type { Expense, EventWithRelations } from '@/src/core/types'
+import { EXPENSES_AUTH_REQUIRED_MESSAGE } from './messages'
 
 export type { ExpenseSummary, VenueArtistSpendEstimate, ExpenseSplitUser }
 
@@ -100,7 +101,7 @@ async function requireUserId() {
   const id = await getCurrentUserId()
   if (!id) {
     return {
-      error: 'Iniciá sesión para registrar gastos.' as const,
+      error: EXPENSES_AUTH_REQUIRED_MESSAGE,
     }
   }
   return { userId: id } as const
@@ -131,6 +132,11 @@ export async function insertExpense(formData: ExpenseCreateInput): Promise<Actio
     if (eventIdErr) return { error: eventIdErr }
   }
 
+  if (formData.client_id) {
+    const clientIdErr = validateUUID(formData.client_id, 'Cliente')
+    if (clientIdErr) return { error: clientIdErr }
+  }
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('expenses')
@@ -141,10 +147,22 @@ export async function insertExpense(formData: ExpenseCreateInput): Promise<Actio
       note: sanitizeText(formData.note, MAX_NOTE_LENGTH),
       event_id: formData.event_id || null,
       date: formData.date,
+      ...(formData.client_id ? { client_id: formData.client_id } : {}),
     })
     .select('id')
     .single()
   if (error) {
+    // A retried offline sync: this client_id already produced a row, so hand
+    // back its id instead of a duplicate (or an error the user can't act on).
+    if (error.code === '23505' && formData.client_id) {
+      const { data: existing } = await supabase
+        .from('expenses')
+        .select('id')
+        .eq('user_id', r.userId)
+        .eq('client_id', formData.client_id)
+        .single()
+      if (existing) return { id: existing.id }
+    }
     return { error: sanitizeError(error) }
   }
   return { id: data.id }
@@ -270,7 +288,7 @@ export async function addExpenseSplit(
     .from('expense_splits')
     .insert({ expense_id: expenseId, user_id: profile.id })
   if (error) {
-    if (error.code === '23505') return { error: `Ya está compartido con "${cleanUsername}".` }
+    if (error.code === '23505') return { error: `Ya está compartido con "${cleanUsername}".`, errorCode: 'CONFLICT' }
     return { error: sanitizeError(error) }
   }
   return { userId: profile.id, username: profile.username ?? undefined }

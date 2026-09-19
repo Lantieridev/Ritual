@@ -225,6 +225,33 @@ describe('expenses GraphQL mutations', () => {
     expect(insertExpense).toHaveBeenCalledWith(expect.objectContaining({ event_id: undefined }))
   })
 
+  it('passes clientId through to insertExpense as client_id', async () => {
+    vi.mocked(insertExpense).mockResolvedValue({ id: 'ex-new' })
+
+    const body = await query(`mutation {
+      createExpense(input: {
+        amount: 10, category: "Entrada", date: "2026-03-01",
+        clientId: "33333333-3333-3333-3333-333333333333"
+      }) { id error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(insertExpense).toHaveBeenCalledWith(
+      expect.objectContaining({ client_id: '33333333-3333-3333-3333-333333333333' })
+    )
+  })
+
+  it('still accepts createExpense without a clientId', async () => {
+    vi.mocked(insertExpense).mockResolvedValue({ id: 'ex-new' })
+
+    const body = await query(`mutation {
+      createExpense(input: { amount: 10, category: "Entrada", date: "2026-03-01" }) { id error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(insertExpense).toHaveBeenCalledWith(expect.objectContaining({ client_id: undefined }))
+  })
+
   it('surfaces a rejected create through the error field, not a thrown GraphQL error', async () => {
     vi.mocked(insertExpense).mockResolvedValue({ error: 'El monto debe ser mayor a 0.' })
 
@@ -313,12 +340,12 @@ describe('expenses GraphQL mutations', () => {
   })
 
   it('reports addExpenseSplit failure through success:false', async () => {
-    vi.mocked(addExpenseSplit).mockResolvedValue({ error: '"lucia" no tiene marcada su asistencia a este show.' })
+    vi.mocked(addExpenseSplit).mockResolvedValue({ error: '"lucia" no tiene marcada su asistencia a este show.', errorCode: 'VALIDATION' })
 
-    const body = await query('mutation { addExpenseSplit(expenseId: "ex1", username: "lucia") { success error } }')
+    const body = await query('mutation { addExpenseSplit(expenseId: "ex1", username: "lucia") { success error errorCode } }')
 
     expect(body.data).toEqual({
-      addExpenseSplit: { success: false, error: '"lucia" no tiene marcada su asistencia a este show.' },
+      addExpenseSplit: { success: false, error: '"lucia" no tiene marcada su asistencia a este show.', errorCode: 'VALIDATION' },
     })
   })
 

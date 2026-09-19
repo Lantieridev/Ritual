@@ -106,7 +106,7 @@ describe('modifyProfile', () => {
 
     const result = await modifyProfile({ username: 'taken' })
 
-    expect(result).toEqual({ error: 'Ese nombre de usuario ya está en uso.' })
+    expect(result).toEqual({ error: 'Ese nombre de usuario ya está en uso.', errorCode: 'CONFLICT' })
   })
 
   it('returns {} on success, no redirect involved', async () => {

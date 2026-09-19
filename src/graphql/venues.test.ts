@@ -150,15 +150,16 @@ describe('venues GraphQL mutations', () => {
     vi.mocked(insertVenue).mockResolvedValue({
       error: 'Ya existe una sede con ese nombre.',
       existingId: 'existing-1',
+      errorCode: 'CONFLICT',
     })
 
     const body = await query(`mutation {
-      createVenue(input: { name: "Niceto Club" }) { id existingId error }
+      createVenue(input: { name: "Niceto Club" }) { id existingId error errorCode }
     }`)
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({
-      createVenue: { id: null, existingId: 'existing-1', error: 'Ya existe una sede con ese nombre.' },
+      createVenue: { id: null, existingId: 'existing-1', error: 'Ya existe una sede con ese nombre.', errorCode: 'CONFLICT' },
     })
   })
 

@@ -167,6 +167,18 @@ describe('heroBadgeText', () => {
 
     expect(heroBadgeText({ kind: 'normal', nextShow, daysUntil: 5 })).toBe('20 jun · 19:30')
   })
+
+  it('omits the hour for show-today when the time is unknown', () => {
+    const event = makeEvent({ id: 'e1', date: '2026-06-15T00:00:00-03:00', time_known: false })
+
+    expect(heroBadgeText({ kind: 'show-today', event })).toBe('Esta noche')
+  })
+
+  it('omits the hour for normal when the time is unknown', () => {
+    const nextShow = makeEvent({ id: 'e1', date: '2026-06-20T00:00:00-03:00', time_known: false })
+
+    expect(heroBadgeText({ kind: 'normal', nextShow, daysUntil: 5 })).toBe('20 jun')
+  })
 })
 
 describe('pickRecentSeen', () => {

@@ -6,7 +6,7 @@ vi.mock('@/src/core/lib/supabase/server', () => ({
   createClient: () => mockCreateClient(),
 }))
 
-import { searchMergeTargets } from '@/src/domains/moderation/data'
+import { getUnverifiedEvents, searchMergeTargets } from '@/src/domains/moderation/data'
 
 /** Registra la cadena de llamadas para poder afirmar sobre el filtro construido. */
 function makeQueryBuilder(result: { data: unknown; error: unknown }) {
@@ -119,6 +119,14 @@ describe('searchMergeTargets', () => {
     await expect(searchMergeTargets('events', 'show')).resolves.toEqual([
       { id: 'e-1', name: 'Show', detail: '2026-09-01' },
     ])
+  })
+
+  it('orders unverified events by creation date descending, newest first', async () => {
+    const { calls } = mockFrom({ data: [], error: null })
+
+    await getUnverifiedEvents()
+
+    expect(calls.order).toContainEqual(['created_at', { ascending: false }])
   })
 
   it('propagates a query error instead of returning a silently empty list', async () => {

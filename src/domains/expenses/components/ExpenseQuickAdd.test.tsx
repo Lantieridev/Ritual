@@ -20,6 +20,7 @@ function renderQuickAdd(
       defaultDate="2026-05-01"
       insertExpense={vi.fn()}
       onAdded={vi.fn()}
+      onQueued={vi.fn()}
       onCancel={vi.fn()}
       {...overrides}
     />
@@ -27,6 +28,20 @@ function renderQuickAdd(
 }
 
 describe('ExpenseQuickAdd', () => {
+  it('calls onQueued (not onAdded) when the expense was saved offline', async () => {
+    const insertExpense = vi.fn().mockResolvedValue({ queued: true })
+    const onAdded = vi.fn()
+    const onQueued = vi.fn()
+    renderQuickAdd({ insertExpense, onAdded, onQueued })
+
+    await userEvent.type(screen.getByLabelText('Monto'), '500')
+    await userEvent.selectOptions(screen.getByLabelText('Categoría'), 'Merch')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar gasto' }))
+
+    await waitFor(() => expect(onQueued).toHaveBeenCalledTimes(1))
+    expect(onAdded).not.toHaveBeenCalled()
+  })
+
   it('submits amount + category + the event id + the default date, with note omitted by default', async () => {
     const insertExpense = vi.fn().mockResolvedValue({ id: 'exp-1' })
     renderQuickAdd({ insertExpense })

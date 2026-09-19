@@ -8,7 +8,7 @@ import {
     linkEventToFestival,
 } from '@/src/domains/festivals/service'
 import type { Festival } from '@/src/domains/festivals/service'
-import { MutationResultRef, toMutationResult } from './shared'
+import { MutationResultRef, toMutationResult, ErrorCode, ErrorCodeRef } from './shared'
 import { AttendanceStatusEnum } from './events'
 
 type FestivalVenueSummary = Festival['venues']
@@ -124,11 +124,12 @@ const FestivalCreateInput = builder.inputType('FestivalCreateInput', {
     }),
 })
 
-const CreateFestivalResultRef = builder.objectRef<{ id?: string; error?: string }>('CreateFestivalResult')
+const CreateFestivalResultRef = builder.objectRef<{ id?: string; error?: string; errorCode?: ErrorCode }>('CreateFestivalResult')
 CreateFestivalResultRef.implement({
     fields: (t) => ({
         id: t.exposeID('id', { nullable: true }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
     }),
 })
 

@@ -1,4 +1,4 @@
-import { daysUntil, hasTimeOfDay, eventTimeOfDay } from '@/src/core/lib/dates'
+import { daysUntil, hasTimeOfDay, eventTimeOfDay, isTimeKnown } from '@/src/core/lib/dates'
 import { routes } from '@/src/core/lib/routes'
 import type { MobileBandaLink } from '@/src/core/components/layout/MobileAction'
 
@@ -13,6 +13,7 @@ export interface ShowTonightRow {
     id: string
     name: string | null
     date: string
+    time_known?: boolean | null
     lineups: Array<{ artists: { name: string } }> | null
   } | null
 }
@@ -21,6 +22,7 @@ export interface ShowTonight {
   id: string
   headliner: string
   date: string
+  timeKnown: boolean
 }
 
 /**
@@ -40,7 +42,7 @@ export function pickShowTonight(rows: ShowTonightRow[], now: Date = new Date()):
 
     const headliner = event.lineups?.[0]?.artists.name ?? event.name ?? 'Recital'
     if (!best || event.date < best.date) {
-      best = { id: event.id, headliner, date: event.date }
+      best = { id: event.id, headliner, date: event.date, timeKnown: isTimeKnown(event.time_known) }
     }
   }
   return best
@@ -52,7 +54,7 @@ export function pickShowTonight(rows: ShowTonightRow[], now: Date = new Date()):
  * sólo se agrega cuando la fecha guardada la trae (`hasTimeOfDay`).
  */
 export function bandaLinkFor(show: ShowTonight): MobileBandaLink {
-  const time = hasTimeOfDay(show.date) ? ` · ${eventTimeOfDay(show.date)}` : ''
+  const time = show.timeKnown && hasTimeOfDay(show.date) ? ` · ${eventTimeOfDay(show.date)}` : ''
   return {
     subtitle: 'Tu entrada de hoy',
     title: `${show.headliner}${time}`,
