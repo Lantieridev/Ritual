@@ -20,3 +20,7 @@ CREATE TABLE public.google_calendar_events (
 );
 
 ALTER TABLE public.google_calendar_events ENABLE ROW LEVEL SECURITY;
+
+-- Defensa en profundidad: sólo el service role accede a estas tablas.
+revoke all on public.google_calendar_links from anon, authenticated;
+revoke all on public.google_calendar_events from anon, authenticated;
