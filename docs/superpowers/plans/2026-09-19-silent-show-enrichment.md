@@ -27,7 +27,7 @@
 ### Task 1: Migration, event types and `isTimeKnown`
 
 **Files:**
-- Create: `supabase/migrations/20260919000000_show_enrichment.sql`
+- Create: `supabase/migrations/20260919030000_show_enrichment.sql`
 - Modify: `src/core/types/index.ts` (the `Event` interface, after `ticket_url`)
 - Modify: `src/core/lib/dates.ts` (add `isTimeKnown` after `hasTimeOfDay`)
 - Test: `src/core/lib/dates.test.ts`
@@ -87,7 +87,7 @@ In `src/core/types/index.ts`, inside `interface Event`, after `ticket_url?: stri
   time_known?: boolean
 ```
 
-Create `supabase/migrations/20260919000000_show_enrichment.sql`:
+Create `supabase/migrations/20260919030000_show_enrichment.sql`:
 
 ```sql
 -- issue #11: enriquecimiento silencioso de shows desde Ticketmaster.
@@ -121,7 +121,7 @@ Expected: no errors.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260919000000_show_enrichment.sql src/core/types/index.ts src/core/lib/dates.ts src/core/lib/dates.test.ts
+git add supabase/migrations/20260919030000_show_enrichment.sql src/core/types/index.ts src/core/lib/dates.ts src/core/lib/dates.test.ts
 git commit -m "feat(events): add poster_url, time_known and artist genre fill policy (#11)"
 ```
 
@@ -1228,7 +1228,7 @@ Expected: no new errors.
 - [ ] **Step 3: Apply the migration (manual, needs the linked Supabase project)**
 
 Run: `npx supabase db push`
-Expected: `20260919000000_show_enrichment.sql` applied. Then confirm in the Supabase SQL editor: `select column_name from information_schema.columns where table_name = 'events' and column_name in ('poster_url','time_known');` returns 2 rows.
+Expected: `20260919030000_show_enrichment.sql` applied. Then confirm in the Supabase SQL editor: `select column_name from information_schema.columns where table_name = 'events' and column_name in ('poster_url','time_known');` returns 2 rows.
 
 - [ ] **Step 4: Manual end-to-end check (needs `TICKETMASTER_API_KEY` in `.env.local`)**
 

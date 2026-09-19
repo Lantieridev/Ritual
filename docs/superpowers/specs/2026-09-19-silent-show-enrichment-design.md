@@ -30,7 +30,7 @@ Corre únicamente al **crear**. Editar un show no dispara búsquedas.
 
 ## Modelo de datos
 
-Migración `supabase/migrations/20260919000000_show_enrichment.sql`:
+Migración `supabase/migrations/20260919030000_show_enrichment.sql`:
 
 - `events.poster_url text null`: póster del show.
 - `events.time_known boolean not null default true`: `false` cuando el usuario no cargó hora. Los shows existentes quedan en `true`.
