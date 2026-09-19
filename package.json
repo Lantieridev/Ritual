@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:pwa": "playwright test -c playwright.pwa.config.ts",
     "supabase:db-pull": "npx supabase db pull",
     "supabase:db-push": "npx supabase db push",
     "supabase:gen-types": "npx supabase gen types typescript -o src/lib/database.types.ts"

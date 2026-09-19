@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  // The offline/PWA specs need a production build; they have their own config.
+  testIgnore: '**/pwa/**',
   // Each test walks 7 viewports, and `next dev` compiles routes on demand.
   timeout: 300 * 1000,
   expect: {
