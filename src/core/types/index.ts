@@ -139,6 +139,8 @@ export interface ExpenseCreateInput {
   note?: string
   event_id?: string
   date: string
+  /** Client-generated UUID that makes a retried create idempotent (issue #10). */
+  client_id?: string
 }
 
 /** Payload para actualizar un gasto (edición). */

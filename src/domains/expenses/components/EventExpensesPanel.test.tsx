@@ -2,6 +2,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { IDBFactory } from 'fake-indexeddb'
+import { setOutboxOwner } from '@/src/domains/expenses/offline/outbox-owner'
 import type { ExpenseWithSplits } from '@/src/domains/expenses/components/EventExpensesPanel'
 
 // El panel dejó de recibir las escrituras por prop: dispara las mutations
@@ -55,6 +57,9 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof EventExpense
 describe('EventExpensesPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Creating an expense writes to the offline outbox first (issue #10).
+    globalThis.indexedDB = new IDBFactory()
+    setOutboxOwner('u1')
   })
 
   it('shows the total, item count and grouped categories ("Comida y bebida: $8.000 · 2 ítems")', () => {
@@ -123,7 +128,9 @@ describe('EventExpensesPanel', () => {
     })
 
     // Total grows from $23.000 to $25.000, and the new category shows up expanded.
-    expect(screen.getByText('$25.000')).toBeInTheDocument()
+    // The create path now awaits the offline outbox (IndexedDB) before it reports
+    // success, so the UI settles a tick after the mutation is sent — wait for it.
+    expect(await screen.findByText('$25.000')).toBeInTheDocument()
     expect(screen.getByText(/4 ítems/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Merch: \$2\.000 · 1 ítem$/ })).toBeInTheDocument()
     // Quick-add form closes after a successful add.
@@ -233,7 +240,10 @@ describe('EventExpensesPanel', () => {
    * algo que el servidor nunca guardó.
    */
   describe('transport failures (data undefined, result.error set)', () => {
-    it('quick-add: does not add the expense and surfaces an error', async () => {
+    // Offline support (issue #10): a create that can't reach the server is
+    // saved on the device instead of erroring. What must still hold is that
+    // the panel never adds it to the list as if the server had saved it.
+    it('quick-add: queues the expense on the device without adding it to the list', async () => {
       createExpenseMock.mockResolvedValue({ data: undefined, error: transportError() })
       renderPanel()
 
@@ -242,9 +252,8 @@ describe('EventExpensesPanel', () => {
       await userEvent.selectOptions(screen.getByLabelText('Categoría'), 'Merch')
       await userEvent.click(screen.getByRole('button', { name: 'Guardar gasto' }))
 
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
-      })
+      expect(await screen.findByRole('status')).toHaveTextContent('Guardado en tu dispositivo')
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
       expect(screen.getByText('$23.000')).toBeInTheDocument()
       expect(screen.getByText(/3 ítems/)).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /Merch:/ })).not.toBeInTheDocument()

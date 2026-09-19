@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMutation, gql } from 'urql'
 import { unwrapMutation } from '@/src/graphql/mutation-result'
+import { useCreateExpense } from '@/src/domains/expenses/offline/use-create-expense'
 import { Button, FormField, inputClass } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
 import { formatDate } from '@/src/core/lib/utils'
@@ -13,11 +14,6 @@ import { EXPENSE_CATEGORIES } from '@/src/domains/expenses/categories'
 import type { Expense, GraphQLExpense } from '@/src/core/types'
 import type { EventWithRelations } from '@/src/core/types'
 
-const CreateExpenseMutation = gql`
-  mutation CreateExpense($input: ExpenseCreateInput!) {
-    createExpense(input: $input) { id error }
-  }
-`
 const UpdateExpenseMutation = gql`
   mutation UpdateExpense($id: ID!, $input: ExpenseUpdateInput!) {
     updateExpense(id: $id, input: $input) { error }
@@ -32,15 +28,17 @@ interface ExpenseFormProps {
 export function ExpenseForm({ events, expense }: ExpenseFormProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isEdit = Boolean(expense?.id)
 
-  const [, createExpenseM] = useMutation(CreateExpenseMutation)
+  const createExpense = useCreateExpense()
   const [, updateExpenseM] = useMutation(UpdateExpenseMutation)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    setNotice(null)
     setIsSubmitting(true)
     const form = e.currentTarget
     
@@ -62,9 +60,15 @@ export function ExpenseForm({ events, expense }: ExpenseFormProps) {
         router.push(routes.expenses.detail(expense.id))
       }
     } else {
-      const result = unwrapMutation(await createExpenseM({ input: payload }), 'createExpense')
-      if (result.error) {
-        setError(result.error)
+      const outcome = await createExpense(payload)
+      if (outcome.status === 'rejected') {
+        setError(outcome.error)
+        setIsSubmitting(false)
+      } else if (outcome.status === 'queued') {
+        // Stay on the form: offline, navigating to the list may have no cached
+        // page, and at the venue the next expense is usually right behind this one.
+        form.reset()
+        setNotice('Guardado en tu dispositivo. Se sincroniza cuando vuelva la señal.')
         setIsSubmitting(false)
       } else {
         router.push(routes.expenses.list)
@@ -81,6 +85,11 @@ export function ExpenseForm({ events, expense }: ExpenseFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-xl space-y-6">
+      {notice && (
+        <div role="status" className="bg-ritual-surface border border-ritual-border text-ritual-bone px-4 py-3 font-body text-sm">
+          {notice}
+        </div>
+      )}
       {error && (
         <div role="alert" className="bg-ritual-red/10 border border-ritual-red/30 text-ritual-red-hover px-4 py-3 font-body text-sm">
           {error}

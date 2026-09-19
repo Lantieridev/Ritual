@@ -15,8 +15,10 @@ interface ExpenseQuickAddProps {
     note?: string
     eventId?: string
     date: string
-  }) => Promise<{ error?: string; id?: string }>
+  }) => Promise<{ error?: string; id?: string; queued?: boolean }>
   onAdded: (expense: Expense) => void
+  /** The expense was saved on the device (no signal) and will sync later. */
+  onQueued: () => void
   onCancel: () => void
 }
 
@@ -30,7 +32,7 @@ interface ExpenseQuickAddProps {
  * event's own date rather than asking the user to pick one. A user who
  * needs a different date can still get there via the full ExpenseForm.
  */
-export function ExpenseQuickAdd({ eventId, defaultDate, insertExpense, onAdded, onCancel }: ExpenseQuickAddProps) {
+export function ExpenseQuickAdd({ eventId, defaultDate, insertExpense, onAdded, onQueued, onCancel }: ExpenseQuickAddProps) {
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
   const [showNote, setShowNote] = useState(false)
@@ -52,6 +54,10 @@ export function ExpenseQuickAdd({ eventId, defaultDate, insertExpense, onAdded, 
         eventId,
         date: defaultDate,
       })
+      if (result.queued) {
+        onQueued()
+        return
+      }
       if (result.error || !result.id) {
         setError(result.error ?? 'No se pudo registrar el gasto.')
         return

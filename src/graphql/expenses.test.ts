@@ -225,6 +225,33 @@ describe('expenses GraphQL mutations', () => {
     expect(insertExpense).toHaveBeenCalledWith(expect.objectContaining({ event_id: undefined }))
   })
 
+  it('passes clientId through to insertExpense as client_id', async () => {
+    vi.mocked(insertExpense).mockResolvedValue({ id: 'ex-new' })
+
+    const body = await query(`mutation {
+      createExpense(input: {
+        amount: 10, category: "Entrada", date: "2026-03-01",
+        clientId: "33333333-3333-3333-3333-333333333333"
+      }) { id error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(insertExpense).toHaveBeenCalledWith(
+      expect.objectContaining({ client_id: '33333333-3333-3333-3333-333333333333' })
+    )
+  })
+
+  it('still accepts createExpense without a clientId', async () => {
+    vi.mocked(insertExpense).mockResolvedValue({ id: 'ex-new' })
+
+    const body = await query(`mutation {
+      createExpense(input: { amount: 10, category: "Entrada", date: "2026-03-01" }) { id error }
+    }`)
+
+    expect(body.errors).toBeUndefined()
+    expect(insertExpense).toHaveBeenCalledWith(expect.objectContaining({ client_id: undefined }))
+  })
+
   it('surfaces a rejected create through the error field, not a thrown GraphQL error', async () => {
     vi.mocked(insertExpense).mockResolvedValue({ error: 'El monto debe ser mayor a 0.' })
 

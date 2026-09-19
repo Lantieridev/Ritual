@@ -4,11 +4,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useMutation, gql } from 'urql'
 import { unwrapMutation } from '@/src/graphql/mutation-result'
+import { useCreateExpense } from '@/src/domains/expenses/offline/use-create-expense'
+import type { OutboxPayload } from '@/src/domains/expenses/offline/outbox'
 import { getExpenseCategory } from '@/src/domains/expenses/categories'
 import { groupExpensesByCategory } from '@/src/domains/expenses/grouping'
 import { formatChoripanComparison } from '@/src/domains/expenses/comparisons'
 import { computeDebts } from '@/src/domains/expenses/debts'
 import { ExpenseQuickAdd } from './ExpenseQuickAdd'
+import { PendingExpensesList } from './PendingExpensesList'
 import { ExpenseInlineEdit } from './ExpenseInlineEdit'
 import { DeleteExpenseButton } from './DeleteExpenseButton'
 import { ExpenseSplitControl } from './ExpenseSplitControl'
@@ -49,11 +52,6 @@ function formatARS(amount: number) {
  * same pattern as PhotoGallery.
  */
 
-const CreateExpenseMutation = gql`
-  mutation CreateExpense($input: ExpenseCreateInput!) {
-    createExpense(input: $input) { id error }
-  }
-`
 const UpdateExpenseMutation = gql`
   mutation UpdateExpense($id: ID!, $input: ExpenseUpdateInput!) {
     updateExpense(id: $id, input: $input) { error }
@@ -77,15 +75,22 @@ export function EventExpensesPanel({
   const [showQuickAdd, setShowQuickAdd] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
-  const [, createExpenseM] = useMutation(CreateExpenseMutation)
+  const createExpense = useCreateExpense()
   const [, updateExpenseM] = useMutation(UpdateExpenseMutation)
   const [, deleteExpenseM] = useMutation(DeleteExpenseMutation)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function handleInsert(expenseData: any) {
-    const result = await createExpenseM({ input: expenseData })
-    return unwrapMutation<{ id?: string; error?: string }>(result, 'createExpense')
+  async function handleInsert(expenseData: OutboxPayload) {
+    const outcome = await createExpense(expenseData)
+    if (outcome.status === 'synced') return { id: outcome.id }
+    if (outcome.status === 'queued') return { queued: true as const }
+    return { error: outcome.error }
+  }
+
+  function handleQueued() {
+    setShowQuickAdd(false)
+    setNotice('Guardado en tu dispositivo. Se sincroniza cuando vuelva la señal.')
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -126,6 +131,7 @@ export function EventExpensesPanel({
     // se pisa acá con el id real en vez de con la cadena vacía.
     setExpenses((prev) => [{ ...expense, user_id: currentUserId ?? expense.user_id, ownerUsername: null, splits: [] }, ...prev])
     setShowQuickAdd(false)
+    setNotice(null)
     setExpandedCategory(expense.category)
   }
 
@@ -201,12 +207,21 @@ export function EventExpensesPanel({
         </div>
       )}
 
+      <PendingExpensesList eventId={eventId} />
+
+      {notice && (
+        <p role="status" className="font-body text-sm text-ritual-bone">
+          {notice}
+        </p>
+      )}
+
       {showQuickAdd && (
         <ExpenseQuickAdd
           eventId={eventId}
           defaultDate={defaultDate}
           insertExpense={handleInsert}
           onAdded={handleAdded}
+          onQueued={handleQueued}
           onCancel={() => setShowQuickAdd(false)}
         />
       )}
