@@ -340,12 +340,12 @@ describe('expenses GraphQL mutations', () => {
   })
 
   it('reports addExpenseSplit failure through success:false', async () => {
-    vi.mocked(addExpenseSplit).mockResolvedValue({ error: '"lucia" no tiene marcada su asistencia a este show.' })
+    vi.mocked(addExpenseSplit).mockResolvedValue({ error: '"lucia" no tiene marcada su asistencia a este show.', errorCode: 'VALIDATION' })
 
-    const body = await query('mutation { addExpenseSplit(expenseId: "ex1", username: "lucia") { success error } }')
+    const body = await query('mutation { addExpenseSplit(expenseId: "ex1", username: "lucia") { success error errorCode } }')
 
     expect(body.data).toEqual({
-      addExpenseSplit: { success: false, error: '"lucia" no tiene marcada su asistencia a este show.' },
+      addExpenseSplit: { success: false, error: '"lucia" no tiene marcada su asistencia a este show.', errorCode: 'VALIDATION' },
     })
   })
 

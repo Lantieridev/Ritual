@@ -165,13 +165,13 @@ describe('auth GraphQL mutations', () => {
   })
 
   it('reports failure through success:false, not a thrown GraphQL error', async () => {
-    vi.mocked(modifyProfile).mockResolvedValue({ error: 'Ese nombre de usuario ya está en uso.' })
+    vi.mocked(modifyProfile).mockResolvedValue({ error: 'Ese nombre de usuario ya está en uso.', errorCode: 'CONFLICT' })
 
-    const body = await query('mutation { updateProfile(input: { username: "taken" }) { success error } }')
+    const body = await query('mutation { updateProfile(input: { username: "taken" }) { success error errorCode } }')
 
     expect(body.errors).toBeUndefined()
     expect(body.data).toEqual({
-      updateProfile: { success: false, error: 'Ese nombre de usuario ya está en uso.' },
+      updateProfile: { success: false, error: 'Ese nombre de usuario ya está en uso.', errorCode: 'CONFLICT' },
     })
   })
 

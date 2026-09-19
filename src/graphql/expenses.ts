@@ -2,7 +2,7 @@ import { builder } from './builder'
 import { listExpenses, findExpenseById, summarizeExpenses } from '@/src/domains/expenses/service'
 import type { ExpenseSummary, ExpenseSplitUser } from '@/src/domains/expenses/service'
 import { insertExpense, modifyExpense, removeExpense, addExpenseSplit, removeExpenseSplit } from '@/src/domains/expenses/service'
-import { MutationResultRef, toMutationResult } from './shared'
+import { MutationResultRef, toMutationResult, ErrorCode, ErrorCodeRef } from './shared'
 import { findEventById } from '@/src/domains/events/service'
 import { estimateSpendForEvent, listExpensesForEvent } from '@/src/domains/expenses/service'
 import type { VenueArtistSpendEstimate } from '@/src/domains/expenses/service'
@@ -120,11 +120,12 @@ const ExpenseUpdateInput = builder.inputType('ExpenseUpdateInput', {
     }),
 })
 
-const CreateExpenseResultRef = builder.objectRef<{ id?: string; error?: string }>('CreateExpenseResult')
+const CreateExpenseResultRef = builder.objectRef<{ id?: string; error?: string; errorCode?: ErrorCode }>('CreateExpenseResult')
 CreateExpenseResultRef.implement({
     fields: (t) => ({
         id: t.exposeID('id', { nullable: true }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
     }),
 })
 
@@ -202,13 +203,14 @@ builder.queryField('estimateSpendForEvent', (t) =>
 // del tageado para poder sacarlo del split después sin esperar un refetch
 // (ilike es case-insensitive, así que lo tipeado no siempre es el username
 // real tal cual está guardado).
-const AddExpenseSplitResultRef = builder.objectRef<{ error?: string; userId?: string; username?: string }>(
+const AddExpenseSplitResultRef = builder.objectRef<{ error?: string; userId?: string; username?: string; errorCode?: ErrorCode }>(
     'AddExpenseSplitResult'
 )
 AddExpenseSplitResultRef.implement({
     fields: (t) => ({
         success: t.boolean({ resolve: (r) => !r.error }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
         userId: t.exposeID('userId', { nullable: true }),
         username: t.exposeString('username', { nullable: true }),
     }),

@@ -8,7 +8,9 @@
  * más los campos de éxito que necesite cada action (ej. `ActionResult<{ eventId: string }>`).
  * Reemplaza los ~6 tipos de retorno distintos que había hand-rolled en cada actions.ts.
  */
-export type ActionResult<TData extends object = object> = { error?: string } & TData
+export type ErrorCodeType = 'VALIDATION' | 'UNAUTHENTICATED' | 'CONFLICT' | 'NOT_FOUND' | 'SERVER_ERROR';
+
+export type ActionResult<TData extends object = object> = { error?: string; errorCode?: ErrorCodeType } & TData
 
 /** Artista. Participa en eventos a través de la tabla lineups (muchos a muchos). */
 export interface Artist {

@@ -1,4 +1,5 @@
 import { builder } from './builder'
+import { ErrorCode, ErrorCodeRef } from './shared'
 import {
     listArtists,
     findArtistById,
@@ -122,7 +123,7 @@ const ArtistCreateInput = builder.inputType('ArtistCreateInput', {
     }),
 })
 
-const CreateArtistResultRef = builder.objectRef<{ id?: string; existingId?: string; error?: string }>(
+const CreateArtistResultRef = builder.objectRef<{ id?: string; existingId?: string; error?: string; errorCode?: ErrorCode }>(
     'CreateArtistResult'
 )
 CreateArtistResultRef.implement({
@@ -130,6 +131,7 @@ CreateArtistResultRef.implement({
         id: t.exposeID('id', { nullable: true }),
         existingId: t.exposeID('existingId', { nullable: true }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
     }),
 })
 
@@ -147,11 +149,12 @@ builder.mutationField('createArtist', (t) =>
     })
 )
 
-const FindOrCreateArtistResultRef = builder.objectRef<{ id?: string; error?: string }>('FindOrCreateArtistResult')
+const FindOrCreateArtistResultRef = builder.objectRef<{ id?: string; error?: string; errorCode?: ErrorCode }>('FindOrCreateArtistResult')
 FindOrCreateArtistResultRef.implement({
     fields: (t) => ({
         id: t.exposeID('id', { nullable: true }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
     }),
 })
 
@@ -169,13 +172,14 @@ builder.mutationField('findOrCreateArtist', (t) =>
 
 // El estado resultante viaja en el payload en vez de inferirse en el cliente:
 // el toggle es optimista en la UI y necesita el valor real para reconciliar.
-const ToggleWishlistResultRef = builder.objectRef<{ inWishlist: boolean; error?: string }>(
+const ToggleWishlistResultRef = builder.objectRef<{ inWishlist: boolean; error?: string; errorCode?: ErrorCode }>(
     'ToggleWishlistResult'
 )
 ToggleWishlistResultRef.implement({
     fields: (t) => ({
         inWishlist: t.exposeBoolean('inWishlist'),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
     }),
 })
 

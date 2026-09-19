@@ -2,7 +2,7 @@ import { builder } from './builder'
 import { listVenues, findVenueById, insertVenue, findOrCreateVenue, addVenueTip, removeVenueTip } from '@/src/domains/venues/service'
 import type { VenueEvent, VenueWithEvents, VenueTip, VenueTipCategory } from '@/src/domains/venues/service'
 import type { Venue } from '@/src/core/types'
-import { MutationResultRef, toMutationResult } from './shared'
+import { MutationResultRef, toMutationResult, ErrorCode, ErrorCodeRef } from './shared'
 
 const VenueEventLineupArtistRef = builder.objectRef<VenueEvent['lineups'][number]['artists']>(
     'VenueEventLineupArtist'
@@ -110,7 +110,7 @@ const VenueCreateInput = builder.inputType('VenueCreateInput', {
 // Payload en vez de tirar un GraphQL error: un nombre duplicado no es una
 // falla del sistema, es un resultado de negocio esperable — mismo criterio
 // que ya usaba insertVenue() cuando la llamaba una Server Action.
-const CreateVenueResultRef = builder.objectRef<{ id?: string; existingId?: string; error?: string }>(
+const CreateVenueResultRef = builder.objectRef<{ id?: string; existingId?: string; error?: string; errorCode?: ErrorCode }>(
     'CreateVenueResult'
 )
 CreateVenueResultRef.implement({
@@ -118,6 +118,7 @@ CreateVenueResultRef.implement({
         id: t.exposeID('id', { nullable: true }),
         existingId: t.exposeID('existingId', { nullable: true }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
     }),
 })
 
@@ -137,11 +138,12 @@ builder.mutationField('createVenue', (t) =>
     })
 )
 
-const FindOrCreateVenueResultRef = builder.objectRef<{ id?: string; error?: string }>('FindOrCreateVenueResult')
+const FindOrCreateVenueResultRef = builder.objectRef<{ id?: string; error?: string; errorCode?: ErrorCode }>('FindOrCreateVenueResult')
 FindOrCreateVenueResultRef.implement({
     fields: (t) => ({
         id: t.exposeID('id', { nullable: true }),
         error: t.exposeString('error', { nullable: true }),
+        errorCode: t.expose('errorCode', { type: ErrorCodeRef, nullable: true }),
     }),
 })
 

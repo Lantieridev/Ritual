@@ -90,14 +90,15 @@ describe('artists GraphQL mutations', () => {
     vi.mocked(insertArtist).mockResolvedValue({
       error: 'Ya existe un artista con ese nombre.',
       existingId: 'existing-1',
+      errorCode: 'CONFLICT',
     })
 
     const body = await query(`mutation {
-      createArtist(input: { name: "Bandalos Chinos" }) { id existingId error }
+      createArtist(input: { name: "Bandalos Chinos" }) { id existingId error errorCode }
     }`)
 
     expect(body.data).toEqual({
-      createArtist: { id: null, existingId: 'existing-1', error: 'Ya existe un artista con ese nombre.' },
+      createArtist: { id: null, existingId: 'existing-1', error: 'Ya existe un artista con ese nombre.', errorCode: 'CONFLICT' },
     })
   })
 
