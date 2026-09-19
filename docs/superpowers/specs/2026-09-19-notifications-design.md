@@ -15,6 +15,8 @@ Poder avisarle al usuario algo fuera de que esté mirando la app, con control gr
 | Timing del post-show | Un aviso por show, en la corrida diaria del día siguiente al show. |
 | Entrega | La base como cola: filas en `notifications` + cron que drena los emails pendientes. |
 | Control | Preferencias por tipo **y** por canal (`in_app`, `email`). |
+| Rechazo de moderación | Tipo soportado de punta a punta; el productor se difiere porque moderación hoy solo aprueba y fusiona (issue aparte). |
+| Horarios de los crons | `notify-post-show` a las `0 16 * * *` UTC (13:00 AR) y `deliver-notifications` a las `0 17 * * *`, una hora después: en Hobby dos crons de la misma hora no tienen orden garantizado. |
 
 Motivo de la entrega por cola en la base: la infraestructura de background actual son crons de Vercel (`vercel.json`) con `authorizeCron` y `cron_runs`, y Vercel Hobby limita los crons a una corrida diaria. Una cola en Postgres cumple el patrón productor → cola → consumidor asíncrono del issue sin sumar un vendor ni un runtime nuevo. Alternativas descartadas: `pgmq` + Edge Function (superficie nueva sin justificación por el volumen) y cola externa tipo Inngest/QStash (vendor y secrets extra).
 
@@ -24,12 +26,14 @@ Motivo de la entrega por cola en la base: la infraestructura de background actua
 
 - `id`, `user_id`, `type`, `title`, `body`, `payload jsonb` (motivo del rechazo, `event_id`, lista de pendientes), `read_at`, `created_at`.
 - `dedupe_key`, con índice único `(user_id, dedupe_key)`. El post-show usa `post_show:{event_id}`, así un reintento del cron no duplica el aviso.
-- Estado de email: `email_status` (`skipped | pending | sent | failed`), `email_attempts`, `email_last_error`, `email_sent_at`.
+- `in_app boolean`: `false` significa que la fila existe solo como cola de email y no aparece en el inbox.
+- Estado de email: `email_status` (`skipped | pending | sent | failed`), `email_attempts`, `email_last_error`, `email_sent_at` y `email_claimed_at`.
+- La RPC `claim_pending_notifications` (solo service-role) toma un lote con `for update skip locked`, incrementa `email_attempts` y marca `email_claimed_at`; una fila reclamada hace más de 10 minutos se considera colgada y se puede retomar.
 
 ### `notification_preferences`
 
 - Una fila por `(user_id, type)` con `in_app boolean` y `email boolean`.
-- Sin fila, aplican los defaults por tipo definidos en código (el mensaje del admin siempre va por email).
+- Sin fila, aplican los defaults: ambos canales activos para todos los tipos.
 
 ### RLS
 
@@ -44,7 +48,7 @@ Nuevo dominio `src/domains/notifications/` con la misma forma que `moderation` (
 ### Productores
 
 - `notify({ userId, type, title, body, payload, dedupeKey })` es el único punto de entrada. Lee las preferencias, inserta la fila con `in_app` / `email_status` según corresponda y devuelve sin bloquear.
-- `moderation/service.ts` llama a `notify` al rechazar una entrada, con el motivo.
+- `moderation_rejected`: soportado, sin productor en la v1 (moderación hoy solo aprueba y fusiona; el flujo de rechazo es un issue aparte).
 - Mutation GraphQL `sendAdminMessage`, solo para admins, llama a `notify`.
 - Cron `notify-post-show`: busca shows terminados el día anterior, aplica `computePendingForShow` (`src/domains/showmode/pending.ts`) y, si queda algo pendiente, hace **un solo** `notify` con la lista completa. Si no queda nada pendiente, no envía.
 
@@ -65,7 +69,7 @@ Campanita con contador en el header, lista de avisos y pantalla de ajustes con u
 
 ### Errores
 
-- `notify()` nunca propaga error al productor. Si falla el insert, loguea a Sentry y continúa: perder un aviso no debe romper el rechazo de una entrada ni una respuesta al usuario.
+- `notify()` nunca propaga error al productor. Si falla el insert, loguea con `console.error` (como el resto del repo) y continúa: perder un aviso no debe romper el rechazo de una entrada ni una respuesta al usuario.
 - Email caído: la fila queda `failed` con `email_last_error` tras 3 intentos. El inbox in-app funciona igual. `cron_runs` registra los contadores (enviados, fallidos).
 - Sin `RESEND_API_KEY`, el cron falla cerrado con 503, igual que `authorizeCron` sin `CRON_SECRET`.
 
@@ -82,7 +86,7 @@ Una sola migración con tablas, RLS e índices; tipos regenerados con `supabase:
 
 ### Fuera de la v1
 
-Push del navegador, modo recital activo (checklist + clima), wishlist, recordatorio a los 3 días y digest agrupado. El modelo de tipos y preferencias permite sumarlos sin migraciones grandes.
+Push del navegador, modo recital activo (checklist + clima), wishlist, recordatorio a los 3 días, digest agrupado, el flujo de rechazo de moderación, la entrada a la bandeja en mobile (el hub de perfil es una grilla fija de 2x2 y requiere una decisión de diseño) y los eventos multi-día (la tabla `events` no tiene `end_date`). El modelo de tipos y preferencias permite sumarlos sin migraciones grandes.
 
 ## Relación con otros issues
 
