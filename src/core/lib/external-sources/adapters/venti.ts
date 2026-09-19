@@ -16,17 +16,15 @@ export const ventiAdapter: ExternalSourceAdapter = {
    *
    * La única forma real de sacar datos de ahí sería un browser headless
    * ejecutando el JS del sitio -infraestructura que no existe en este
-   * repo hoy (el enum `type: 'headless'` en `../types` está anticipado
-   * pero nada lo implementa todavía). Hacerle andar de nuevo es una
-   * decisión de arquitectura aparte, no un fix de una línea, así que en
-   * vez de seguir pegándole a una URL muerta todos los días en el cron,
-   * esto devuelve el error explicado sin gastar el fetch.
+   * repo, y se decidió no sumarla (ver docs/adr/0004). Así que en vez de
+   * seguir pegándole a una URL muerta todos los días en el cron, esto
+   * devuelve el error explicado sin gastar el fetch.
    */
   search: async (): Promise<ExternalSearchResponse> => {
     return {
       events: [],
       total: 0,
-      error: 'Venti migró a venti.live (SPA client-side); el API endpoint viejo ya no existe y el sitio nuevo necesita un browser headless para leer sus eventos -no implementado.',
+      error: 'Venti migró a venti.live (SPA client-side); el API endpoint viejo ya no existe y el sitio nuevo necesita un browser headless para leer sus eventos -descartado (ADR 0004).',
     }
   },
 }
