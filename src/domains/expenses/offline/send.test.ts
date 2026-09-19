@@ -59,6 +59,7 @@ describe('makeSender', () => {
 
     const result = await send({
       clientId: 'c-1',
+      ownerId: 'user-1',
       payload: { amount: 5, category: 'Entrada', date: '2024-01-01' },
       createdAt: 1,
       status: 'pending',

@@ -18,6 +18,12 @@ export interface OutboxPayload {
 
 export interface OutboxEntry {
   clientId: string
+  /**
+   * The signed-in user who created it. The outbox lives on the device, not in
+   * the account, so without this a second user signing in on the same phone
+   * would flush the first user's expenses into their own account.
+   */
+  ownerId: string
   payload: OutboxPayload
   createdAt: number
   status: OutboxStatus
@@ -71,19 +77,21 @@ async function getEntry(clientId: string): Promise<OutboxEntry | undefined> {
 
 export async function enqueue(
   payload: OutboxPayload,
+  ownerId: string,
   clientId: string = crypto.randomUUID()
 ): Promise<OutboxEntry> {
   // Strictly increasing so ordering survives two enqueues in one millisecond.
   lastCreatedAt = Math.max(Date.now(), lastCreatedAt + 1)
-  const entry: OutboxEntry = { clientId, payload, createdAt: lastCreatedAt, status: 'pending' }
+  const entry: OutboxEntry = { clientId, ownerId, payload, createdAt: lastCreatedAt, status: 'pending' }
   await withStore('readwrite', (store) => store.put(entry))
   notifyChanged()
   return entry
 }
 
-export async function listEntries(): Promise<OutboxEntry[]> {
+/** One owner's entries, oldest first. Other users' entries are never returned. */
+export async function listEntries(ownerId: string): Promise<OutboxEntry[]> {
   const all = await withStore('readonly', (store) => store.getAll() as IDBRequest<OutboxEntry[]>)
-  return all.sort((a, b) => a.createdAt - b.createdAt)
+  return all.filter((e) => e.ownerId === ownerId).sort((a, b) => a.createdAt - b.createdAt)
 }
 
 export async function markFailed(clientId: string, error: string): Promise<void> {

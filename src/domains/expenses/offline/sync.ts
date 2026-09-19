@@ -22,11 +22,11 @@ export interface FlushSummary {
 
 const LOCK_NAME = 'ritual-outbox-flush'
 
-async function drain(send: SendExpense): Promise<FlushSummary> {
+async function drain(send: SendExpense, ownerId: string): Promise<FlushSummary> {
   let synced = 0
   let failed = 0
 
-  const pending = (await listEntries()).filter((e) => e.status === 'pending')
+  const pending = (await listEntries(ownerId)).filter((e) => e.status === 'pending')
   for (const entry of pending) {
     let result: SendResult
     try {
@@ -47,21 +47,22 @@ async function drain(send: SendExpense): Promise<FlushSummary> {
     }
   }
 
-  const remaining = (await listEntries()).filter((e) => e.status === 'pending').length
+  const remaining = (await listEntries(ownerId)).filter((e) => e.status === 'pending').length
   return { synced, failed, remaining, skipped: false }
 }
 
 /**
- * Drains the outbox oldest-first. Serialized across tabs with Web Locks; the
+ * Drains ONE owner's entries oldest-first — never another user's, since the
+ * request goes out under whoever is signed in now. Serialized across tabs with Web Locks; the
  * server-side (user_id, client_id) constraint covers any gap (and browsers
  * without Web Locks), so a double send is harmless.
  */
-export async function flushOutbox(send: SendExpense): Promise<FlushSummary> {
+export async function flushOutbox(send: SendExpense, ownerId: string): Promise<FlushSummary> {
   if (typeof navigator !== 'undefined' && navigator.locks) {
     const summary = await navigator.locks.request(LOCK_NAME, { ifAvailable: true }, (lock) =>
-      lock ? drain(send) : null
+      lock ? drain(send, ownerId) : null
     )
     return summary ?? { synced: 0, failed: 0, remaining: 0, skipped: true }
   }
-  return drain(send)
+  return drain(send, ownerId)
 }
