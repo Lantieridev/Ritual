@@ -7,7 +7,7 @@ import { useMutation, gql } from 'urql'
 import { unwrapMutation } from '@/src/graphql/mutation-result'
 import { Button, FormField, inputClass, Combobox, StarRating, type ComboboxOption } from '@/src/core/components/ui'
 import { routes } from '@/src/core/lib/routes'
-import { combineDateAndTime, eventTimeOfDay, toDateOnly } from '@/src/core/lib/dates'
+import { combineDateAndTime, eventTimeOfDay, isTimeKnown, toDateOnly } from '@/src/core/lib/dates'
 import { EXPENSE_CATEGORIES } from '@/src/domains/expenses/categories'
 import type { Venue, EventWithRelations, Artist } from '@/src/core/types'
 
@@ -204,7 +204,10 @@ export function EventForm({ venues, artists, event }: EventFormProps) {
     // Combina fecha + hora en un solo timestamp — issue #8 (clima exacto por
     // hora): antes solo se guardaba la fecha (medianoche UTC), lo que hacía
     // imposible pedirle a Open-Meteo el clima de la hora real del show.
-    const date = combineDateAndTime(dateValue, timeValue)
+    // Con la hora vacía se manda la fecha sola: el servicio la guarda como
+    // "sin hora" (time_known = false) y el enriquecimiento puede completarla
+    // (issue #11).
+    const date = timeValue ? combineDateAndTime(dateValue, timeValue) : dateValue
 
     const b2bGroups = b2bLinks.map((ids) => ({ artistIds: ids }))
 
@@ -303,15 +306,13 @@ export function EventForm({ venues, artists, event }: EventFormProps) {
         <FormField
           label="Hora"
           id="time"
-          required
-          hint="Puerta/inicio del show — se usa para pedirle a Open-Meteo el clima de esa hora exacta."
+          hint="Opcional. Si la dejás vacía, Ritual intenta completarla con la hora real del show. Se usa para el clima de esa hora."
         >
           <input
             id="time"
             name="time"
             type="time"
-            required
-            defaultValue={event?.date ? eventTimeOfDay(event.date) : '20:00'}
+            defaultValue={event?.date && isTimeKnown(event.time_known) ? eventTimeOfDay(event.date) : ''}
             className={inputClass}
           />
         </FormField>
