@@ -77,6 +77,14 @@ export interface Event {
    * completa quien carga el evento — ver issue #19.
    */
   ticket_url?: string | null
+  /** Póster del show, completado desde Ticketmaster (issue #11). */
+  poster_url?: string | null
+  /**
+   * false cuando el usuario no cargó hora: `date` guarda entonces la
+   * medianoche local sólo para no perder el día. Ausente = hora conocida —
+   * ver `isTimeKnown`.
+   */
+  time_known?: boolean
 }
 
 /**

@@ -272,7 +272,7 @@ export async function getShowTonight(userId: string, now: Date = new Date()): Pr
     .select(`
       status,
       events (
-        id, name, date,
+        id, name, date, time_known,
         lineups ( artists ( name ) )
       )
     `)

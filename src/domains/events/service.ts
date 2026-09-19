@@ -1,8 +1,9 @@
 import { cache } from 'react'
+import { after } from 'next/server'
 import { createClient } from '@/src/core/lib/supabase/server'
 import { validateUUID, validateDate, sanitizeText, sanitizeError } from '@/src/core/lib/validation'
 import { findOrCreateByName } from '@/src/core/lib/find-or-create'
-import { parseExternalDateTime } from '@/src/core/lib/dates'
+import { parseExternalDateTime, hasTimeOfDay, combineDateAndTime } from '@/src/core/lib/dates'
 import { getCurrentUserId } from '@/src/core/auth/session'
 import type { ActionResult, EventCreateInput, EventUpdateInput, FutureEvent, EventWithRelations } from '@/src/core/types'
 import { getEvents, getEventsWithAttendance, getEventById, getEventIdsForSitemap, getMyEvents, getUpcomingEvents, getShowTonight, listSuggestionCandidates as loadSuggestionCandidates } from './data'
@@ -17,6 +18,7 @@ import type { EventPhoto } from './photo-actions'
 import { getEventMessages, addEventMessage } from './messages-data'
 import type { EventMessage } from './messages-data'
 import { buildLineupRows } from './lineup-b2b'
+import { enrichEventFromExternal } from './enrichment/enrich-event'
 
 export type { EventWithRelations, EventWithAttendance, EventAttendance, AttendanceStatus, EventPhoto, EventMessage, ShowTonight, SuggestionCandidateRow }
 
@@ -122,6 +124,16 @@ function validateCreate(data: EventCreateInput): string | null {
 }
 
 /**
+ * El form manda la fecha sola ("YYYY-MM-DD") cuando el usuario dejó la hora
+ * vacía. `events.date` es timestamptz, así que se guarda la medianoche local
+ * (para no perder el día) y `time_known = false` conserva el "no sé la hora".
+ */
+function resolveEventDate(date: string): { date: string; time_known: boolean } {
+  if (hasTimeOfDay(date)) return { date, time_known: true }
+  return { date: combineDateAndTime(date, '00:00'), time_known: false }
+}
+
+/**
  * Inserta el evento (y su lineup, si se pasan artist_ids) y devuelve su id
  * — sin redirigir, misma razón que en los demás dominios: la mutation de
  * GraphQL nunca debería redirigir.
@@ -140,7 +152,7 @@ export async function insertEvent(formData: EventCreateInput): Promise<ActionRes
     .from('events')
     .insert({
       name,
-      date: formData.date,
+      ...resolveEventDate(formData.date),
       venue_id: formData.venue_id,
       ticket_url: formData.ticket_url?.trim() || null,
     })
@@ -171,6 +183,12 @@ export async function insertEvent(formData: EventCreateInput): Promise<ActionRes
       }
     }
   }
+
+  // Enriquecimiento silencioso (issue #11): completa hora, póster y género
+  // desde Ticketmaster DESPUÉS de responder. after() nunca demora el guardado
+  // y enrichEventFromExternal nunca lanza, así que una API caída no puede
+  // convertir un show creado en un error (mismo criterio que modifyProfile).
+  after(() => enrichEventFromExternal(supabase, newEvent.id))
 
   return { id: newEvent.id }
 }
@@ -294,13 +312,19 @@ export async function modifyEvent(id: string, formData: EventUpdateInput): Promi
   }
 
   const supabase = await createClient()
-  const payload: { name?: string | null; date?: string; venue_id?: string | null; ticket_url?: string | null } = {}
+  const payload: {
+    name?: string | null
+    date?: string
+    time_known?: boolean
+    venue_id?: string | null
+    ticket_url?: string | null
+  } = {}
 
   if (formData.name !== undefined) {
     payload.name = sanitizeText(formData.name, MAX_NAME_LENGTH)
   }
   if (formData.date !== undefined) {
-    payload.date = formData.date
+    Object.assign(payload, resolveEventDate(formData.date))
   }
   if (formData.venue_id !== undefined) {
     payload.venue_id = formData.venue_id || null

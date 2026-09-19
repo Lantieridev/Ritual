@@ -11,6 +11,7 @@ import {
   eventTimeOfDay,
   parseExternalDateTime,
   hasTimeOfDay,
+  isTimeKnown,
   APP_TIMEZONE,
 } from './dates'
 
@@ -280,5 +281,17 @@ describe('hasTimeOfDay', () => {
 
   it('es true para un timestamp completo con hora', () => {
     expect(hasTimeOfDay('2026-09-20T21:00:00-03:00')).toBe(true)
+  })
+})
+
+describe('isTimeKnown', () => {
+  it('es false solo cuando el flag es exactamente false', () => {
+    expect(isTimeKnown(false)).toBe(false)
+  })
+
+  it('trata true, null y undefined como hora conocida (filas anteriores a la columna)', () => {
+    expect(isTimeKnown(true)).toBe(true)
+    expect(isTimeKnown(null)).toBe(true)
+    expect(isTimeKnown(undefined)).toBe(true)
   })
 })
