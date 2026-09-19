@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { IDBFactory } from 'fake-indexeddb'
+import { setOutboxOwner } from '@/src/domains/expenses/offline/outbox-owner'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Expense, EventWithRelations } from '@/src/core/types'
@@ -31,6 +33,12 @@ import { TRANSPORT_ERROR_MESSAGE } from '@/src/graphql/mutation-result'
 import { transportError } from '@/src/graphql/transport-failure.testing'
 
 const events = [{ id: 'e1', name: 'Show en Niceto', date: '2024-05-01' }] as EventWithRelations[]
+
+// Creating an expense writes to the offline outbox first (issue #10).
+beforeEach(() => {
+  globalThis.indexedDB = new IDBFactory()
+  setOutboxOwner('user-1')
+})
 
 describe('ExpenseForm — create mode', () => {
   beforeEach(() => {
@@ -212,7 +220,10 @@ describe('ExpenseForm — edit mode', () => {
    * `undefined`, el form navegaba y el usuario creía que el gasto se guardó.
    */
   describe('transport failures (data undefined, result.error set)', () => {
-    it('create: stays on the form and surfaces an error instead of navigating', async () => {
+    // Offline support (issue #10): a create that can't reach the server is no
+    // longer an error — it is saved on the device and synced later. What must
+    // still hold is that the form never navigates as if the server had saved it.
+    it('create: queues the expense on the device instead of navigating or erroring', async () => {
       createExpenseMock.mockResolvedValue({ data: undefined, error: transportError() })
       render(<ExpenseForm events={events} />)
 
@@ -220,11 +231,11 @@ describe('ExpenseForm — edit mode', () => {
       await userEvent.selectOptions(screen.getByLabelText(/Categoría/), 'Entrada')
       await userEvent.click(screen.getByRole('button', { name: 'Agregar gasto' }))
 
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(TRANSPORT_ERROR_MESSAGE)
-      })
+      expect(await screen.findByRole('status')).toHaveTextContent('Guardado en tu dispositivo')
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
       expect(push).not.toHaveBeenCalled()
       expect(screen.getByRole('button', { name: 'Agregar gasto' })).toBeEnabled()
+      expect(screen.getByLabelText(/Monto/)).toHaveValue(null)
     })
 
     it('update: stays on the form and surfaces an error instead of navigating', async () => {
